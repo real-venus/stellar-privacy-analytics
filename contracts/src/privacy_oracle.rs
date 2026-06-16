@@ -96,10 +96,10 @@ impl PrivacyOracle {
 
         // Initialize default data source fees
         let mut fees = Map::new(&env);
-        fees.set(symbol_short!("mkt_data"), &50000000i128); // 0.05 XLM
-        fees.set(symbol_short!("wtr_data"), &20000000i128); // 0.02 XLM
-        fees.set(symbol_short!("soc_metr"), &30000000i128); // 0.03 XLM
-        fees.set(symbol_short!("fin_data"), &100000000i128); // 0.1 XLM
+        fees.set(String::from_str(&env, "market_data"), &50000000i128); // 0.05 XLM
+        fees.set(String::from_str(&env, "weather_data"), &20000000i128); // 0.02 XLM
+        fees.set(String::from_str(&env, "social_metrics"), &30000000i128); // 0.03 XLM
+        fees.set(String::from_str(&env, "financial_data"), &100000000i128); // 0.1 XLM
 
         env.storage().instance().set(&symbol!("data_source_fees"), &fees);
         env.storage().instance().set(&symbol!("total_requests"), &0u64);
