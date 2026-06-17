@@ -8,6 +8,9 @@ use soroban_sdk::String;
 use soroban_sdk::Map;
 use soroban_sdk::BytesN;
 
+#[cfg(any(test, feature = "clientgen"))]
+pub type MultiSigAdminClient = ();
+
 // Contract state storage keys
 const OWNERS_KEY: &str = "OWNERS";
 const THRESHOLD_KEY: &str = "THRESHOLD";
@@ -495,7 +498,7 @@ impl MultiSigAdmin {
 
     /// Helper function to hash a transaction
     fn hash_transaction(env: Env, transaction: &Transaction) -> BytesN<32> {
-        use soroban_sdk::crypto::sha256;
+        
         
         let mut data = Vec::new(&env);
         data.push_back(transaction.destination.clone());

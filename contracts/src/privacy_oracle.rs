@@ -6,11 +6,12 @@ use soroban_sdk::Env;
 use soroban_sdk::Vec;
 use soroban_sdk::String;
 use soroban_sdk::symbol_short;
-use soroban_sdk::symbol;
 use soroban_sdk::Map;
 use soroban_sdk::BytesN;
-use soroban_sdk::crypto::sha256;
 use soroban_sdk::xdr::ScVal;
+
+#[cfg(any(test, feature = "clientgen"))]
+pub type PrivacyOracleClient = ();
 
 // Contract state storage keys
 const DATA_REQUESTS_KEY: &str = "DATA_REQUESTS";
@@ -94,11 +95,13 @@ impl PrivacyOracle {
         env.storage().instance().set(&symbol!("admin"), &admin);
 
         // Initialize default data source fees
+        // Keys are String (not SymbolShort) to align with consumer's
+        // `Map<String, i128>::get(data_source.clone())` read in `request_data`.
         let mut fees = Map::new(&env);
-        fees.set(symbol_short!("market_data"), &50000000i128); // 0.05 XLM
-        fees.set(symbol_short!("weather_data"), &20000000i128); // 0.02 XLM
-        fees.set(symbol_short!("social_metrics"), &30000000i128); // 0.03 XLM
-        fees.set(symbol_short!("financial_data"), &100000000i128); // 0.1 XLM
+        fees.set(String::from_str(&env, "market_data"), &50000000i128); // 0.05 XLM
+        fees.set(String::from_str(&env, "weather_data"), &20000000i128); // 0.02 XLM
+        fees.set(String::from_str(&env, "social_metrics"), &30000000i128); // 0.03 XLM
+        fees.set(String::from_str(&env, "financial_data"), &100000000i128); // 0.1 XLM
 
         env.storage().instance().set(&symbol!("data_source_fees"), &fees);
         env.storage().instance().set(&symbol!("total_requests"), &0u64);

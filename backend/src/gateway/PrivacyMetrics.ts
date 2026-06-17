@@ -54,14 +54,14 @@ export interface PrivacyAlert {
 
 export class PrivacyMetrics {
   private config: MetricsConfig;
-  private metrics: PrivacyMetric[];
+  private metrics: Map<string, PrivacyMetric>;
   private alerts: PrivacyAlert[];
   private aggregationCache: Map<string, AggregatedMetrics>;
   private collectionInterval?: NodeJS.Timeout;
 
   constructor(config: MetricsConfig) {
     this.config = config;
-    this.metrics = [];
+    this.metrics = new Map();
     this.alerts = [];
     this.aggregationCache = new Map();
   }
@@ -118,7 +118,7 @@ export class PrivacyMetrics {
       userAgent: req.headers['user-agent'] || 'unknown'
     };
 
-    this.metrics.push(metric);
+    this.metrics.set(metric.requestId, metric);
 
     // Real-time alert checking for critical events
     if (res.statusCode === 403) {
@@ -132,7 +132,7 @@ export class PrivacyMetrics {
     }
 
     // Update existing metric with response details
-    const existingMetric = this.metrics.find(m => m.requestId === req.requestId);
+    const existingMetric = this.metrics.get(req.requestId);
     if (existingMetric) {
       existingMetric.statusCode = proxyRes.statusCode;
       existingMetric.accessDecision = proxyRes.statusCode < 400 ? 'allow' : 'deny';
@@ -153,10 +153,10 @@ export class PrivacyMetrics {
       return cached;
     }
 
-    let filteredMetrics = this.metrics;
+    let filteredMetrics = Array.from(this.metrics.values());
 
     if (timeRange) {
-      filteredMetrics = this.metrics.filter(m =>
+      filteredMetrics = filteredMetrics.filter(m =>
         m.timestamp >= timeRange.start && m.timestamp <= timeRange.end
       );
     }
@@ -173,7 +173,7 @@ export class PrivacyMetrics {
     start: Date;
     end: Date;
   }): Promise<PrivacyMetric[]> {
-    let filteredMetrics = this.metrics.filter(m => m.accessDecision === 'deny');
+    let filteredMetrics = Array.from(this.metrics.values()).filter(m => m.accessDecision === 'deny');
 
     if (timeRange) {
       filteredMetrics = filteredMetrics.filter(m =>
@@ -378,11 +378,15 @@ export class PrivacyMetrics {
 
   private cleanupOldMetrics(): void {
     const cutoff = new Date(Date.now() - this.config.retentionPeriod);
-    const beforeCount = this.metrics.length;
+    const beforeCount = this.metrics.size;
 
-    this.metrics = this.metrics.filter(m => m.timestamp > cutoff);
+    for (const [id, metric] of this.metrics) {
+      if (metric.timestamp <= cutoff) {
+        this.metrics.delete(id);
+      }
+    }
     
-    const removed = beforeCount - this.metrics.length;
+    const removed = beforeCount - this.metrics.size;
     if (removed > 0) {
       logger.debug(`Cleaned up ${removed} old privacy metrics`);
     }
@@ -402,7 +406,7 @@ export class PrivacyMetrics {
   private checkForAlerts(): void {
     const now = new Date();
     const last5Minutes = new Date(now.getTime() - 5 * 60 * 1000);
-    const recentMetrics = this.metrics.filter(m => m.timestamp > last5Minutes);
+    const recentMetrics = Array.from(this.metrics.values()).filter(m => m.timestamp > last5Minutes);
 
     // Check for high denial rate
     const recentDenials = recentMetrics.filter(m => m.accessDecision === 'deny');
@@ -530,7 +534,7 @@ export class PrivacyMetrics {
     enabled: boolean;
   } {
     return {
-      totalMetrics: this.metrics.length,
+      totalMetrics: this.metrics.size,
       totalAlerts: this.alerts.length,
       activeAlerts: this.alerts.filter(a => !a.resolved).length,
       cacheSize: this.aggregationCache.size,

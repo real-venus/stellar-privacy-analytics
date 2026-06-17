@@ -6,11 +6,12 @@ use soroban_sdk::Env;
 use soroban_sdk::Vec;
 use soroban_sdk::String;
 use soroban_sdk::symbol_short;
-use soroban_sdk::symbol;
 use soroban_sdk::Map;
 use soroban_sdk::BytesN;
-use soroban_sdk::crypto::sha256;
 use soroban_sdk::xdr::ScVal;
+
+#[cfg(any(test, feature = "clientgen"))]
+pub type StellarAnalyticsClient = ();
 
 // Contract state storage keys
 const ANALYSIS_REQUESTS_KEY: &str = "ANALYSIS_REQUESTS";
@@ -225,7 +226,7 @@ impl StellarAnalytics {
         input_data.push_back(env.ledger().timestamp().into());
         input_data.push_back(env.ledger().sequence().into());
 
-        let request_id = sha256(&input_data.to_xdr(env));
+        let request_id = env.crypto().sha256(&input_data.to_xdr(env));
 
         // Check user's privacy budget
         let user_budget: i128 = Self::get_user_privacy_budget(env.clone(), requester.clone());
