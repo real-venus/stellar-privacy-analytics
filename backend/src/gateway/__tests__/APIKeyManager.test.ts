@@ -1,5 +1,7 @@
 import { APIKeyManager } from '../APIKeyManager';
 
+jest.mock('../../utils/logger');
+
 describe('APIKeyManager', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -7,13 +9,14 @@ describe('APIKeyManager', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.clearAllMocks();
   });
 
   describe('listKeys', () => {
-    it('returns deep-cloned keys so callers cannot mutate stored state', async () => {
+    it('returns deep-cloned keys so callers cannot mutate internal state', async () => {
       const manager = new APIKeyManager();
-      const { key, keyInfo } = await manager.createKey({
-        name: 'Analytics Read Key',
+      const { key: apiKey, keyInfo } = await manager.createKey({
+        name: 'Analytics Reader',
         permissions: ['read'],
         rateLimit: {
           requestsPerMinute: 10,
@@ -21,38 +24,47 @@ describe('APIKeyManager', () => {
           requestsPerDay: 1000
         },
         restrictions: {
-          allowedIPs: ['127.0.0.1'],
-          allowedOrigins: ['https://example.com'],
-          allowedServices: []
+          allowedIPs: ['10.0.0.1'],
+          allowedOrigins: ['https://analytics.example.com'],
+          allowedServices: ['analytics']
         },
         metadata: {
-          owner: 'clone-test-owner',
+          owner: 'security-team',
           department: 'security',
-          purpose: 'Verify listKeys clone behavior'
+          purpose: 'regression-test'
         }
       });
 
-      const listedKeys = await manager.listKeys({ owner: 'clone-test-owner' });
+      const listedKeys = await manager.listKeys({ owner: 'security-team' });
       const listedKey = listedKeys[0];
 
+      listedKeys.pop();
       listedKey.permissions.push('admin');
+      listedKey.restrictions.allowedIPs.push('0.0.0.0/0');
+      listedKey.restrictions.allowedOrigins.push('*');
+      listedKey.restrictions.allowedServices.push('admin-console');
       listedKey.metadata.isActive = false;
-      listedKey.restrictions.allowedServices.push('admin-service');
-      listedKey.rateLimit!.requestsPerDay = 999999;
+      listedKey.metadata.owner = 'attacker';
+      listedKey.rateLimit!.requestsPerMinute = 9999;
 
-      const refreshedKeys = await manager.listKeys({ owner: 'clone-test-owner' });
-      const refreshedKey = refreshedKeys.find(candidate => candidate.id === keyInfo.id)!;
-      const validation = await manager.validateKey(key, {
-        ipAddress: '127.0.0.1',
-        origin: 'https://example.com',
+      const freshKeys = await manager.listKeys({ owner: 'security-team' });
+      const freshKey = freshKeys.find(key => key.id === keyInfo.id);
+
+      expect(freshKey).toBeDefined();
+      expect(freshKeys).toHaveLength(1);
+      expect(freshKey!.permissions).toEqual(['read']);
+      expect(freshKey!.restrictions.allowedIPs).toEqual(['10.0.0.1']);
+      expect(freshKey!.restrictions.allowedOrigins).toEqual(['https://analytics.example.com']);
+      expect(freshKey!.restrictions.allowedServices).toEqual(['analytics']);
+      expect(freshKey!.metadata.isActive).toBe(true);
+      expect(freshKey!.metadata.owner).toBe('security-team');
+      expect(freshKey!.rateLimit!.requestsPerMinute).toBe(10);
+
+      await expect(manager.validateKey(apiKey, {
+        ipAddress: '10.0.0.1',
+        origin: 'https://analytics.example.com',
         service: 'analytics'
-      });
-
-      expect(refreshedKey.permissions).toEqual(['read']);
-      expect(refreshedKey.metadata.isActive).toBe(true);
-      expect(refreshedKey.restrictions.allowedServices).toEqual([]);
-      expect(refreshedKey.rateLimit?.requestsPerDay).toBe(1000);
-      expect(validation.valid).toBe(true);
+      })).resolves.toMatchObject({ valid: true });
     });
   });
 });

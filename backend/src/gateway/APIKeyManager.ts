@@ -291,11 +291,8 @@ export class APIKeyManager {
       }
     }
     
-    // Return deep-cloned keys without sensitive information
-    return keys.map(key => this.cloneKey({
-      ...key,
-      keyHash: '[REDACTED]'
-    }));
+    // Return deep-cloned keys without sensitive information.
+    return keys.map(key => this.cloneKeyForList(key));
   }
 
   async recordUsage(usage: Omit<APIKeyUsage, 'timestamp'>): Promise<void> {
@@ -383,8 +380,11 @@ export class APIKeyManager {
     return `key_${Date.now()}_${randomBytes(8).toString('hex')}`;
   }
 
-  private cloneKey(key: APIKey): APIKey {
-    return structuredClone(key);
+  private cloneKeyForList(key: APIKey): APIKey {
+    const clonedKey = structuredClone(key);
+    clonedKey.keyHash = '[REDACTED]';
+
+    return clonedKey;
   }
 
   private checkRestrictions(
