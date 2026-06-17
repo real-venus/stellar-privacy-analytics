@@ -20,6 +20,21 @@ export interface TransformationResult {
   appliedTransformations: string[];
 }
 
+export interface TransformedRequestData {
+  body?: any;
+  query?: any;
+  params?: any;
+  headers?: any;
+}
+
+export interface RequestWithTransformations extends Request {
+  transformedRequest?: TransformedRequestData;
+}
+
+interface ResponseWithData extends Response {
+  data?: any;
+}
+
 export interface MaskingConfig {
   type: 'partial' | 'full' | 'hash';
   preserveLength?: boolean;
@@ -70,13 +85,16 @@ export class RequestTransformer {
 
     const appliedTransformations: string[] = [];
     let transformed = false;
+    const transformedRequest: TransformedRequestData = {};
 
     try {
       // Transform request body
       if (req.body && Object.keys(req.body).length > 0) {
-        const bodyResult = await this.transformData(req.body, rules, context, 'request.body');
+        const bodyClone = this.deepClone(req.body);
+        const bodyResult = await this.transformData(bodyClone, rules, context, 'request.body');
+        transformedRequest.body = bodyResult.data;
+
         if (bodyResult.transformed) {
-          req.body = bodyResult.data;
           transformed = true;
           appliedTransformations.push(...bodyResult.appliedTransformations);
         }
@@ -84,9 +102,11 @@ export class RequestTransformer {
 
       // Transform query parameters
       if (req.query && Object.keys(req.query).length > 0) {
-        const queryResult = await this.transformData(req.query, rules, context, 'request.query');
+        const queryClone = this.deepClone(req.query);
+        const queryResult = await this.transformData(queryClone, rules, context, 'request.query');
+        transformedRequest.query = queryResult.data;
+
         if (queryResult.transformed) {
-          req.query = queryResult.data;
           transformed = true;
           appliedTransformations.push(...queryResult.appliedTransformations);
         }
@@ -94,21 +114,27 @@ export class RequestTransformer {
 
       // Transform path parameters
       if (req.params && Object.keys(req.params).length > 0) {
-        const paramsResult = await this.transformData(req.params, rules, context, 'request.params');
+        const paramsClone = this.deepClone(req.params);
+        const paramsResult = await this.transformData(paramsClone, rules, context, 'request.params');
+        transformedRequest.params = paramsResult.data;
+
         if (paramsResult.transformed) {
-          req.params = paramsResult.data;
           transformed = true;
           appliedTransformations.push(...paramsResult.appliedTransformations);
         }
       }
 
       // Transform headers
-      const headerResult = await this.transformHeaders(req.headers, rules, context);
+      const headerClone = this.deepClone(req.headers);
+      const headerResult = await this.transformHeaders(headerClone, rules, context);
+      transformedRequest.headers = headerResult.data;
+
       if (headerResult.transformed) {
-        req.headers = headerResult.data;
         transformed = true;
         appliedTransformations.push(...headerResult.appliedTransformations);
       }
+
+      (req as RequestWithTransformations).transformedRequest = transformedRequest;
 
       logger.info('Request transformations applied', {
         requestId: context.requestId,
@@ -119,6 +145,7 @@ export class RequestTransformer {
       return {
         success: true,
         transformed,
+        data: transformedRequest,
         appliedTransformations
       };
 
@@ -140,14 +167,15 @@ export class RequestTransformer {
     context: TransformationContext
   ): Promise<TransformationResult> {
     const appliedTransformations: string[] = [];
+    const response = res as ResponseWithData;
 
     try {
       // Get response data
       let responseData: any;
-      if (res.locals && res.locals.responseData) {
-        responseData = res.locals.responseData;
-      } else if (res.data) {
-        responseData = res.data;
+      if (response.locals && response.locals.responseData) {
+        responseData = response.locals.responseData;
+      } else if (response.data) {
+        responseData = response.data;
       }
 
       if (!responseData) {
@@ -162,10 +190,10 @@ export class RequestTransformer {
       
       if (result.transformed) {
         // Update response data
-        if (res.locals) {
-          res.locals.responseData = result.data;
+        if (response.locals) {
+          response.locals.responseData = result.data;
         }
-        res.data = result.data;
+        response.data = result.data;
       }
 
       logger.info('Response transformations applied', {
@@ -247,7 +275,7 @@ export class RequestTransformer {
           const itemPath = `${path}[${i}]`;
           const itemResult = await this.transformData(result[i], rules, context, itemPath);
           
-          transformedArray.push(itemResult.data || result[i]);
+          transformedArray.push(itemResult.transformed ? itemResult.data : result[i]);
           
           if (itemResult.transformed) {
             transformed = true;
@@ -486,26 +514,52 @@ export class RequestTransformer {
   }
 
   private ruleMatchesPath(rule: TransformationRule, path: string, data: any): boolean {
+    const normalizedField = this.normalizeRuleField(rule.field);
+
     // Simple field matching - can be enhanced with regex patterns
-    if (rule.field === '*') {
+    if (normalizedField === '*') {
       return true;
     }
     
-    if (rule.field === path) {
+    if (normalizedField === path) {
       return true;
     }
     
     // Check if field is a property in the current data
-    if (data && typeof data === 'object' && rule.field in data) {
+    if (data && typeof data === 'object' && normalizedField in data) {
       return true;
     }
     
     // Check for nested field matching
-    if (path.endsWith('.' + rule.field)) {
+    if (path.endsWith('.' + normalizedField)) {
       return true;
     }
     
     return false;
+  }
+
+  private normalizeRuleField(field: string): string {
+    if (field.startsWith('req.')) {
+      return field.replace(/^req\./, 'request.');
+    }
+
+    return field;
+  }
+
+  private deepClone<T>(value: T): T {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (typeof globalThis.structuredClone === 'function') {
+      try {
+        return globalThis.structuredClone(value);
+      } catch {
+        // Fall through for values structuredClone cannot copy.
+      }
+    }
+
+    return JSON.parse(JSON.stringify(value)) as T;
   }
 
   private initializeDefaultKeys(): void {
