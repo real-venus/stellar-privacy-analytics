@@ -95,10 +95,11 @@ export class APIKeyManager {
         keyHash,
         keyPrefix,
         permissions: request.permissions,
-        rateLimit: request.rateLimit || {
+        rateLimit: {
           requestsPerMinute: 60,
           requestsPerHour: 1000,
-          requestsPerDay: 10000
+          requestsPerDay: 10000,
+          ...request.rateLimit
         },
         restrictions: {
           allowedIPs: request.restrictions?.allowedIPs || [],
@@ -290,8 +291,8 @@ export class APIKeyManager {
       }
     }
     
-    // Return keys without sensitive information
-    return keys.map(key => ({
+    // Return deep-cloned keys without sensitive information
+    return keys.map(key => this.cloneKey({
       ...key,
       keyHash: '[REDACTED]'
     }));
@@ -380,6 +381,10 @@ export class APIKeyManager {
 
   private generateKeyId(): string {
     return `key_${Date.now()}_${randomBytes(8).toString('hex')}`;
+  }
+
+  private cloneKey(key: APIKey): APIKey {
+    return structuredClone(key);
   }
 
   private checkRestrictions(
