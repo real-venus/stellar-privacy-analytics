@@ -76,11 +76,21 @@ check_prerequisites() {
 setup_environment() {
     print_status "Setting up environment files..."
     
-    # Copy environment files if they don't exist
+    # Copy root .env from template only when both conditions are met:
+    # 1. .env does not already exist
+    # 2. .env.example template is present
     if [ ! -f .env ]; then
-        cp .env.example .env
-        print_success "Created .env file from template"
-        print_warning "Please update .env with your configuration"
+        if [ -f .env.example ]; then
+            if cp .env.example .env; then
+                print_success "Created .env file from template"
+                print_warning "Please update .env with your configuration"
+            else
+                print_error "Failed to copy .env.example to .env"
+                exit 1
+            fi
+        else
+            print_warning ".env.example template not found — skipping .env creation. Please create a .env file manually before running the application."
+        fi
     else
         print_warning ".env file already exists, skipping creation"
     fi
@@ -90,7 +100,15 @@ setup_environment() {
     for module in "${modules[@]}"; do
         if [ -d "$module" ]; then
             if [ ! -f "$module/.env" ]; then
-                cp "$module/.env.example" "$module/.env" 2>/dev/null || print_warning "No .env.example found for $module"
+                if [ -f "$module/.env.example" ]; then
+                    if cp "$module/.env.example" "$module/.env"; then
+                        print_success "Created $module/.env file from template"
+                    else
+                        print_warning "Failed to copy $module/.env.example to $module/.env"
+                    fi
+                else
+                    print_warning "No .env.example found for $module — skipping $module/.env creation"
+                fi
             fi
         fi
     done

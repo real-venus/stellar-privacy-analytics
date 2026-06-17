@@ -1,3 +1,4 @@
+import * as geoip from 'geoip-lite';
 import { logger } from '../utils/logger';
 
 export interface UserAttributes {
@@ -40,7 +41,13 @@ export interface ABACPolicy {
   id: string;
   name: string;
   description: string;
-  rules: ABACRule[];
+  rules?: ABACRule[];
+  target?: {
+    users?: AttributeCondition[];
+    resources?: AttributeCondition[];
+    environment?: AttributeCondition[];
+  };
+  condition?: LogicalExpression;
   priority: number;
   enabled: boolean;
   effect: 'allow' | 'deny';
@@ -169,7 +176,7 @@ export class ABACService {
       const matchedRules: string[] = [];
       
       // Check if policy applies to this user and resource
-      const targetMatch = this.evaluateTarget(policy.target, userAttributes, resource);
+      const targetMatch = this.evaluateTarget(policy.target ?? {}, userAttributes, resource);
       if (!targetMatch) {
         return {
           allowed: false,
@@ -184,6 +191,21 @@ export class ABACService {
         };
       }
       
+      // If there is no condition, default to allow effect
+      if (!policy.condition) {
+        return {
+          allowed: policy.effect === 'allow',
+          reason: `Policy ${policy.effect} - no condition specified`,
+          policy: policy.id,
+          context: {
+            userAttributes,
+            resource,
+            matchedRules: [],
+            timestamp: new Date()
+          }
+        };
+      }
+
       // Evaluate policy condition
       const conditionResult = this.evaluateLogicalExpression(policy.condition, userAttributes, resource);
       
@@ -274,10 +296,11 @@ export class ABACService {
     switch (expression.operator) {
       case 'and':
         const andResults = expression.operands.map(operand => {
-          if ('operator' in operand) {
-            const result = this.evaluateAttributeCondition(operand as AttributeCondition, 
+          if ('attribute' in operand) {
+            const cond = operand as AttributeCondition;
+            const result = this.evaluateAttributeCondition(cond,
               { ...userAttributes, ...resource });
-            if (result) matchedRules.push(`${operand.attribute} ${operand.operator} ${operand.value}`);
+            if (result) matchedRules.push(`${cond.attribute} ${cond.operator} ${cond.value}`);
             return result;
           } else {
             return this.evaluateLogicalExpression(operand as LogicalExpression, userAttributes, resource).result;
@@ -292,10 +315,11 @@ export class ABACService {
         
       case 'or':
         const orResults = expression.operands.map(operand => {
-          if ('operator' in operand) {
-            const result = this.evaluateAttributeCondition(operand as AttributeCondition, 
+          if ('attribute' in operand) {
+            const cond = operand as AttributeCondition;
+            const result = this.evaluateAttributeCondition(cond,
               { ...userAttributes, ...resource });
-            if (result) matchedRules.push(`${operand.attribute} ${operand.operator} ${operand.value}`);
+            if (result) matchedRules.push(`${cond.attribute} ${cond.operator} ${cond.value}`);
             return result;
           } else {
             return this.evaluateLogicalExpression(operand as LogicalExpression, userAttributes, resource).result;
@@ -310,13 +334,14 @@ export class ABACService {
         
       case 'not':
         const operandResult = expression.operands[0];
-        if ('operator' in operandResult) {
-          const result = this.evaluateAttributeCondition(operandResult as AttributeCondition, 
+        if ('attribute' in operandResult) {
+          const cond = operandResult as AttributeCondition;
+          const result = this.evaluateAttributeCondition(cond,
             { ...userAttributes, ...resource });
-          if (result) matchedRules.push(`NOT ${operandResult.attribute} ${operandResult.operator} ${operandResult.value}`);
+          if (result) matchedRules.push(`NOT ${cond.attribute} ${cond.operator} ${cond.value}`);
           return {
             result: !result,
-            explanation: `Negated condition: NOT (${operandResult.attribute} ${operandResult.operator} ${operandResult.value})`,
+            explanation: `Negated condition: NOT (${cond.attribute} ${cond.operator} ${cond.value})`,
             matchedRules
           };
         } else {
@@ -388,7 +413,7 @@ export class ABACService {
   ): ABACPolicy[] {
     return Array.from(this.policies.values())
       .filter(policy => policy.enabled)
-      .filter(policy => this.evaluateTarget(policy.target, userAttributes, resource))
+      .filter(policy => this.evaluateTarget(policy.target ?? {}, userAttributes, resource))
       .sort((a, b) => b.priority - a.priority);
   }
 
@@ -546,7 +571,7 @@ export class ABACService {
   }
 }
 
-class AttributeResolver {
+export class AttributeResolver {
   async resolve(userAttributes: UserAttributes, resource: Resource): Promise<UserAttributes> {
     const resolved = { ...userAttributes };
     
@@ -583,9 +608,31 @@ class AttributeResolver {
     return clearanceMap[department.toLowerCase()] || 'low';
   }
 
-  private async resolveJurisdiction(ipAddress: string): Promise<string> {
-    // In a real implementation, this would use a GeoIP service
-    // For now, return a default
-    return 'US';
+  /**
+   * Resolves the jurisdiction (ISO 3166-1 alpha-2 country code) for a given IP
+   * address using the geoip-lite database. Returns "unknown" if the lookup
+   * fails or the IP address cannot be mapped to a country, so that geo-based
+   * ABAC policies are never silently bypassed with a "US" default.
+   */
+  async resolveJurisdiction(ipAddress: string): Promise<string> {
+    if (!ipAddress || ipAddress.trim() === '') {
+      logger.warn('resolveJurisdiction called with empty IP address — returning "unknown"');
+      return 'unknown';
+    }
+
+    try {
+      const geo = geoip.lookup(ipAddress);
+
+      if (!geo || !geo.country) {
+        logger.warn(`GeoIP lookup returned no result for IP ${ipAddress} — returning "unknown"`);
+        return 'unknown';
+      }
+
+      logger.debug(`GeoIP resolved ${ipAddress} to jurisdiction "${geo.country}"`);
+      return geo.country;
+    } catch (error) {
+      logger.error(`GeoIP lookup error for IP ${ipAddress}:`, error);
+      return 'unknown';
+    }
   }
 }
