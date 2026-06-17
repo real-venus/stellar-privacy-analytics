@@ -9,7 +9,7 @@ const structuredLogFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.json(),
   winston.format.printf(({ timestamp, level, message, service, correlationId, userId, traceId, ...meta }) => {
-    const logEntry = {
+    const logEntry: Record<string, unknown> = {
       timestamp,
       level: level.toUpperCase(),
       message,
