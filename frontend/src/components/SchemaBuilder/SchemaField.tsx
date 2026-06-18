@@ -95,7 +95,6 @@ export const FieldControls: React.FC<FieldControlsProps> = ({
             <input
               type="number"
               value={field.constraints.max || ''}
-<<<<<<< HEAD
               onChange={(e) =>
                 onUpdate({
                   constraints: {
