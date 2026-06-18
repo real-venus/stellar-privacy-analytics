@@ -27,7 +27,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   maxConcurrentUploads = 3,
   enableBatchUpload = true,
   enableRetry = true,
-  maxRetries = 3
+  maxRetries = 3,
 }) => {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -95,7 +95,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         }
 
         const bytes = new Uint8Array(buffer.slice(0, 16));
-        const signature = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const signature = Array.from(bytes)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
 
         // Check for known malicious signatures
         const maliciousSignatures = [
@@ -178,9 +180,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             return;
           }
 
-          const lines = text.split('\n').filter(line => line.trim().length > 0);
+          const lines = text.split('\n').filter((line) => line.trim().length > 0);
           if (lines.length < 2) {
-            resolve({ valid: false, error: 'CSV file must have at least a header and one data row' });
+            resolve({
+              valid: false,
+              error: 'CSV file must have at least a header and one data row',
+            });
             return;
           }
 
@@ -188,7 +193,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           const headerColumns = lines[0].split(',').length;
           const dataColumns = lines[1].split(',').length;
 
-          if (Math.abs(headerColumns - dataColumns) > 2) { // Allow some flexibility
+          if (Math.abs(headerColumns - dataColumns) > 2) {
+            // Allow some flexibility
             resolve({ valid: false, error: 'CSV structure appears inconsistent' });
             return;
           }
@@ -212,16 +218,19 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const initializeUpload = async (file: File): Promise<string> => {
-    const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/v1/data/upload/init`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileSize: file.size,
-      }),
-    });
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/v1/data/upload/init`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+        }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Failed to initialize upload');
@@ -247,10 +256,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     formData.append('fileName', fileName);
     formData.append('fileSize', fileSize.toString());
 
-    const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/v1/data/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/v1/data/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to upload chunk ${chunkIndex}`);
@@ -259,20 +271,18 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
   const uploadFileInChunks = async (uploadFile: UploadFile, retryCount = 0) => {
     try {
-      setUploadingCount(prev => prev + 1);
+      setUploadingCount((prev) => prev + 1);
 
       // Initialize upload
       const uploadId = await initializeUpload(uploadFile.file);
-      
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id 
-          ? { ...f, uploadId, status: 'uploading' }
-          : f
-      ));
+
+      setFiles((prev) =>
+        prev.map((f) => (f.id === uploadFile.id ? { ...f, uploadId, status: 'uploading' } : f))
+      );
 
       // Split file into chunks and upload
       const totalChunks = Math.ceil(uploadFile.file.size / CHUNK_SIZE);
-      
+
       for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
         const start = chunkIndex * CHUNK_SIZE;
         const end = Math.min(start + CHUNK_SIZE, uploadFile.file.size);
@@ -289,17 +299,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       }
 
       // Mark as completed
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id 
-          ? { ...f, status: 'completed' }
-          : f
-      ));
+      setFiles((prev) =>
+        prev.map((f) => (f.id === uploadFile.id ? { ...f, status: 'completed' } : f))
+      );
 
       onUploadComplete?.(uploadFile.file.name, uploadFile.file.size);
-
     } catch (error) {
       console.error(`Upload failed (attempt ${retryCount + 1}):`, error);
-      
+
       if (enableRetry && retryCount < maxRetries) {
         // Exponential backoff
         const delay = Math.pow(2, retryCount) * 1000;
@@ -309,50 +316,49 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         return;
       }
 
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id 
-          ? { ...f, status: 'error' }
-          : f
-      ));
+      setFiles((prev) => prev.map((f) => (f.id === uploadFile.id ? { ...f, status: 'error' } : f)));
     } finally {
-      setUploadingCount(prev => prev - 1);
+      setUploadingCount((prev) => prev - 1);
     }
   };
 
-  const handleFiles = useCallback(async (newFiles: FileList | null) => {
-    if (!newFiles) return;
+  const handleFiles = useCallback(
+    async (newFiles: FileList | null) => {
+      if (!newFiles) return;
 
-    setError(null);
-    const validFiles: UploadFile[] = [];
+      setError(null);
+      const validFiles: UploadFile[] = [];
 
-    for (const file of Array.from(newFiles)) {
-      const validationError = await validateFile(file);
-      if (validationError) {
-        setError(`${file.name}: ${validationError}`);
-        continue; // Skip invalid files but continue with others
-      }
+      for (const file of Array.from(newFiles)) {
+        const validationError = await validateFile(file);
+        if (validationError) {
+          setError(`${file.name}: ${validationError}`);
+          continue; // Skip invalid files but continue with others
+        }
 
-      validFiles.push({
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        file,
-        status: 'pending'
-      });
-    }
-
-    if (validFiles.length > 0) {
-      setFiles(prev => [...prev, ...validFiles]);
-
-      if (enableBatchUpload) {
-        // Start uploads with concurrency control
-        startBatchUpload(validFiles);
-      } else {
-        // Start uploading immediately without queuing
-        validFiles.forEach(uploadFile => {
-          uploadFileInChunks(uploadFile);
+        validFiles.push({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          file,
+          status: 'pending',
         });
       }
-    }
-  }, [maxFileSize, allowedTypes, onUploadComplete, enableBatchUpload, enableRetry, maxRetries]);
+
+      if (validFiles.length > 0) {
+        setFiles((prev) => [...prev, ...validFiles]);
+
+        if (enableBatchUpload) {
+          // Start uploads with concurrency control
+          startBatchUpload(validFiles);
+        } else {
+          // Start uploading immediately without queuing
+          validFiles.forEach((uploadFile) => {
+            uploadFileInChunks(uploadFile);
+          });
+        }
+      }
+    },
+    [maxFileSize, allowedTypes, onUploadComplete, enableBatchUpload, enableRetry, maxRetries]
+  );
 
   const startBatchUpload = (uploadFiles: UploadFile[]) => {
     let index = 0;
@@ -401,15 +407,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const removeFile = (fileId: string) => {
-    setFiles(prev => prev.filter(f => f.id !== fileId));
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
   const handleUploadComplete = (fileId: string) => {
-    setFiles(prev => prev.map(f => 
-      f.id === fileId 
-        ? { ...f, status: 'completed' }
-        : f
-    ));
+    setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, status: 'completed' } : f)));
   };
 
   const handleUploadCancel = (fileId: string) => {
@@ -430,23 +432,23 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
       >
-        <Upload className={`mx-auto h-12 w-12 transition-colors ${
-          isDragging ? 'text-blue-500' : 'text-gray-400'
-        }`} />
-        
+        <Upload
+          className={`mx-auto h-12 w-12 transition-colors ${
+            isDragging ? 'text-blue-500' : 'text-gray-400'
+          }`}
+        />
+
         <div className="mt-4">
-          <p className="text-lg font-medium text-gray-900">
-            Drop files here or click to upload
-          </p>
+          <p className="text-lg font-medium text-gray-900">Drop files here or click to upload</p>
           <p className="text-sm text-gray-600 mt-1">
             CSV, JSON, or Parquet files up to {formatBytes(maxFileSize)}
           </p>
         </div>
-        
+
         <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           Select Files
         </button>
-        
+
         <input
           ref={fileInputRef}
           type="file"
@@ -494,20 +496,24 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 <div>
                   <h3 className="text-sm font-medium text-blue-900">Batch Upload Progress</h3>
                   <p className="text-xs text-blue-700">
-                    {files.filter(f => f.status === 'completed').length} of {files.length} files completed
+                    {files.filter((f) => f.status === 'completed').length} of {files.length} files
+                    completed
                     {uploadingCount > 0 && ` • ${uploadingCount} uploading`}
                   </p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-sm font-medium text-blue-900">
-                  {Math.round((files.filter(f => f.status === 'completed').length / files.length) * 100)}%
+                  {Math.round(
+                    (files.filter((f) => f.status === 'completed').length / files.length) * 100
+                  )}
+                  %
                 </div>
                 <div className="w-20 bg-blue-200 rounded-full h-1 mt-1">
                   <div
                     className="bg-blue-600 h-1 rounded-full transition-all duration-300"
                     style={{
-                      width: `${(files.filter(f => f.status === 'completed').length / files.length) * 100}%`
+                      width: `${(files.filter((f) => f.status === 'completed').length / files.length) * 100}%`,
                     }}
                   />
                 </div>
@@ -518,53 +524,49 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       </AnimatePresence>
 
       {/* File List */}
-            
-            {files.map((uploadFile) => (
-              <div key={uploadFile.id}>
-                {uploadFile.uploadId ? (
-                  <UploadProgress
-                    uploadId={uploadFile.uploadId}
-                    fileName={uploadFile.file.name}
-                    fileSize={uploadFile.file.size}
-                    onCancel={() => handleUploadCancel(uploadFile.id)}
-                    onComplete={() => handleUploadComplete(uploadFile.id)}
-                  />
-                ) : (
-                  // Pending state - show file info while initializing
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="border border-gray-200 rounded-lg p-4 bg-white"
+
+      {files.map((uploadFile) => (
+        <div key={uploadFile.id}>
+          {uploadFile.uploadId ? (
+            <UploadProgress
+              uploadId={uploadFile.uploadId}
+              fileName={uploadFile.file.name}
+              fileSize={uploadFile.file.size}
+              onCancel={() => handleUploadCancel(uploadFile.id)}
+              onComplete={() => handleUploadComplete(uploadFile.id)}
+            />
+          ) : (
+            // Pending state - show file info while initializing
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="border border-gray-200 rounded-lg p-4 bg-white"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <FileText className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">{uploadFile.file.name}</h4>
+                    <p className="text-xs text-gray-500">{formatBytes(uploadFile.file.size)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <button
+                    onClick={() => removeFile(uploadFile.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-gray-100 rounded-lg">
-                          <FileText className="h-5 w-5 text-gray-600" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {uploadFile.file.name}
-                          </h4>
-                          <p className="text-xs text-gray-500">
-                            {formatBytes(uploadFile.file.size)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                        <button
-                          onClick={() => removeFile(uploadFile.id)}
-                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-            ))}
+            </motion.div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

@@ -1,6 +1,6 @@
-import { EventEmitter } from 'events';
-import { logger } from '../../utils/logger';
-import { DistributedCacheManager } from './DistributedCacheManager';
+import { EventEmitter } from "events";
+import { logger } from "../../utils/logger";
+import { DistributedCacheManager } from "./DistributedCacheManager";
 
 export interface PerformanceTestConfig {
   duration: number; // milliseconds
@@ -74,9 +74,11 @@ export class CachePerformanceTester extends EventEmitter {
   /**
    * Run performance test
    */
-  async runTest(config: Partial<PerformanceTestConfig> = {}): Promise<PerformanceTestResult> {
+  async runTest(
+    config: Partial<PerformanceTestConfig> = {},
+  ): Promise<PerformanceTestResult> {
     if (this.isRunning) {
-      throw new Error('Performance test already running');
+      throw new Error("Performance test already running");
     }
 
     const testConfig: PerformanceTestConfig = {
@@ -86,11 +88,11 @@ export class CachePerformanceTester extends EventEmitter {
         get: 70,
         set: 20,
         delete: 5,
-        invalidate: 5
+        invalidate: 5,
       },
       keyCount: config.keyCount || 1000,
       valueSize: config.valueSize || 1024, // 1KB
-      warmupDuration: config.warmupDuration || 5000 // 5 seconds
+      warmupDuration: config.warmupDuration || 5000, // 5 seconds
     };
 
     const testId = this.generateTestId();
@@ -107,7 +109,7 @@ export class CachePerformanceTester extends EventEmitter {
         get: 0,
         set: 0,
         delete: 0,
-        invalidate: 0
+        invalidate: 0,
       },
       latency: {
         min: Infinity,
@@ -115,25 +117,28 @@ export class CachePerformanceTester extends EventEmitter {
         mean: 0,
         median: 0,
         p95: 0,
-        p99: 0
+        p99: 0,
       },
       throughput: {
         operationsPerSecond: 0,
-        bytesPerSecond: 0
+        bytesPerSecond: 0,
       },
       cacheMetrics: {
         hitRate: 0,
         missRate: 0,
-        evictionRate: 0
+        evictionRate: 0,
       },
-      errors: []
+      errors: [],
     };
 
     this.isRunning = true;
 
     try {
-      logger.info('Starting cache performance test', { testId, config: testConfig });
-      this.emit('testStarted', { testId, config: testConfig });
+      logger.info("Starting cache performance test", {
+        testId,
+        config: testConfig,
+      });
+      this.emit("testStarted", { testId, config: testConfig });
 
       // Warmup phase
       await this.warmup(testConfig);
@@ -145,8 +150,10 @@ export class CachePerformanceTester extends EventEmitter {
       const startTime = Date.now();
       const latencies: number[] = [];
 
-      const workers = Array.from({ length: testConfig.concurrency }, (_, index) =>
-        this.runWorker(index, testConfig, result, latencies, startTime)
+      const workers = Array.from(
+        { length: testConfig.concurrency },
+        (_, index) =>
+          this.runWorker(index, testConfig, result, latencies, startTime),
       );
 
       await Promise.all(workers);
@@ -163,24 +170,24 @@ export class CachePerformanceTester extends EventEmitter {
       result.cacheMetrics = {
         hitRate: cacheMetrics.hitRate,
         missRate: 1 - cacheMetrics.hitRate,
-        evictionRate: cacheMetrics.evictions / cacheMetrics.totalRequests
+        evictionRate: cacheMetrics.evictions / cacheMetrics.totalRequests,
       };
 
       this.testResults.set(testId, result);
 
-      logger.info('Cache performance test completed', {
+      logger.info("Cache performance test completed", {
         testId,
         duration: result.duration,
         operations: result.operations.total,
-        throughput: result.throughput.operationsPerSecond
+        throughput: result.throughput.operationsPerSecond,
       });
 
-      this.emit('testCompleted', result);
+      this.emit("testCompleted", result);
 
       return result;
     } catch (error) {
-      logger.error('Cache performance test failed:', error);
-      this.emit('testFailed', { testId, error });
+      logger.error("Cache performance test failed:", error);
+      this.emit("testFailed", { testId, error });
       throw error;
     } finally {
       this.isRunning = false;
@@ -190,13 +197,15 @@ export class CachePerformanceTester extends EventEmitter {
   /**
    * Run load test scenario
    */
-  async runScenario(scenario: LoadTestScenario): Promise<PerformanceTestResult> {
+  async runScenario(
+    scenario: LoadTestScenario,
+  ): Promise<PerformanceTestResult> {
     logger.info(`Running load test scenario: ${scenario.name}`);
-    this.emit('scenarioStarted', scenario);
+    this.emit("scenarioStarted", scenario);
 
     const result = await this.runTest(scenario.config);
 
-    this.emit('scenarioCompleted', { scenario, result });
+    this.emit("scenarioCompleted", { scenario, result });
 
     return result;
   }
@@ -204,7 +213,9 @@ export class CachePerformanceTester extends EventEmitter {
   /**
    * Run multiple scenarios
    */
-  async runScenarios(scenarios: LoadTestScenario[]): Promise<PerformanceTestResult[]> {
+  async runScenarios(
+    scenarios: LoadTestScenario[],
+  ): Promise<PerformanceTestResult[]> {
     const results: PerformanceTestResult[] = [];
 
     for (const scenario of scenarios) {
@@ -224,77 +235,77 @@ export class CachePerformanceTester extends EventEmitter {
   getPredefinedScenarios(): LoadTestScenario[] {
     return [
       {
-        name: 'Light Load',
-        description: 'Simulates light traffic with mostly reads',
+        name: "Light Load",
+        description: "Simulates light traffic with mostly reads",
         config: {
           duration: 30000,
           concurrency: 5,
           operationMix: { get: 80, set: 15, delete: 3, invalidate: 2 },
           keyCount: 500,
           valueSize: 512,
-          warmupDuration: 3000
-        }
+          warmupDuration: 3000,
+        },
       },
       {
-        name: 'Normal Load',
-        description: 'Simulates normal production traffic',
+        name: "Normal Load",
+        description: "Simulates normal production traffic",
         config: {
           duration: 60000,
           concurrency: 10,
           operationMix: { get: 70, set: 20, delete: 5, invalidate: 5 },
           keyCount: 1000,
           valueSize: 1024,
-          warmupDuration: 5000
-        }
+          warmupDuration: 5000,
+        },
       },
       {
-        name: 'Heavy Load',
-        description: 'Simulates peak traffic conditions',
+        name: "Heavy Load",
+        description: "Simulates peak traffic conditions",
         config: {
           duration: 60000,
           concurrency: 25,
           operationMix: { get: 65, set: 25, delete: 5, invalidate: 5 },
           keyCount: 2000,
           valueSize: 2048,
-          warmupDuration: 5000
-        }
+          warmupDuration: 5000,
+        },
       },
       {
-        name: 'Write Heavy',
-        description: 'Simulates write-intensive workload',
+        name: "Write Heavy",
+        description: "Simulates write-intensive workload",
         config: {
           duration: 60000,
           concurrency: 15,
           operationMix: { get: 40, set: 50, delete: 5, invalidate: 5 },
           keyCount: 1000,
           valueSize: 1024,
-          warmupDuration: 5000
-        }
+          warmupDuration: 5000,
+        },
       },
       {
-        name: 'Read Heavy',
-        description: 'Simulates read-intensive workload',
+        name: "Read Heavy",
+        description: "Simulates read-intensive workload",
         config: {
           duration: 60000,
           concurrency: 20,
           operationMix: { get: 90, set: 7, delete: 2, invalidate: 1 },
           keyCount: 1500,
           valueSize: 1024,
-          warmupDuration: 5000
-        }
+          warmupDuration: 5000,
+        },
       },
       {
-        name: 'Stress Test',
-        description: 'Pushes cache to its limits',
+        name: "Stress Test",
+        description: "Pushes cache to its limits",
         config: {
           duration: 120000,
           concurrency: 50,
           operationMix: { get: 60, set: 30, delete: 5, invalidate: 5 },
           keyCount: 5000,
           valueSize: 4096,
-          warmupDuration: 10000
-        }
-      }
+          warmupDuration: 10000,
+        },
+      },
     ];
   }
 
@@ -302,7 +313,7 @@ export class CachePerformanceTester extends EventEmitter {
    * Warmup phase
    */
   private async warmup(config: PerformanceTestConfig): Promise<void> {
-    logger.info('Starting warmup phase', { duration: config.warmupDuration });
+    logger.info("Starting warmup phase", { duration: config.warmupDuration });
 
     const keys = this.generateKeys(config.keyCount);
     const value = this.generateValue(config.valueSize);
@@ -311,12 +322,10 @@ export class CachePerformanceTester extends EventEmitter {
     const batchSize = 100;
     for (let i = 0; i < keys.length; i += batchSize) {
       const batch = keys.slice(i, i + batchSize);
-      await Promise.all(
-        batch.map(key => this.cacheManager.set(key, value))
-      );
+      await Promise.all(batch.map((key) => this.cacheManager.set(key, value)));
     }
 
-    logger.info('Warmup phase completed');
+    logger.info("Warmup phase completed");
   }
 
   /**
@@ -327,7 +336,7 @@ export class CachePerformanceTester extends EventEmitter {
     config: PerformanceTestConfig,
     result: PerformanceTestResult,
     latencies: number[],
-    startTime: number
+    startTime: number,
   ): Promise<void> {
     const keys = this.generateKeys(config.keyCount);
     const value = this.generateValue(config.valueSize);
@@ -340,22 +349,22 @@ export class CachePerformanceTester extends EventEmitter {
 
       try {
         switch (operation) {
-          case 'get':
+          case "get":
             await this.cacheManager.get(key);
             result.operations.get++;
             break;
 
-          case 'set':
+          case "set":
             await this.cacheManager.set(key, value);
             result.operations.set++;
             break;
 
-          case 'delete':
+          case "delete":
             await this.cacheManager.delete(key);
             result.operations.delete++;
             break;
 
-          case 'invalidate':
+          case "invalidate":
             await this.cacheManager.invalidatePattern(`${key}*`);
             result.operations.invalidate++;
             break;
@@ -375,8 +384,8 @@ export class CachePerformanceTester extends EventEmitter {
         result.operations.failed++;
         result.errors.push({
           operation,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date()
+          error: error instanceof Error ? error.message : "Unknown error",
+          timestamp: new Date(),
         });
       }
     }
@@ -385,7 +394,10 @@ export class CachePerformanceTester extends EventEmitter {
   /**
    * Calculate statistics
    */
-  private calculateStatistics(result: PerformanceTestResult, latencies: number[]): void {
+  private calculateStatistics(
+    result: PerformanceTestResult,
+    latencies: number[],
+  ): void {
     if (latencies.length === 0) {
       return;
     }
@@ -399,9 +411,10 @@ export class CachePerformanceTester extends EventEmitter {
 
     // Calculate median
     const mid = Math.floor(latencies.length / 2);
-    result.latency.median = latencies.length % 2 === 0
-      ? (latencies[mid - 1] + latencies[mid]) / 2
-      : latencies[mid];
+    result.latency.median =
+      latencies.length % 2 === 0
+        ? (latencies[mid - 1] + latencies[mid]) / 2
+        : latencies[mid];
 
     // Calculate percentiles
     result.latency.p95 = latencies[Math.floor(latencies.length * 0.95)];
@@ -409,15 +422,16 @@ export class CachePerformanceTester extends EventEmitter {
 
     // Calculate throughput
     const durationSeconds = result.duration / 1000;
-    result.throughput.operationsPerSecond = result.operations.total / durationSeconds;
-    result.throughput.bytesPerSecond = 
+    result.throughput.operationsPerSecond =
+      result.operations.total / durationSeconds;
+    result.throughput.bytesPerSecond =
       (result.operations.total * result.config.valueSize) / durationSeconds;
   }
 
   /**
    * Select operation based on mix
    */
-  private selectOperation(mix: PerformanceTestConfig['operationMix']): string {
+  private selectOperation(mix: PerformanceTestConfig["operationMix"]): string {
     const rand = Math.random() * 100;
     let cumulative = 0;
 
@@ -428,7 +442,7 @@ export class CachePerformanceTester extends EventEmitter {
       }
     }
 
-    return 'get'; // Default
+    return "get"; // Default
   }
 
   /**
@@ -442,7 +456,7 @@ export class CachePerformanceTester extends EventEmitter {
    * Generate value
    */
   private generateValue(size: number): string {
-    return 'x'.repeat(size);
+    return "x".repeat(size);
   }
 
   /**
@@ -456,7 +470,7 @@ export class CachePerformanceTester extends EventEmitter {
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -478,7 +492,7 @@ export class CachePerformanceTester extends EventEmitter {
    */
   generateReport(testId: string): string {
     const result = this.testResults.get(testId);
-    
+
     if (!result) {
       throw new Error(`Test result not found: ${testId}`);
     }
@@ -523,8 +537,11 @@ Cache Metrics:
 - Eviction Rate: ${(result.cacheMetrics.evictionRate * 100).toFixed(2)}%
 
 Errors: ${result.errors.length}
-${result.errors.slice(0, 10).map(e => `  - ${e.operation}: ${e.error}`).join('\n')}
-${result.errors.length > 10 ? `  ... and ${result.errors.length - 10} more` : ''}
+${result.errors
+  .slice(0, 10)
+  .map((e) => `  - ${e.operation}: ${e.error}`)
+  .join("\n")}
+${result.errors.length > 10 ? `  ... and ${result.errors.length - 10} more` : ""}
 
 ======================================
 `;
@@ -540,43 +557,64 @@ ${result.errors.length > 10 ? `  ... and ${result.errors.length - 10} more` : ''
     const result2 = this.testResults.get(testId2);
 
     if (!result1 || !result2) {
-      throw new Error('One or both test results not found');
+      throw new Error("One or both test results not found");
     }
 
     const comparison = {
       throughput: {
         test1: result1.throughput.operationsPerSecond,
         test2: result2.throughput.operationsPerSecond,
-        improvement: ((result2.throughput.operationsPerSecond - result1.throughput.operationsPerSecond) / 
-                     result1.throughput.operationsPerSecond * 100).toFixed(2) + '%'
+        improvement:
+          (
+            ((result2.throughput.operationsPerSecond -
+              result1.throughput.operationsPerSecond) /
+              result1.throughput.operationsPerSecond) *
+            100
+          ).toFixed(2) + "%",
       },
       latency: {
         mean: {
           test1: result1.latency.mean,
           test2: result2.latency.mean,
-          improvement: ((result1.latency.mean - result2.latency.mean) / 
-                       result1.latency.mean * 100).toFixed(2) + '%'
+          improvement:
+            (
+              ((result1.latency.mean - result2.latency.mean) /
+                result1.latency.mean) *
+              100
+            ).toFixed(2) + "%",
         },
         p95: {
           test1: result1.latency.p95,
           test2: result2.latency.p95,
-          improvement: ((result1.latency.p95 - result2.latency.p95) / 
-                       result1.latency.p95 * 100).toFixed(2) + '%'
-        }
+          improvement:
+            (
+              ((result1.latency.p95 - result2.latency.p95) /
+                result1.latency.p95) *
+              100
+            ).toFixed(2) + "%",
+        },
       },
       hitRate: {
         test1: result1.cacheMetrics.hitRate,
         test2: result2.cacheMetrics.hitRate,
-        improvement: ((result2.cacheMetrics.hitRate - result1.cacheMetrics.hitRate) / 
-                     result1.cacheMetrics.hitRate * 100).toFixed(2) + '%'
+        improvement:
+          (
+            ((result2.cacheMetrics.hitRate - result1.cacheMetrics.hitRate) /
+              result1.cacheMetrics.hitRate) *
+            100
+          ).toFixed(2) + "%",
       },
       errorRate: {
         test1: result1.operations.failed / result1.operations.total,
         test2: result2.operations.failed / result2.operations.total,
-        improvement: (((result1.operations.failed / result1.operations.total) - 
-                      (result2.operations.failed / result2.operations.total)) / 
-                     (result1.operations.failed / result1.operations.total) * 100).toFixed(2) + '%'
-      }
+        improvement:
+          (
+            ((result1.operations.failed / result1.operations.total -
+              result2.operations.failed / result2.operations.total) /
+              (result1.operations.failed / result1.operations.total)) *
+            100
+          ).toFixed(2) + "%",
+      },
     };
 
     return comparison;

@@ -4,8 +4,8 @@
 // assertions will be re-introduced in a follow-up commit once the underlying
 // utilities are stable.
 
-describe('DifferentialPrivacy', () => {
-  it('placeholder — real assertion suite to be re-added', () => {
+describe("DifferentialPrivacy", () => {
+  it("placeholder — real assertion suite to be re-added", () => {
     expect(true).toBe(true);
   });
 });

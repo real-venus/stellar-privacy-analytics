@@ -20,7 +20,7 @@ export const Analytics: React.FC = () => {
       icon: BarChart3,
       color: 'bg-blue-500',
       privacy: 'High',
-      duration: '2-5 min'
+      duration: '2-5 min',
     },
     {
       id: 'predictive',
@@ -29,7 +29,7 @@ export const Analytics: React.FC = () => {
       icon: TrendingUp,
       color: 'bg-green-500',
       privacy: 'Maximum',
-      duration: '5-10 min'
+      duration: '5-10 min',
     },
     {
       id: 'segmentation',
@@ -38,7 +38,7 @@ export const Analytics: React.FC = () => {
       icon: Users,
       color: 'bg-purple-500',
       privacy: 'High',
-      duration: '3-7 min'
+      duration: '3-7 min',
     },
     {
       id: 'anomaly',
@@ -47,8 +47,8 @@ export const Analytics: React.FC = () => {
       icon: Target,
       color: 'bg-red-500',
       privacy: 'Maximum',
-      duration: '4-8 min'
-    }
+      duration: '4-8 min',
+    },
   ];
 
   const recentAnalyses = [
@@ -59,7 +59,7 @@ export const Analytics: React.FC = () => {
       status: 'completed',
       accuracy: '94%',
       privacyScore: 'High',
-      completedAt: '2 hours ago'
+      completedAt: '2 hours ago',
     },
     {
       id: 2,
@@ -68,7 +68,7 @@ export const Analytics: React.FC = () => {
       status: 'running',
       progress: 67,
       privacyScore: 'Maximum',
-      startedAt: '15 min ago'
+      startedAt: '15 min ago',
     },
     {
       id: 3,
@@ -77,21 +77,23 @@ export const Analytics: React.FC = () => {
       status: 'completed',
       accuracy: '89%',
       privacyScore: 'High',
-      completedAt: '1 day ago'
-    }
+      completedAt: '1 day ago',
+    },
   ];
 
   // Filter analysis types based on search term
-  const filteredAnalysisTypes = analysisTypes.filter(analysis =>
-    analysis.name.toLowerCase().includes(analysisSearchTerm.toLowerCase()) ||
-    analysis.description.toLowerCase().includes(analysisSearchTerm.toLowerCase())
+  const filteredAnalysisTypes = analysisTypes.filter(
+    (analysis) =>
+      analysis.name.toLowerCase().includes(analysisSearchTerm.toLowerCase()) ||
+      analysis.description.toLowerCase().includes(analysisSearchTerm.toLowerCase())
   );
 
   // Filter recent analyses based on search term
-  const filteredRecentAnalyses = recentAnalyses.filter(analysis =>
-    analysis.name.toLowerCase().includes(recentSearchTerm.toLowerCase()) ||
-    analysis.type.toLowerCase().includes(recentSearchTerm.toLowerCase()) ||
-    analysis.privacyScore.toLowerCase().includes(recentSearchTerm.toLowerCase())
+  const filteredRecentAnalyses = recentAnalyses.filter(
+    (analysis) =>
+      analysis.name.toLowerCase().includes(recentSearchTerm.toLowerCase()) ||
+      analysis.type.toLowerCase().includes(recentSearchTerm.toLowerCase()) ||
+      analysis.privacyScore.toLowerCase().includes(recentSearchTerm.toLowerCase())
   );
 
   return (
@@ -200,7 +202,7 @@ export const Analytics: React.FC = () => {
                 );
               })}
             </div>
-            
+
             {selectedAnalysis && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -248,10 +250,13 @@ export const Analytics: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center">
                     <h3 className="font-medium text-gray-900">{analysis.name}</h3>
-                    <span className={`ml-2 px-2 py-1 text-xs font-medium rounded ${
-                      analysis.privacyScore === 'Maximum' ? 'bg-purple-100 text-purple-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs font-medium rounded ${
+                        analysis.privacyScore === 'Maximum'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}
+                    >
                       {analysis.privacyScore}
                     </span>
                   </div>
@@ -310,7 +315,10 @@ export const Analytics: React.FC = () => {
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800">Privacy-Protected Analysis</h3>
             <div className="mt-2 text-sm text-blue-700">
-              <p>All analyses are performed with differential privacy, ensuring that individual data points cannot be identified while maintaining statistical accuracy.</p>
+              <p>
+                All analyses are performed with differential privacy, ensuring that individual data
+                points cannot be identified while maintaining statistical accuracy.
+              </p>
               <ul className="mt-2 list-disc list-inside space-y-1">
                 <li>Data is encrypted before processing</li>
                 <li>Statistical noise is added to protect privacy</li>

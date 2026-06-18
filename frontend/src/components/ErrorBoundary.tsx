@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
-      errorId: ''
+      errorId: '',
     };
   }
 
@@ -63,14 +63,14 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: true,
       error,
       errorInfo: null,
-      errorId: Math.random().toString(36).substr(2, 9)
+      errorId: Math.random().toString(36).substr(2, 9),
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({
       errorInfo,
-      errorId: Math.random().toString(36).substr(2, 9)
+      errorId: Math.random().toString(36).substr(2, 9),
     });
 
     // Log error to console
@@ -78,7 +78,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Show toast notification
     toast.error('Something went wrong. Please try refreshing the page.', {
-      duration: 5000
+      duration: 5000,
     });
 
     // Call custom error handler if provided
@@ -99,7 +99,7 @@ export class ErrorBoundary extends Component<Props, State> {
         componentStack: truncateStack(errorInfo.componentStack),
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
-        url: window.location.href
+        url: window.location.href,
       };
 
       let existing: unknown[] = [];
@@ -137,7 +137,7 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
-      errorId: ''
+      errorId: '',
     });
   };
 
@@ -155,11 +155,12 @@ export class ErrorBoundary extends Component<Props, State> {
       error: this.state.error?.message,
       stack: this.state.error?.stack,
       componentStack: this.state.errorInfo?.componentStack,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     // Copy to clipboard
-    navigator.clipboard.writeText(JSON.stringify(errorReport, null, 2))
+    navigator.clipboard
+      .writeText(JSON.stringify(errorReport, null, 2))
       .then(() => {
         toast.success('Error report copied to clipboard');
       })
@@ -190,7 +191,8 @@ export class ErrorBoundary extends Component<Props, State> {
             </h1>
 
             <p className="text-gray-600 text-center mb-6">
-              We're sorry, but something unexpected happened. The error has been logged for debugging.
+              We're sorry, but something unexpected happened. The error has been logged for
+              debugging.
             </p>
 
             <div className="bg-gray-50 rounded-lg p-3 mb-6">
@@ -238,9 +240,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <div className="mt-6 pt-4 border-t border-gray-200">
               <details className="text-xs text-gray-500">
-                <summary className="cursor-pointer hover:text-gray-700">
-                  Technical Details
-                </summary>
+                <summary className="cursor-pointer hover:text-gray-700">Technical Details</summary>
                 <div className="mt-2 space-y-2">
                   <div>
                     <strong>Stack Trace:</strong>

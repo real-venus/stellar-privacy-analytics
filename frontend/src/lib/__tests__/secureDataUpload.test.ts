@@ -24,10 +24,10 @@ describe('Secure Data Upload', () => {
       const testData = 'test data for integrity';
       const buffer = new TextEncoder().encode(testData);
       const checksum = await WebCryptoService.generateChecksum(buffer);
-      
+
       const mockFile = new File([buffer], 'test.txt', { type: 'text/plain' });
       const isValid = await WebCryptoService.verifyFileIntegrity(mockFile, checksum);
-      
+
       expect(isValid).toBe(true);
     });
   });
@@ -41,7 +41,7 @@ describe('Secure Data Upload', () => {
       const mockProof = {
         proof: new Uint8Array([1, 2, 3, 4]),
         publicInputs: new Uint8Array([5, 6, 7, 8]),
-        verificationKey: 'test-key'
+        verificationKey: 'test-key',
       };
 
       const serialized = await ZKProofService.serializeProof(mockProof);
@@ -61,7 +61,7 @@ describe('Secure Data Upload', () => {
         zkProofHash: 'test-zk-hash',
         timestamp: Date.now(),
         network: 'testnet',
-        verificationUrl: 'https://test.stellar.org/tx/test-tx-hash'
+        verificationUrl: 'https://test.stellar.org/tx/test-tx-hash',
       };
 
       const receiptUrl = StellarWalletService.generateReceiptPDF(mockReceipt);

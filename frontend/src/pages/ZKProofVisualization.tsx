@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Shield, 
-  Lock, 
-  Key, 
-  Zap, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Shield,
+  Lock,
+  Key,
+  Zap,
+  Clock,
+  CheckCircle,
+  XCircle,
   Info,
   Play,
   Pause,
@@ -22,7 +22,7 @@ import {
   CircuitBoard,
   Network,
   Eye,
-  EyeOff
+  EyeOff,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -78,8 +78,8 @@ const PROOF_TYPES: ProofType[] = [
       'Smallest proof size among zk-SNARKs',
       'Fastest verification time',
       'Requires trusted setup ceremony',
-      'Circuit-specific setup'
-    ]
+      'Circuit-specific setup',
+    ],
   },
   {
     id: 'plonk',
@@ -94,8 +94,8 @@ const PROOF_TYPES: ProofType[] = [
       'Universal setup (permutation)',
       'No trusted setup required',
       'Flexible circuit updates',
-      'Batch verification support'
-    ]
+      'Batch verification support',
+    ],
   },
   {
     id: 'bulletproofs',
@@ -110,9 +110,9 @@ const PROOF_TYPES: ProofType[] = [
       'No trusted setup',
       'Excellent for range proofs',
       'Proof size logarithmic in witness',
-      'Slower verification'
-    ]
-  }
+      'Slower verification',
+    ],
+  },
 ];
 
 const ZKProofVisualization: React.FC = () => {
@@ -133,43 +133,43 @@ const ZKProofVisualization: React.FC = () => {
         title: 'Trusted Setup',
         description: 'Generate proving and verification keys',
         status: 'pending',
-        details: ['Create toxic waste', 'Generate parameters', 'Discard secrets']
+        details: ['Create toxic waste', 'Generate parameters', 'Discard secrets'],
       },
       {
         id: 'witness',
         title: 'Witness Computation',
         description: 'Compute witness from private inputs',
         status: 'pending',
-        details: ['Evaluate circuit', 'Generate assignments', 'Satisfy constraints']
+        details: ['Evaluate circuit', 'Generate assignments', 'Satisfy constraints'],
       },
       {
         id: 'commitment',
         title: 'Commitment Scheme',
         description: 'Create polynomial commitments',
         status: 'pending',
-        details: ['Encode witness', 'Generate commitments', 'Hide information']
+        details: ['Encode witness', 'Generate commitments', 'Hide information'],
       },
       {
         id: 'challenge',
         title: 'Challenge Generation',
         description: 'Verifier generates random challenge',
         status: 'pending',
-        details: ['Random oracle', 'Fiat-Shamir transform', 'Non-interactive']
+        details: ['Random oracle', 'Fiat-Shamir transform', 'Non-interactive'],
       },
       {
         id: 'response',
         title: 'Response Computation',
         description: 'Prover computes response to challenge',
         status: 'pending',
-        details: ['Evaluate polynomials', 'Compute proofs', 'Generate response']
+        details: ['Evaluate polynomials', 'Compute proofs', 'Generate response'],
       },
       {
         id: 'verification',
         title: 'Verification',
         description: 'Verifier checks proof validity',
         status: 'pending',
-        details: ['Check equations', 'Verify commitments', 'Accept or reject']
-      }
+        details: ['Check equations', 'Verify commitments', 'Accept or reject'],
+      },
     ];
     setProofSteps(steps);
   }, []);
@@ -177,14 +177,44 @@ const ZKProofVisualization: React.FC = () => {
   // Initialize circuit visualization
   const initializeCircuit = useCallback(() => {
     const nodes: CircuitNode[] = [
-      { id: 'in1', type: 'input', label: 'Input A', position: { x: 50, y: 50 }, connections: ['g1'] },
-      { id: 'in2', type: 'input', label: 'Input B', position: { x: 50, y: 150 }, connections: ['g1'] },
+      {
+        id: 'in1',
+        type: 'input',
+        label: 'Input A',
+        position: { x: 50, y: 50 },
+        connections: ['g1'],
+      },
+      {
+        id: 'in2',
+        type: 'input',
+        label: 'Input B',
+        position: { x: 50, y: 150 },
+        connections: ['g1'],
+      },
       { id: 'g1', type: 'gate', label: 'ADD', position: { x: 200, y: 100 }, connections: ['g2'] },
-      { id: 'in3', type: 'input', label: 'Input C', position: { x: 50, y: 250 }, connections: ['g2'] },
+      {
+        id: 'in3',
+        type: 'input',
+        label: 'Input C',
+        position: { x: 50, y: 250 },
+        connections: ['g2'],
+      },
       { id: 'g2', type: 'gate', label: 'MUL', position: { x: 350, y: 150 }, connections: ['out'] },
       { id: 'out', type: 'output', label: 'Output', position: { x: 500, y: 150 }, connections: [] },
-      { id: 'c1', type: 'constraint', label: 'Constraint 1', position: { x: 200, y: 250 }, connections: [] },
-      { id: 'c2', type: 'constraint', label: 'Constraint 2', position: { x: 350, y: 300 }, connections: [] }
+      {
+        id: 'c1',
+        type: 'constraint',
+        label: 'Constraint 1',
+        position: { x: 200, y: 250 },
+        connections: [],
+      },
+      {
+        id: 'c2',
+        type: 'constraint',
+        label: 'Constraint 2',
+        position: { x: 350, y: 300 },
+        connections: [],
+      },
     ];
     setCircuitNodes(nodes);
   }, []);
@@ -194,19 +224,19 @@ const ZKProofVisualization: React.FC = () => {
     const steps = [...proofSteps];
     for (let i = 0; i < steps.length; i++) {
       if (!isPlaying) break;
-      
+
       setCurrentStep(i);
       steps[i].status = 'active';
       setProofSteps([...steps]);
-      
+
       // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, (2000 / animationSpeed)));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000 / animationSpeed));
+
       steps[i].status = 'completed';
       steps[i].duration = Math.random() * 500 + 100;
       setProofSteps([...steps]);
     }
-    
+
     if (isPlaying) {
       // Generate mock metrics
       setMetrics({
@@ -215,11 +245,11 @@ const ZKProofVisualization: React.FC = () => {
         proofSize: Math.random() * 400 + 100,
         memoryUsage: Math.random() * 512 + 128,
         circuitSize: Math.random() * 10000 + 5000,
-        constraints: Math.floor(Math.random() * 100000 + 10000)
+        constraints: Math.floor(Math.random() * 100000 + 10000),
       });
       toast.success('Proof generation completed');
     }
-    
+
     setIsPlaying(false);
     setCurrentStep(0);
   }, [proofSteps, isPlaying, animationSpeed]);
@@ -234,7 +264,7 @@ const ZKProofVisualization: React.FC = () => {
 
   // Toggle details section
   const toggleDetails = useCallback((id: string) => {
-    setShowDetails(prev => ({ ...prev, [id]: !prev[id] }));
+    setShowDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   // Initialize on mount
@@ -252,24 +282,33 @@ const ZKProofVisualization: React.FC = () => {
 
   const getNodeTypeColor = (type: string) => {
     switch (type) {
-      case 'input': return 'bg-blue-500';
-      case 'output': return 'bg-green-500';
-      case 'gate': return 'bg-purple-500';
-      case 'constraint': return 'bg-orange-500';
-      default: return 'bg-gray-500';
+      case 'input':
+        return 'bg-blue-500';
+      case 'output':
+        return 'bg-green-500';
+      case 'gate':
+        return 'bg-purple-500';
+      case 'constraint':
+        return 'bg-orange-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
   const getStepStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'text-green-600 bg-green-50 border-green-200';
-      case 'active': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'failed': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'completed':
+        return 'text-green-600 bg-green-50 border-green-200';
+      case 'active':
+        return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'failed':
+        return 'text-red-600 bg-red-50 border-red-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
-  const selectedProofData = PROOF_TYPES.find(pt => pt.id === selectedProofType);
+  const selectedProofData = PROOF_TYPES.find((pt) => pt.id === selectedProofType);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -281,7 +320,9 @@ const ZKProofVisualization: React.FC = () => {
               <Shield className="w-8 h-8 text-purple-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">ZK Proof Visualization</h1>
-                <p className="text-sm text-gray-600">Interactive demonstration of zero-knowledge proof systems</p>
+                <p className="text-sm text-gray-600">
+                  Interactive demonstration of zero-knowledge proof systems
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -378,7 +419,7 @@ const ZKProofVisualization: React.FC = () => {
               {/* Draw connections */}
               {circuitNodes.map((node) =>
                 node.connections.map((connId) => {
-                  const targetNode = circuitNodes.find(n => n.id === connId);
+                  const targetNode = circuitNodes.find((n) => n.id === connId);
                   if (!targetNode) return null;
                   return (
                     <motion.line
@@ -390,9 +431,9 @@ const ZKProofVisualization: React.FC = () => {
                       stroke={node.type === 'input' ? '#3b82f6' : '#8b5cf6'}
                       strokeWidth="2"
                       initial={{ pathLength: 0 }}
-                      animate={{ 
+                      animate={{
                         pathLength: isPlaying && currentStep >= 1 ? 1 : 0,
-                        opacity: isPlaying && currentStep >= 1 ? 1 : 0.3
+                        opacity: isPlaying && currentStep >= 1 ? 1 : 0.3,
                       }}
                       transition={{ duration: 1 / animationSpeed }}
                     />
@@ -405,11 +446,11 @@ const ZKProofVisualization: React.FC = () => {
                 <motion.g
                   key={node.id}
                   initial={{ scale: 0, opacity: 0 }}
-                  animate={{ 
+                  animate={{
                     scale: isPlaying && index <= currentStep ? 1 : 0.8,
-                    opacity: isPlaying && index <= currentStep ? 1 : 0.5
+                    opacity: isPlaying && index <= currentStep ? 1 : 0.5,
                   }}
-                  transition={{ delay: index * 0.2 / animationSpeed }}
+                  transition={{ delay: (index * 0.2) / animationSpeed }}
                 >
                   <rect
                     x={node.position.x}
@@ -482,11 +523,15 @@ const ZKProofVisualization: React.FC = () => {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      step.status === 'completed' ? 'bg-green-100 text-green-600' :
-                      step.status === 'active' ? 'bg-blue-100 text-blue-600' :
-                      'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        step.status === 'completed'
+                          ? 'bg-green-100 text-green-600'
+                          : step.status === 'active'
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
                       {step.status === 'completed' ? (
                         <CheckCircle className="w-5 h-5" />
                       ) : step.status === 'active' ? (
@@ -502,11 +547,11 @@ const ZKProofVisualization: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-3">
                     {step.duration && (
-                      <div className="text-sm text-gray-500">
-                        {step.duration.toFixed(0)}ms
-                      </div>
+                      <div className="text-sm text-gray-500">{step.duration.toFixed(0)}ms</div>
                     )}
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStepStatusColor(step.status)}`}>
+                    <div
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStepStatusColor(step.status)}`}
+                    >
                       {step.status.toUpperCase()}
                     </div>
                     <button
@@ -563,7 +608,8 @@ const ZKProofVisualization: React.FC = () => {
                 <h3 className="font-semibold text-purple-900">Zero-Knowledge</h3>
               </div>
               <p className="text-sm text-purple-800 mb-3">
-                The verifier learns nothing beyond the validity of the statement. No private information is revealed.
+                The verifier learns nothing beyond the validity of the statement. No private
+                information is revealed.
               </p>
               <div className="flex items-center space-x-2 text-xs text-purple-700">
                 <Info className="w-4 h-4" />
@@ -577,7 +623,8 @@ const ZKProofVisualization: React.FC = () => {
                 <h3 className="font-semibold text-blue-900">Soundness</h3>
               </div>
               <p className="text-sm text-blue-800 mb-3">
-                A malicious prover cannot convince the verifier of a false statement with non-negligible probability.
+                A malicious prover cannot convince the verifier of a false statement with
+                non-negligible probability.
               </p>
               <div className="flex items-center space-x-2 text-xs text-blue-700">
                 <Info className="w-4 h-4" />
@@ -605,7 +652,8 @@ const ZKProofVisualization: React.FC = () => {
                 <h3 className="font-semibold text-orange-900">Non-Interactivity</h3>
               </div>
               <p className="text-sm text-orange-800 mb-3">
-                Proofs can be verified without interaction between prover and verifier using Fiat-Shamir heuristic.
+                Proofs can be verified without interaction between prover and verifier using
+                Fiat-Shamir heuristic.
               </p>
               <div className="flex items-center space-x-2 text-xs text-orange-700">
                 <Info className="w-4 h-4" />

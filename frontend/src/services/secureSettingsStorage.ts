@@ -110,16 +110,16 @@ class SecureSettingsStorage {
       const newEntry: AuditLogEntry = {
         ...entry,
         id: this.generateId(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
+
       logs.push(newEntry);
-      
+
       // Keep only last 1000 entries
       if (logs.length > 1000) {
         logs.splice(0, logs.length - 1000);
       }
-      
+
       localStorage.setItem(this.auditLogKey, JSON.stringify(logs));
     } catch (error) {
       console.error('Failed to add audit log entry:', error);
@@ -149,34 +149,38 @@ class SecureSettingsStorage {
   /**
    * Store settings with encryption and audit logging
    */
-  async set<T>(key: string, value: T, source: 'local' | 'remote' | 'import' = 'local'): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    source: 'local' | 'remote' | 'import' = 'local'
+  ): Promise<void> {
     try {
       const storageKey = `${this.storagePrefix}${key}`;
-      
+
       // Get old value for audit log
       const oldValue = this.getWithoutAudit<T>(key);
-      
+
       // Create settings entry
       const entry: SettingsEntry<T> = {
         data: value,
         timestamp: Date.now(),
         version: this.version,
-        checksum: this.generateChecksum(JSON.stringify(value))
+        checksum: this.generateChecksum(JSON.stringify(value)),
       };
-      
+
       // Encrypt and store
       const encryptedData = this.encrypt(JSON.stringify(entry));
       localStorage.setItem(storageKey, encryptedData);
-      
+
       // Log to audit trail
       await this.addAuditLogEntry({
         action: oldValue ? 'update' : 'create',
         settingKey: key,
         oldValue,
         newValue: value,
-        source
+        source,
       });
-      
+
       console.log(`Settings stored successfully for key: ${key}`);
     } catch (error) {
       console.error('Failed to store settings:', error);
@@ -191,22 +195,22 @@ class SecureSettingsStorage {
     try {
       const storageKey = `${this.storagePrefix}${key}`;
       const encryptedData = localStorage.getItem(storageKey);
-      
+
       if (!encryptedData) {
         return null;
       }
-      
+
       // Decrypt
       const decryptedData = this.decrypt(encryptedData);
       const entry: SettingsEntry<T> = JSON.parse(decryptedData);
-      
+
       // Verify checksum
       const dataString = JSON.stringify(entry.data);
       if (!this.verifyChecksum(dataString, entry.checksum)) {
         console.error('Checksum verification failed for key:', key);
         throw new Error('Data integrity check failed');
       }
-      
+
       return entry.data;
     } catch (error) {
       console.error('Failed to retrieve settings:', error);
@@ -221,11 +225,11 @@ class SecureSettingsStorage {
     try {
       const storageKey = `${this.storagePrefix}${key}`;
       const encryptedData = localStorage.getItem(storageKey);
-      
+
       if (!encryptedData) {
         return null;
       }
-      
+
       const decryptedData = this.decrypt(encryptedData);
       const entry: SettingsEntry<T> = JSON.parse(decryptedData);
       return entry.data;
@@ -241,14 +245,14 @@ class SecureSettingsStorage {
     try {
       const storageKey = `${this.storagePrefix}${key}`;
       const oldValue = this.getWithoutAudit(key);
-      
+
       localStorage.removeItem(storageKey);
-      
+
       await this.addAuditLogEntry({
         action: 'delete',
         settingKey: key,
         oldValue,
-        source: 'local'
+        source: 'local',
       });
     } catch (error) {
       console.error('Failed to remove settings:', error);
@@ -261,10 +265,8 @@ class SecureSettingsStorage {
    */
   async clear(): Promise<void> {
     try {
-      const keys = Object.keys(localStorage).filter(key => 
-        key.startsWith(this.storagePrefix)
-      );
-      
+      const keys = Object.keys(localStorage).filter((key) => key.startsWith(this.storagePrefix));
+
       for (const key of keys) {
         await this.remove(key.replace(this.storagePrefix, ''));
       }
@@ -280,32 +282,34 @@ class SecureSettingsStorage {
   async exportSettings(keys?: string[]): Promise<string> {
     try {
       const settings: { [key: string]: any } = {};
-      const keysToExport = keys || Object.keys(localStorage).filter(key => 
-        key.startsWith(this.storagePrefix)
-      ).map(key => key.replace(this.storagePrefix, ''));
-      
+      const keysToExport =
+        keys ||
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith(this.storagePrefix))
+          .map((key) => key.replace(this.storagePrefix, ''));
+
       for (const key of keysToExport) {
         const value = this.get(key);
         if (value !== null) {
           settings[key] = value;
         }
       }
-      
+
       const exportData = {
         version: this.version,
         timestamp: new Date().toISOString(),
-        settings
+        settings,
       };
-      
+
       const encryptedExport = this.encrypt(JSON.stringify(exportData));
-      
+
       await this.addAuditLogEntry({
         action: 'export',
         settingKey: 'all',
         newValue: keysToExport,
-        source: 'export'
+        source: 'export',
       });
-      
+
       return encryptedExport;
     } catch (error) {
       console.error('Failed to export settings:', error);
@@ -316,20 +320,23 @@ class SecureSettingsStorage {
   /**
    * Import settings from encrypted JSON
    */
-  async importSettings(encryptedData: string, strategy: ConflictResolution['strategy'] = 'merge'): Promise<void> {
+  async importSettings(
+    encryptedData: string,
+    strategy: ConflictResolution['strategy'] = 'merge'
+  ): Promise<void> {
     try {
       // Decrypt
       const decryptedData = this.decrypt(encryptedData);
       const importData = JSON.parse(decryptedData);
-      
+
       if (!importData.settings) {
         throw new Error('Invalid import data format');
       }
-      
+
       // Import each setting
       for (const [key, value] of Object.entries(importData.settings)) {
         const existingValue = this.getWithoutAudit(key);
-        
+
         if (existingValue !== null) {
           // Handle conflict
           switch (strategy) {
@@ -340,7 +347,7 @@ class SecureSettingsStorage {
                 settingKey: key,
                 oldValue: existingValue,
                 newValue: value,
-                source: 'import'
+                source: 'import',
               });
               break;
             case 'remote':
@@ -363,7 +370,7 @@ class SecureSettingsStorage {
                 settingKey: key,
                 oldValue: existingValue,
                 newValue: value,
-                source: 'import'
+                source: 'import',
               });
               break;
           }
@@ -372,12 +379,12 @@ class SecureSettingsStorage {
           await this.set(key, value, 'import');
         }
       }
-      
+
       await this.addAuditLogEntry({
         action: 'import',
         settingKey: 'all',
         newValue: Object.keys(importData.settings),
-        source: 'import'
+        source: 'import',
       });
     } catch (error) {
       console.error('Failed to import settings:', error);
@@ -392,17 +399,17 @@ class SecureSettingsStorage {
     try {
       const storageKey = `${this.storagePrefix}${key}`;
       const encryptedData = localStorage.getItem(storageKey);
-      
+
       if (!encryptedData) {
         return null;
       }
-      
+
       const decryptedData = this.decrypt(encryptedData);
       const entry: SettingsEntry<any> = JSON.parse(decryptedData);
-      
+
       return {
         timestamp: entry.timestamp,
-        version: entry.version
+        version: entry.version,
       };
     } catch (error) {
       console.error('Failed to get metadata:', error);
@@ -414,9 +421,9 @@ class SecureSettingsStorage {
    * Get all settings keys
    */
   getAllKeys(): string[] {
-    return Object.keys(localStorage).filter(key => 
-      key.startsWith(this.storagePrefix)
-    ).map(key => key.replace(this.storagePrefix, ''));
+    return Object.keys(localStorage)
+      .filter((key) => key.startsWith(this.storagePrefix))
+      .map((key) => key.replace(this.storagePrefix, ''));
   }
 
   /**
@@ -426,7 +433,7 @@ class SecureSettingsStorage {
     try {
       const value = this.get<T>(key);
       if (!value) return false;
-      
+
       // Basic validation (can be extended with a schema validator like Zod)
       if (schema.required) {
         for (const field of schema.required) {
@@ -435,7 +442,7 @@ class SecureSettingsStorage {
           }
         }
       }
-      
+
       if (schema.types) {
         for (const [field, type] of Object.entries(schema.types)) {
           if (value[field] !== undefined && typeof value[field] !== type) {
@@ -443,7 +450,7 @@ class SecureSettingsStorage {
           }
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error('Validation failed:', error);

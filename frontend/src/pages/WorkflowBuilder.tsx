@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Play, 
-  Save, 
-  Share2, 
-  Download, 
-  Trash2, 
+import {
+  Play,
+  Save,
+  Share2,
+  Download,
+  Trash2,
   Eye,
   AlertCircle,
   Clock,
@@ -13,7 +13,7 @@ import {
   Database,
   Filter,
   BarChart3,
-  Target
+  Target,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { CollaborationPanel } from '../components/workflow/CollaborationPanel';
@@ -42,7 +42,7 @@ const nodeTypes = [
     description: 'Connect to encrypted data sources',
     icon: Database,
     color: 'bg-blue-500',
-    category: 'Input'
+    category: 'Input',
   },
   {
     type: 'privacy-filter' as const,
@@ -50,7 +50,7 @@ const nodeTypes = [
     description: 'Apply differential privacy and anonymization',
     icon: Shield,
     color: 'bg-purple-500',
-    category: 'Privacy'
+    category: 'Privacy',
   },
   {
     type: 'aggregation' as const,
@@ -58,7 +58,7 @@ const nodeTypes = [
     description: 'Aggregate data with privacy guarantees',
     icon: Filter,
     color: 'bg-green-500',
-    category: 'Transform'
+    category: 'Transform',
   },
   {
     type: 'visualization' as const,
@@ -66,7 +66,7 @@ const nodeTypes = [
     description: 'Create privacy-preserving visualizations',
     icon: BarChart3,
     color: 'bg-orange-500',
-    category: 'Output'
+    category: 'Output',
   },
   {
     type: 'export' as const,
@@ -74,8 +74,8 @@ const nodeTypes = [
     description: 'Export results securely',
     icon: Download,
     color: 'bg-gray-500',
-    category: 'Output'
-  }
+    category: 'Output',
+  },
 ];
 
 const templates = [
@@ -87,8 +87,8 @@ const templates = [
       { type: 'data-source', name: 'Customer Data', position: { x: 100, y: 100 } },
       { type: 'privacy-filter', name: 'Privacy Filter', position: { x: 300, y: 100 } },
       { type: 'aggregation', name: 'Aggregate Metrics', position: { x: 500, y: 100 } },
-      { type: 'visualization', name: 'Dashboard', position: { x: 700, y: 100 } }
-    ]
+      { type: 'visualization', name: 'Dashboard', position: { x: 700, y: 100 } },
+    ],
   },
   {
     id: 'sales-forecast',
@@ -98,8 +98,8 @@ const templates = [
       { type: 'data-source', name: 'Sales Data', position: { x: 100, y: 100 } },
       { type: 'privacy-filter', name: 'Noise Addition', position: { x: 300, y: 100 } },
       { type: 'aggregation', name: 'Time Series', position: { x: 500, y: 100 } },
-      { type: 'visualization', name: 'Forecast Chart', position: { x: 700, y: 100 } }
-    ]
+      { type: 'visualization', name: 'Forecast Chart', position: { x: 700, y: 100 } },
+    ],
   },
   {
     id: 'user-segmentation',
@@ -109,51 +109,53 @@ const templates = [
       { type: 'data-source', name: 'User Data', position: { x: 100, y: 100 } },
       { type: 'privacy-filter', name: 'K-Anonymity', position: { x: 300, y: 100 } },
       { type: 'aggregation', name: 'Clustering', position: { x: 500, y: 100 } },
-      { type: 'visualization', name: 'Segment View', position: { x: 700, y: 100 } }
-    ]
-  }
+      { type: 'visualization', name: 'Segment View', position: { x: 700, y: 100 } },
+    ],
+  },
 ];
 
 export const WorkflowBuilder: React.FC = () => {
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [connections, setConnections] = useState<WorkflowConnection[]>([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [draggedNodeType, setDraggedNodeType] = useState<typeof nodeTypes[0] | null>(null);
+  const [draggedNodeType, setDraggedNodeType] = useState<(typeof nodeTypes)[0] | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [isRunning, setIsRunning] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showCollaboration, setShowCollaboration] = useState(false);
-  
+
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const validateWorkflow = useCallback(() => {
     const errors: string[] = [];
-    
+
     if (nodes.length === 0) {
       errors.push('Workflow must contain at least one node');
     }
-    
+
     const hasDataSource = nodes.some((n: WorkflowNode) => n.type === 'data-source');
     if (!hasDataSource) {
       errors.push('Workflow must include a data source');
     }
-    
-    const hasOutput = nodes.some((n: WorkflowNode) => n.type === 'visualization' || n.type === 'export');
+
+    const hasOutput = nodes.some(
+      (n: WorkflowNode) => n.type === 'visualization' || n.type === 'export'
+    );
     if (!hasOutput) {
       errors.push('Workflow must include an output node (visualization or export)');
     }
-    
+
     const dataSourceCount = nodes.filter((n: WorkflowNode) => n.type === 'data-source').length;
     if (dataSourceCount > 1) {
       errors.push('Workflow can only have one data source');
     }
-    
+
     setValidationErrors(errors);
     return errors.length === 0;
   }, [nodes]);
 
-  const handleDragStart = (e: React.DragEvent, nodeType: typeof nodeTypes[0]) => {
+  const handleDragStart = (e: React.DragEvent, nodeType: (typeof nodeTypes)[0]) => {
     setDraggedNodeType(nodeType);
     e.dataTransfer.effectAllowed = 'copy';
   };
@@ -165,13 +167,13 @@ export const WorkflowBuilder: React.FC = () => {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    
+
     if (!draggedNodeType || !canvasRef.current) return;
-    
+
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const newNode: WorkflowNode = {
       id: `${draggedNodeType.type}-${Date.now()}`,
       type: draggedNodeType.type,
@@ -179,9 +181,9 @@ export const WorkflowBuilder: React.FC = () => {
       description: draggedNodeType.description,
       icon: draggedNodeType.icon,
       color: draggedNodeType.color,
-      position: { x, y }
+      position: { x, y },
     };
-    
+
     setNodes((prev: WorkflowNode[]) => [...prev, newNode]);
     setDraggedNodeType(null);
     validateWorkflow();
@@ -194,31 +196,35 @@ export const WorkflowBuilder: React.FC = () => {
 
   const handleNodeDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    
+
     const nodeId = e.dataTransfer.getData('nodeId');
     if (!canvasRef.current || !nodeId) return;
-    
+
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    setNodes((prev: WorkflowNode[]) => prev.map((node: WorkflowNode) => 
-      node.id === nodeId ? { ...node, position: { x, y } } : node
-    ));
+
+    setNodes((prev: WorkflowNode[]) =>
+      prev.map((node: WorkflowNode) =>
+        node.id === nodeId ? { ...node, position: { x, y } } : node
+      )
+    );
   };
 
   const deleteNode = (nodeId: string) => {
     setNodes((prev: WorkflowNode[]) => prev.filter((n: WorkflowNode) => n.id !== nodeId));
-    setConnections((prev: WorkflowConnection[]) => prev.filter((c: WorkflowConnection) => c.sourceId !== nodeId && c.targetId !== nodeId));
+    setConnections((prev: WorkflowConnection[]) =>
+      prev.filter((c: WorkflowConnection) => c.sourceId !== nodeId && c.targetId !== nodeId)
+    );
     if (selectedNode === nodeId) {
       setSelectedNode(null);
     }
     validateWorkflow();
   };
 
-  const loadTemplate = (template: typeof templates[0]) => {
+  const loadTemplate = (template: (typeof templates)[0]) => {
     const newNodes: WorkflowNode[] = template.nodes.map((nodeData, index) => {
-      const nodeType = nodeTypes.find((nt: typeof nodeTypes[0]) => nt.type === nodeData.type);
+      const nodeType = nodeTypes.find((nt: (typeof nodeTypes)[0]) => nt.type === nodeData.type);
       return {
         id: `${nodeData.type}-${Date.now()}-${index}`,
         type: nodeData.type as WorkflowNode['type'],
@@ -226,10 +232,10 @@ export const WorkflowBuilder: React.FC = () => {
         description: nodeType?.description || '',
         icon: nodeType?.icon || Database,
         color: nodeType?.color || 'bg-gray-500',
-        position: nodeData.position
+        position: nodeData.position,
       };
     });
-    
+
     setNodes(newNodes);
     setConnections([]);
     validateWorkflow();
@@ -237,7 +243,7 @@ export const WorkflowBuilder: React.FC = () => {
 
   const runWorkflow = async () => {
     if (!validateWorkflow()) return;
-    
+
     setIsRunning(true);
     // Simulate workflow execution
     setTimeout(() => {
@@ -251,9 +257,9 @@ export const WorkflowBuilder: React.FC = () => {
       name: workflowName,
       nodes,
       connections,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
-    
+
     const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -280,20 +286,20 @@ export const WorkflowBuilder: React.FC = () => {
               <span>Auto-saved 2 min ago</span>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setIsPreviewMode(!isPreviewMode)}
               className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isPreviewMode 
-                  ? 'bg-blue-100 text-blue-700' 
+                isPreviewMode
+                  ? 'bg-blue-100 text-blue-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Eye className="h-4 w-4 mr-2" />
               Preview
             </button>
-            
+
             <button
               onClick={runWorkflow}
               disabled={isRunning}
@@ -311,22 +317,22 @@ export const WorkflowBuilder: React.FC = () => {
                 </>
               )}
             </button>
-            
+
             <Button variant="secondary" size="sm" className="flex items-center">
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={() => setShowCollaboration(!showCollaboration)}
-              variant={showCollaboration ? "default" : "secondary"}
+              variant={showCollaboration ? 'default' : 'secondary'}
               size="sm"
               className="flex items-center"
             >
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>
-            
+
             <Button
               onClick={exportWorkflow}
               variant="secondary"
@@ -429,7 +435,7 @@ export const WorkflowBuilder: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="bg-gray-50 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-2">Visualization</h4>
                           <div className="h-32 bg-blue-100 rounded flex items-center justify-center">
@@ -440,14 +446,14 @@ export const WorkflowBuilder: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div 
+                  <div
                     ref={canvasRef}
                     className="flex-1 relative bg-gray-100 overflow-auto"
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
                   >
                     <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-                    
+
                     {/* Render nodes */}
                     {nodes.map((node) => {
                       const Icon = node.icon;
@@ -462,8 +468,8 @@ export const WorkflowBuilder: React.FC = () => {
                           animate={{ scale: 1 }}
                           whileHover={{ scale: 1.05 }}
                           className={`absolute w-32 p-3 rounded-lg shadow-lg cursor-move border-2 ${
-                            selectedNode === node.id 
-                              ? 'border-blue-500 bg-blue-50' 
+                            selectedNode === node.id
+                              ? 'border-blue-500 bg-blue-50'
                               : 'border-white bg-white'
                           }`}
                           style={{ left: node.position.x - 64, top: node.position.y - 40 }}
@@ -477,7 +483,7 @@ export const WorkflowBuilder: React.FC = () => {
                               {node.name}
                             </div>
                           </div>
-                          
+
                           {selectedNode === node.id && (
                             <button
                               onClick={(e) => {
@@ -492,22 +498,26 @@ export const WorkflowBuilder: React.FC = () => {
                         </motion.div>
                       );
                     })}
-                    
+
                     {nodes.length === 0 && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
                           <div className="text-gray-400 mb-4">
                             <Target className="h-12 w-12 mx-auto" />
                           </div>
-                          <p className="text-gray-600 font-medium">Drag components here to start building</p>
-                          <p className="text-gray-500 text-sm mt-1">Or select a template from the sidebar</p>
+                          <p className="text-gray-600 font-medium">
+                            Drag components here to start building
+                          </p>
+                          <p className="text-gray-500 text-sm mt-1">
+                            Or select a template from the sidebar
+                          </p>
                         </div>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              
+
               {/* Collaboration Panel */}
               <div className="w-80 border-l border-gray-200">
                 <CollaborationPanel />
@@ -537,7 +547,7 @@ export const WorkflowBuilder: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">Visualization</h4>
                         <div className="h-32 bg-blue-100 rounded flex items-center justify-center">
@@ -548,14 +558,14 @@ export const WorkflowBuilder: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div 
+                <div
                   ref={canvasRef}
                   className="flex-1 relative bg-gray-100 overflow-auto"
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                 >
                   <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-                  
+
                   {/* Render nodes */}
                   {nodes.map((node) => {
                     const Icon = node.icon;
@@ -570,8 +580,8 @@ export const WorkflowBuilder: React.FC = () => {
                         animate={{ scale: 1 }}
                         whileHover={{ scale: 1.05 }}
                         className={`absolute w-32 p-3 rounded-lg shadow-lg cursor-move border-2 ${
-                          selectedNode === node.id 
-                            ? 'border-blue-500 bg-blue-50' 
+                          selectedNode === node.id
+                            ? 'border-blue-500 bg-blue-50'
                             : 'border-white bg-white'
                         }`}
                         style={{ left: node.position.x - 64, top: node.position.y - 40 }}
@@ -585,7 +595,7 @@ export const WorkflowBuilder: React.FC = () => {
                             {node.name}
                           </div>
                         </div>
-                        
+
                         {selectedNode === node.id && (
                           <button
                             onClick={(e) => {
@@ -600,15 +610,19 @@ export const WorkflowBuilder: React.FC = () => {
                       </motion.div>
                     );
                   })}
-                  
+
                   {nodes.length === 0 && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
                         <div className="text-gray-400 mb-4">
                           <Target className="h-12 w-12 mx-auto" />
                         </div>
-                        <p className="text-gray-600 font-medium">Drag components here to start building</p>
-                        <p className="text-gray-500 text-sm mt-1">Or select a template from the sidebar</p>
+                        <p className="text-gray-600 font-medium">
+                          Drag components here to start building
+                        </p>
+                        <p className="text-gray-500 text-sm mt-1">
+                          Or select a template from the sidebar
+                        </p>
                       </div>
                     </div>
                   )}

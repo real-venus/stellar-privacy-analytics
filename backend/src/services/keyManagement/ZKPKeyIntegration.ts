@@ -1,7 +1,7 @@
-import { EventEmitter } from 'events';
-import { logger } from '../../utils/logger';
-import { getErrorMessage } from '../../utils/errorHandler';
-import type { KeyManagementService } from './KeyManagementService';
+import { EventEmitter } from "events";
+import { logger } from "../../utils/logger";
+import { getErrorMessage } from "../../utils/errorHandler";
+import type { KeyManagementService } from "./KeyManagementService";
 
 export interface ZKPKeyPair {
   provingKeyId: string;
@@ -27,55 +27,60 @@ export class ZKPKeyIntegration extends EventEmitter {
    */
   async generateCircuitKeys(
     circuitId: string,
-    proofSystem: 'groth16' | 'plonk' | 'bulletproofs'
+    proofSystem: "groth16" | "plonk" | "bulletproofs",
   ): Promise<ZKPKeyPair> {
     try {
       // Generate proving key
       const provingKeyResult = await this.keyManagementService.generateKey({
-        keyType: 'zkp',
+        keyType: "zkp",
         purpose: `zkp-proving-${circuitId}`,
-        owner: 'system',
-        tags: ['zkp', 'proving', circuitId, proofSystem],
+        owner: "system",
+        tags: ["zkp", "proving", circuitId, proofSystem],
         algorithm: this.getAlgorithmForProofSystem(proofSystem),
         keySize: this.getKeySizeForProofSystem(proofSystem),
-        enableBackup: true
+        enableBackup: true,
       });
 
       // Generate verification key
-      const verificationKeyResult = await this.keyManagementService.generateKey({
-        keyType: 'zkp',
-        purpose: `zkp-verification-${circuitId}`,
-        owner: 'system',
-        tags: ['zkp', 'verification', circuitId, proofSystem],
-        algorithm: this.getAlgorithmForProofSystem(proofSystem),
-        keySize: this.getKeySizeForProofSystem(proofSystem),
-        enableBackup: true
-      });
+      const verificationKeyResult = await this.keyManagementService.generateKey(
+        {
+          keyType: "zkp",
+          purpose: `zkp-verification-${circuitId}`,
+          owner: "system",
+          tags: ["zkp", "verification", circuitId, proofSystem],
+          algorithm: this.getAlgorithmForProofSystem(proofSystem),
+          keySize: this.getKeySizeForProofSystem(proofSystem),
+          enableBackup: true,
+        },
+      );
 
       const keyPair: ZKPKeyPair = {
         provingKeyId: provingKeyResult.keyId,
         verificationKeyId: verificationKeyResult.keyId,
-        circuitId
+        circuitId,
       };
 
       this.zkpKeyPairs.set(circuitId, keyPair);
 
-      logger.info('ZKP circuit keys generated', {
+      logger.info("ZKP circuit keys generated", {
         circuitId,
         proofSystem,
         provingKeyId: keyPair.provingKeyId,
-        verificationKeyId: keyPair.verificationKeyId
+        verificationKeyId: keyPair.verificationKeyId,
       });
 
-      this.emit('circuitKeysGenerated', {
+      this.emit("circuitKeysGenerated", {
         circuitId,
         proofSystem,
-        keyPair
+        keyPair,
       });
 
       return keyPair;
     } catch (error: unknown) {
-      logger.error(`Failed to generate ZKP circuit keys for ${circuitId}:`, error);
+      logger.error(
+        `Failed to generate ZKP circuit keys for ${circuitId}:`,
+        error,
+      );
       throw new Error(`ZKP key generation failed: ${getErrorMessage(error)}`);
     }
   }
@@ -100,40 +105,43 @@ export class ZKPKeyIntegration extends EventEmitter {
       // Rotate proving key
       const provingKeyResult = await this.keyManagementService.rotateKey(
         existingKeyPair.provingKeyId,
-        'ZKP proving key rotation'
+        "ZKP proving key rotation",
       );
 
       // Rotate verification key
       const verificationKeyResult = await this.keyManagementService.rotateKey(
         existingKeyPair.verificationKeyId,
-        'ZKP verification key rotation'
+        "ZKP verification key rotation",
       );
 
       const newKeyPair: ZKPKeyPair = {
         provingKeyId: provingKeyResult.newKeyId,
         verificationKeyId: verificationKeyResult.newKeyId,
-        circuitId
+        circuitId,
       };
 
       this.zkpKeyPairs.set(circuitId, newKeyPair);
 
-      logger.info('ZKP circuit keys rotated', {
+      logger.info("ZKP circuit keys rotated", {
         circuitId,
         oldProvingKeyId: provingKeyResult.oldKeyId,
         newProvingKeyId: provingKeyResult.newKeyId,
         oldVerificationKeyId: verificationKeyResult.oldKeyId,
-        newVerificationKeyId: verificationKeyResult.newKeyId
+        newVerificationKeyId: verificationKeyResult.newKeyId,
       });
 
-      this.emit('circuitKeysRotated', {
+      this.emit("circuitKeysRotated", {
         circuitId,
         oldKeyPair: existingKeyPair,
-        newKeyPair
+        newKeyPair,
       });
 
       return newKeyPair;
     } catch (error: unknown) {
-      logger.error(`Failed to rotate ZKP circuit keys for ${circuitId}:`, error);
+      logger.error(
+        `Failed to rotate ZKP circuit keys for ${circuitId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -152,25 +160,28 @@ export class ZKPKeyIntegration extends EventEmitter {
       await this.keyManagementService.revokeKey(
         keyPair.provingKeyId,
         reason,
-        'system'
+        "system",
       );
 
       await this.keyManagementService.revokeKey(
         keyPair.verificationKeyId,
         reason,
-        'system'
+        "system",
       );
 
       this.zkpKeyPairs.delete(circuitId);
 
-      logger.warn('ZKP circuit keys revoked', {
+      logger.warn("ZKP circuit keys revoked", {
         circuitId,
-        reason
+        reason,
       });
 
-      this.emit('circuitKeysRevoked', { circuitId, reason });
+      this.emit("circuitKeysRevoked", { circuitId, reason });
     } catch (error: unknown) {
-      logger.error(`Failed to revoke ZKP circuit keys for ${circuitId}:`, error);
+      logger.error(
+        `Failed to revoke ZKP circuit keys for ${circuitId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -181,34 +192,37 @@ export class ZKPKeyIntegration extends EventEmitter {
    */
   async generateEphemeralProofKey(
     proofId: string,
-    proofSystem: 'groth16' | 'plonk' | 'bulletproofs'
+    proofSystem: "groth16" | "plonk" | "bulletproofs",
   ): Promise<string> {
     try {
       const keyResult = await this.keyManagementService.generateKey({
-        keyType: 'zkp',
+        keyType: "zkp",
         purpose: `zkp-ephemeral-${proofId}`,
-        owner: 'system',
-        tags: ['zkp', 'ephemeral', proofId, proofSystem],
+        owner: "system",
+        tags: ["zkp", "ephemeral", proofId, proofSystem],
         algorithm: this.getAlgorithmForProofSystem(proofSystem),
         keySize: this.getKeySizeForProofSystem(proofSystem),
         ttl: 3600, // 1 hour
-        enableBackup: false
+        enableBackup: false,
       });
 
-      logger.info('Ephemeral ZKP proof key generated', {
+      logger.info("Ephemeral ZKP proof key generated", {
         proofId,
         proofSystem,
-        keyId: keyResult.keyId
+        keyId: keyResult.keyId,
       });
 
-      this.emit('ephemeralKeyGenerated', {
+      this.emit("ephemeralKeyGenerated", {
         proofId,
-        keyId: keyResult.keyId
+        keyId: keyResult.keyId,
       });
 
       return keyResult.keyId;
     } catch (error: unknown) {
-      logger.error(`Failed to generate ephemeral ZKP proof key for ${proofId}:`, error);
+      logger.error(
+        `Failed to generate ephemeral ZKP proof key for ${proofId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -217,33 +231,36 @@ export class ZKPKeyIntegration extends EventEmitter {
    * Batch generate keys for multiple circuits
    */
   async batchGenerateCircuitKeys(
-    circuits: { circuitId: string; proofSystem: 'groth16' | 'plonk' | 'bulletproofs' }[]
+    circuits: {
+      circuitId: string;
+      proofSystem: "groth16" | "plonk" | "bulletproofs";
+    }[],
   ): Promise<Map<string, ZKPKeyPair>> {
     const results = new Map<string, ZKPKeyPair>();
 
     try {
       // Generate keys in parallel for better performance
       const keyPairs = await Promise.all(
-        circuits.map(circuit => 
-          this.generateCircuitKeys(circuit.circuitId, circuit.proofSystem)
-        )
+        circuits.map((circuit) =>
+          this.generateCircuitKeys(circuit.circuitId, circuit.proofSystem),
+        ),
       );
 
       circuits.forEach((circuit, index) => {
         results.set(circuit.circuitId, keyPairs[index]);
       });
 
-      logger.info('Batch ZKP circuit keys generated', {
-        count: circuits.length
+      logger.info("Batch ZKP circuit keys generated", {
+        count: circuits.length,
       });
 
-      this.emit('batchCircuitKeysGenerated', {
-        count: circuits.length
+      this.emit("batchCircuitKeysGenerated", {
+        count: circuits.length,
       });
 
       return results;
     } catch (error: unknown) {
-      logger.error('Failed to batch generate ZKP circuit keys:', error);
+      logger.error("Failed to batch generate ZKP circuit keys:", error);
       throw error;
     }
   }
@@ -265,37 +282,37 @@ export class ZKPKeyIntegration extends EventEmitter {
   } {
     return {
       totalCircuits: this.zkpKeyPairs.size,
-      totalKeysGenerated: this.listenerCount('circuitKeysGenerated'),
-      ephemeralKeysGenerated: this.listenerCount('ephemeralKeyGenerated')
+      totalKeysGenerated: this.listenerCount("circuitKeysGenerated"),
+      ephemeralKeysGenerated: this.listenerCount("ephemeralKeyGenerated"),
     };
   }
 
   // Private helper methods
 
   private getAlgorithmForProofSystem(
-    proofSystem: 'groth16' | 'plonk' | 'bulletproofs'
+    proofSystem: "groth16" | "plonk" | "bulletproofs",
   ): string {
     switch (proofSystem) {
-      case 'groth16':
-        return 'bn254-groth16';
-      case 'plonk':
-        return 'bn254-plonk';
-      case 'bulletproofs':
-        return 'curve25519-bulletproofs';
+      case "groth16":
+        return "bn254-groth16";
+      case "plonk":
+        return "bn254-plonk";
+      case "bulletproofs":
+        return "curve25519-bulletproofs";
       default:
-        return 'aes-256-gcm';
+        return "aes-256-gcm";
     }
   }
 
   private getKeySizeForProofSystem(
-    proofSystem: 'groth16' | 'plonk' | 'bulletproofs'
+    proofSystem: "groth16" | "plonk" | "bulletproofs",
   ): number {
     switch (proofSystem) {
-      case 'groth16':
+      case "groth16":
         return 48; // 384 bits for BN254
-      case 'plonk':
+      case "plonk":
         return 48;
-      case 'bulletproofs':
+      case "bulletproofs":
         return 32; // 256 bits for Curve25519
       default:
         return 32;

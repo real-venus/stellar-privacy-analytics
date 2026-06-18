@@ -1,10 +1,13 @@
-import { EventEmitter } from 'events';
-import { logger } from '../../utils/logger';
-import { DistributedCacheManager, CacheMetrics } from './DistributedCacheManager';
+import { EventEmitter } from "events";
+import { logger } from "../../utils/logger";
+import {
+  DistributedCacheManager,
+  CacheMetrics,
+} from "./DistributedCacheManager";
 
 export interface CacheAlert {
   id: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: "low" | "medium" | "high" | "critical";
   type: string;
   message: string;
   timestamp: Date;
@@ -14,7 +17,7 @@ export interface CacheAlert {
 
 export interface CacheHealthReport {
   timestamp: Date;
-  overall: 'healthy' | 'degraded' | 'unhealthy';
+  overall: "healthy" | "degraded" | "unhealthy";
   hitRate: number;
   latency: number;
   errorRate: number;
@@ -44,12 +47,13 @@ export class CacheMonitor extends EventEmitter {
   private monitorTimer?: NodeJS.Timeout;
   private consistencyTimer?: NodeJS.Timeout;
   private freshnessTimer?: NodeJS.Timeout;
-  private metricsHistory: Array<{ timestamp: Date; metrics: CacheMetrics }> = [];
+  private metricsHistory: Array<{ timestamp: Date; metrics: CacheMetrics }> =
+    [];
   private isMonitoring: boolean = false;
 
   constructor(
     cacheManager: DistributedCacheManager,
-    config?: Partial<MonitorConfig>
+    config?: Partial<MonitorConfig>,
   ) {
     super();
 
@@ -61,7 +65,7 @@ export class CacheMonitor extends EventEmitter {
       errorRateThreshold: config?.errorRateThreshold || 0.05, // 5%
       consistencyCheckInterval: config?.consistencyCheckInterval || 300000, // 5 minutes
       freshnessCheckInterval: config?.freshnessCheckInterval || 180000, // 3 minutes
-      alertRetentionDays: config?.alertRetentionDays || 7
+      alertRetentionDays: config?.alertRetentionDays || 7,
     };
   }
 
@@ -70,7 +74,7 @@ export class CacheMonitor extends EventEmitter {
    */
   start(): void {
     if (this.isMonitoring) {
-      logger.warn('Cache monitor already running');
+      logger.warn("Cache monitor already running");
       return;
     }
 
@@ -91,13 +95,13 @@ export class CacheMonitor extends EventEmitter {
 
     this.isMonitoring = true;
 
-    logger.info('Cache monitor started', {
+    logger.info("Cache monitor started", {
       checkInterval: this.config.checkInterval,
       consistencyCheckInterval: this.config.consistencyCheckInterval,
-      freshnessCheckInterval: this.config.freshnessCheckInterval
+      freshnessCheckInterval: this.config.freshnessCheckInterval,
     });
 
-    this.emit('started');
+    this.emit("started");
   }
 
   /**
@@ -121,8 +125,8 @@ export class CacheMonitor extends EventEmitter {
 
     this.isMonitoring = false;
 
-    logger.info('Cache monitor stopped');
-    this.emit('stopped');
+    logger.info("Cache monitor stopped");
+    this.emit("stopped");
   }
 
   /**
@@ -135,7 +139,7 @@ export class CacheMonitor extends EventEmitter {
 
       // Store metrics history
       this.metricsHistory.push({ timestamp, metrics });
-      
+
       // Keep only last 1000 entries
       if (this.metricsHistory.length > 1000) {
         this.metricsHistory = this.metricsHistory.slice(-1000);
@@ -144,51 +148,62 @@ export class CacheMonitor extends EventEmitter {
       // Check hit rate
       if (metrics.hitRate < this.config.hitRateThreshold) {
         this.createAlert({
-          severity: metrics.hitRate < 0.5 ? 'high' : 'medium',
-          type: 'low_hit_rate',
+          severity: metrics.hitRate < 0.5 ? "high" : "medium",
+          type: "low_hit_rate",
           message: `Cache hit rate is ${(metrics.hitRate * 100).toFixed(2)}% (threshold: ${(this.config.hitRateThreshold * 100).toFixed(2)}%)`,
-          metrics: { hitRate: metrics.hitRate }
+          metrics: { hitRate: metrics.hitRate },
         });
       }
 
       // Check latency
       if (metrics.averageLatency > this.config.latencyThreshold) {
         this.createAlert({
-          severity: metrics.averageLatency > this.config.latencyThreshold * 2 ? 'high' : 'medium',
-          type: 'high_latency',
+          severity:
+            metrics.averageLatency > this.config.latencyThreshold * 2
+              ? "high"
+              : "medium",
+          type: "high_latency",
           message: `Average cache latency is ${metrics.averageLatency.toFixed(2)}ms (threshold: ${this.config.latencyThreshold}ms)`,
-          metrics: { latency: metrics.averageLatency }
+          metrics: { latency: metrics.averageLatency },
         });
       }
 
       // Check error rate
-      const errorRate = metrics.totalRequests > 0 ? metrics.errors / metrics.totalRequests : 0;
+      const errorRate =
+        metrics.totalRequests > 0 ? metrics.errors / metrics.totalRequests : 0;
       if (errorRate > this.config.errorRateThreshold) {
         this.createAlert({
-          severity: errorRate > this.config.errorRateThreshold * 2 ? 'critical' : 'high',
-          type: 'high_error_rate',
+          severity:
+            errorRate > this.config.errorRateThreshold * 2
+              ? "critical"
+              : "high",
+          type: "high_error_rate",
           message: `Cache error rate is ${(errorRate * 100).toFixed(2)}% (threshold: ${(this.config.errorRateThreshold * 100).toFixed(2)}%)`,
-          metrics: { errorRate, errors: metrics.errors, totalRequests: metrics.totalRequests }
+          metrics: {
+            errorRate,
+            errors: metrics.errors,
+            totalRequests: metrics.totalRequests,
+          },
         });
       }
 
       // Check if cache is healthy
       if (!metrics.isHealthy) {
         this.createAlert({
-          severity: 'critical',
-          type: 'unhealthy',
-          message: 'Cache health check failed',
-          metrics
+          severity: "critical",
+          type: "unhealthy",
+          message: "Cache health check failed",
+          metrics,
         });
       }
 
-      this.emit('healthCheck', { timestamp, metrics });
+      this.emit("healthCheck", { timestamp, metrics });
     } catch (error) {
-      logger.error('Error performing health check:', error);
+      logger.error("Error performing health check:", error);
       this.createAlert({
-        severity: 'high',
-        type: 'monitor_error',
-        message: `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        severity: "high",
+        type: "monitor_error",
+        message: `Health check failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     }
   }
@@ -199,23 +214,23 @@ export class CacheMonitor extends EventEmitter {
   private async checkConsistency(): Promise<void> {
     try {
       const stats = await this.cacheManager.getStatistics();
-      
+
       // Calculate consistency score based on invalidation events
       const metrics = this.cacheManager.getMetrics();
       const consistencyScore = this.calculateConsistencyScore(metrics);
 
       if (consistencyScore < 0.9) {
         this.createAlert({
-          severity: consistencyScore < 0.7 ? 'high' : 'medium',
-          type: 'consistency_issue',
+          severity: consistencyScore < 0.7 ? "high" : "medium",
+          type: "consistency_issue",
           message: `Cache consistency score is ${(consistencyScore * 100).toFixed(2)}%`,
-          metrics: { consistencyScore, stats }
+          metrics: { consistencyScore, stats },
         });
       }
 
-      this.emit('consistencyCheck', { consistencyScore, stats });
+      this.emit("consistencyCheck", { consistencyScore, stats });
     } catch (error) {
-      logger.error('Error checking consistency:', error);
+      logger.error("Error checking consistency:", error);
     }
   }
 
@@ -226,22 +241,22 @@ export class CacheMonitor extends EventEmitter {
     try {
       const stats = await this.cacheManager.getStatistics();
       const metrics = this.cacheManager.getMetrics();
-      
+
       // Calculate freshness score
       const freshnessScore = this.calculateFreshnessScore(metrics);
 
       if (freshnessScore < 0.8) {
         this.createAlert({
-          severity: freshnessScore < 0.6 ? 'medium' : 'low',
-          type: 'stale_data',
+          severity: freshnessScore < 0.6 ? "medium" : "low",
+          type: "stale_data",
           message: `Cache freshness score is ${(freshnessScore * 100).toFixed(2)}%`,
-          metrics: { freshnessScore }
+          metrics: { freshnessScore },
         });
       }
 
-      this.emit('freshnessCheck', { freshnessScore, stats });
+      this.emit("freshnessCheck", { freshnessScore, stats });
     } catch (error) {
-      logger.error('Error checking freshness:', error);
+      logger.error("Error checking freshness:", error);
     }
   }
 
@@ -250,9 +265,10 @@ export class CacheMonitor extends EventEmitter {
    */
   private calculateConsistencyScore(metrics: CacheMetrics): number {
     // Higher invalidation rate relative to requests indicates better consistency
-    const invalidationRate = metrics.totalRequests > 0 
-      ? metrics.invalidations / metrics.totalRequests 
-      : 1;
+    const invalidationRate =
+      metrics.totalRequests > 0
+        ? metrics.invalidations / metrics.totalRequests
+        : 1;
 
     // Normalize to 0-1 range (assuming 10% invalidation rate is optimal)
     const optimalRate = 0.1;
@@ -267,9 +283,8 @@ export class CacheMonitor extends EventEmitter {
   private calculateFreshnessScore(metrics: CacheMetrics): number {
     // Higher hit rate indicates fresher data
     // Lower error rate indicates better data quality
-    const errorRate = metrics.totalRequests > 0 
-      ? metrics.errors / metrics.totalRequests 
-      : 0;
+    const errorRate =
+      metrics.totalRequests > 0 ? metrics.errors / metrics.totalRequests : 0;
 
     const freshnessScore = metrics.hitRate * (1 - errorRate);
     return Math.max(0, Math.min(1, freshnessScore));
@@ -278,12 +293,14 @@ export class CacheMonitor extends EventEmitter {
   /**
    * Create alert
    */
-  private createAlert(alert: Omit<CacheAlert, 'id' | 'timestamp' | 'resolved'>): void {
+  private createAlert(
+    alert: Omit<CacheAlert, "id" | "timestamp" | "resolved">,
+  ): void {
     const newAlert: CacheAlert = {
       id: this.generateAlertId(),
       timestamp: new Date(),
       resolved: false,
-      ...alert
+      ...alert,
     };
 
     this.alerts.push(newAlert);
@@ -291,18 +308,18 @@ export class CacheMonitor extends EventEmitter {
     // Clean up old alerts
     this.cleanupOldAlerts();
 
-    logger.warn('Cache alert created', newAlert);
-    this.emit('alert', newAlert);
+    logger.warn("Cache alert created", newAlert);
+    this.emit("alert", newAlert);
   }
 
   /**
    * Resolve alert
    */
   resolveAlert(alertId: string): void {
-    const alert = this.alerts.find(a => a.id === alertId);
+    const alert = this.alerts.find((a) => a.id === alertId);
     if (alert) {
       alert.resolved = true;
-      this.emit('alertResolved', alert);
+      this.emit("alertResolved", alert);
     }
   }
 
@@ -310,7 +327,7 @@ export class CacheMonitor extends EventEmitter {
    * Get active alerts
    */
   getActiveAlerts(): CacheAlert[] {
-    return this.alerts.filter(a => !a.resolved);
+    return this.alerts.filter((a) => !a.resolved);
   }
 
   /**
@@ -331,26 +348,33 @@ export class CacheMonitor extends EventEmitter {
     // Calculate scores
     const consistencyScore = this.calculateConsistencyScore(metrics);
     const freshnessScore = this.calculateFreshnessScore(metrics);
-    const errorRate = metrics.totalRequests > 0 
-      ? metrics.errors / metrics.totalRequests 
-      : 0;
+    const errorRate =
+      metrics.totalRequests > 0 ? metrics.errors / metrics.totalRequests : 0;
 
     // Determine overall health
-    let overall: 'healthy' | 'degraded' | 'unhealthy';
-    if (!metrics.isHealthy || activeAlerts.some(a => a.severity === 'critical')) {
-      overall = 'unhealthy';
+    let overall: "healthy" | "degraded" | "unhealthy";
+    if (
+      !metrics.isHealthy ||
+      activeAlerts.some((a) => a.severity === "critical")
+    ) {
+      overall = "unhealthy";
     } else if (
       metrics.hitRate < this.config.hitRateThreshold ||
       metrics.averageLatency > this.config.latencyThreshold ||
       activeAlerts.length > 0
     ) {
-      overall = 'degraded';
+      overall = "degraded";
     } else {
-      overall = 'healthy';
+      overall = "healthy";
     }
 
     // Generate recommendations
-    const recommendations = this.generateRecommendations(metrics, stats, consistencyScore, freshnessScore);
+    const recommendations = this.generateRecommendations(
+      metrics,
+      stats,
+      consistencyScore,
+      freshnessScore,
+    );
 
     return {
       timestamp: new Date(),
@@ -361,7 +385,7 @@ export class CacheMonitor extends EventEmitter {
       consistency: consistencyScore,
       freshness: freshnessScore,
       alerts: activeAlerts,
-      recommendations
+      recommendations,
     };
   }
 
@@ -372,45 +396,66 @@ export class CacheMonitor extends EventEmitter {
     metrics: CacheMetrics,
     stats: any,
     consistencyScore: number,
-    freshnessScore: number
+    freshnessScore: number,
   ): string[] {
     const recommendations: string[] = [];
 
     if (metrics.hitRate < this.config.hitRateThreshold) {
-      recommendations.push('Consider increasing cache TTL or implementing cache warming strategies');
-      recommendations.push('Review cache key patterns to ensure optimal cache utilization');
+      recommendations.push(
+        "Consider increasing cache TTL or implementing cache warming strategies",
+      );
+      recommendations.push(
+        "Review cache key patterns to ensure optimal cache utilization",
+      );
     }
 
     if (metrics.averageLatency > this.config.latencyThreshold) {
-      recommendations.push('Optimize cache key serialization/deserialization');
-      recommendations.push('Consider increasing local cache size to reduce distributed cache lookups');
+      recommendations.push("Optimize cache key serialization/deserialization");
+      recommendations.push(
+        "Consider increasing local cache size to reduce distributed cache lookups",
+      );
     }
 
-    const errorRate = metrics.totalRequests > 0 ? metrics.errors / metrics.totalRequests : 0;
+    const errorRate =
+      metrics.totalRequests > 0 ? metrics.errors / metrics.totalRequests : 0;
     if (errorRate > this.config.errorRateThreshold) {
-      recommendations.push('Investigate cache connection issues and implement better error handling');
-      recommendations.push('Review fallback mechanisms for cache failures');
+      recommendations.push(
+        "Investigate cache connection issues and implement better error handling",
+      );
+      recommendations.push("Review fallback mechanisms for cache failures");
     }
 
     if (consistencyScore < 0.9) {
-      recommendations.push('Review cache invalidation patterns to ensure proper propagation');
-      recommendations.push('Consider implementing versioning for cache entries');
+      recommendations.push(
+        "Review cache invalidation patterns to ensure proper propagation",
+      );
+      recommendations.push(
+        "Consider implementing versioning for cache entries",
+      );
     }
 
     if (freshnessScore < 0.8) {
-      recommendations.push('Reduce cache TTL for frequently changing data');
-      recommendations.push('Implement proactive cache invalidation on data updates');
+      recommendations.push("Reduce cache TTL for frequently changing data");
+      recommendations.push(
+        "Implement proactive cache invalidation on data updates",
+      );
     }
 
     const localUtilization = stats.local.utilizationPercent;
     if (localUtilization > 90) {
-      recommendations.push('Local cache is near capacity - consider increasing cache size');
+      recommendations.push(
+        "Local cache is near capacity - consider increasing cache size",
+      );
     } else if (localUtilization < 30) {
-      recommendations.push('Local cache is underutilized - consider reducing cache size');
+      recommendations.push(
+        "Local cache is underutilized - consider reducing cache size",
+      );
     }
 
     if (metrics.evictions > metrics.totalRequests * 0.1) {
-      recommendations.push('High eviction rate detected - increase cache size or reduce TTL');
+      recommendations.push(
+        "High eviction rate detected - increase cache size or reduce TTL",
+      );
     }
 
     return recommendations;
@@ -419,38 +464,45 @@ export class CacheMonitor extends EventEmitter {
   /**
    * Get metrics history
    */
-  getMetricsHistory(duration?: number): Array<{ timestamp: Date; metrics: CacheMetrics }> {
+  getMetricsHistory(
+    duration?: number,
+  ): Array<{ timestamp: Date; metrics: CacheMetrics }> {
     if (!duration) {
       return [...this.metricsHistory];
     }
 
     const cutoff = Date.now() - duration;
-    return this.metricsHistory.filter(entry => entry.timestamp.getTime() >= cutoff);
+    return this.metricsHistory.filter(
+      (entry) => entry.timestamp.getTime() >= cutoff,
+    );
   }
 
   /**
    * Get metrics trend
    */
-  getMetricsTrend(metric: keyof CacheMetrics, duration: number = 3600000): {
+  getMetricsTrend(
+    metric: keyof CacheMetrics,
+    duration: number = 3600000,
+  ): {
     current: number;
     average: number;
     min: number;
     max: number;
-    trend: 'improving' | 'stable' | 'degrading';
+    trend: "improving" | "stable" | "degrading";
   } {
     const history = this.getMetricsHistory(duration);
-    
+
     if (history.length === 0) {
       return {
         current: 0,
         average: 0,
         min: 0,
         max: 0,
-        trend: 'stable'
+        trend: "stable",
       };
     }
 
-    const values = history.map(h => h.metrics[metric] as number);
+    const values = history.map((h) => h.metrics[metric] as number);
     const current = values[values.length - 1];
     const average = values.reduce((sum, v) => sum + v, 0) / values.length;
     const min = Math.min(...values);
@@ -458,21 +510,22 @@ export class CacheMonitor extends EventEmitter {
 
     // Calculate trend
     const recentValues = values.slice(-10);
-    const recentAvg = recentValues.reduce((sum, v) => sum + v, 0) / recentValues.length;
-    
-    let trend: 'improving' | 'stable' | 'degrading';
+    const recentAvg =
+      recentValues.reduce((sum, v) => sum + v, 0) / recentValues.length;
+
+    let trend: "improving" | "stable" | "degrading";
     const changePercent = ((recentAvg - average) / average) * 100;
-    
+
     if (Math.abs(changePercent) < 5) {
-      trend = 'stable';
+      trend = "stable";
     } else if (
-      (metric === 'hitRate' && changePercent > 0) ||
-      (metric === 'averageLatency' && changePercent < 0) ||
-      (metric === 'errors' && changePercent < 0)
+      (metric === "hitRate" && changePercent > 0) ||
+      (metric === "averageLatency" && changePercent < 0) ||
+      (metric === "errors" && changePercent < 0)
     ) {
-      trend = 'improving';
+      trend = "improving";
     } else {
-      trend = 'degrading';
+      trend = "degrading";
     }
 
     return { current, average, min, max, trend };
@@ -482,9 +535,10 @@ export class CacheMonitor extends EventEmitter {
    * Clean up old alerts
    */
   private cleanupOldAlerts(): void {
-    const cutoff = Date.now() - (this.config.alertRetentionDays * 24 * 60 * 60 * 1000);
-    this.alerts = this.alerts.filter(alert => 
-      alert.timestamp.getTime() >= cutoff || !alert.resolved
+    const cutoff =
+      Date.now() - this.config.alertRetentionDays * 24 * 60 * 60 * 1000;
+    this.alerts = this.alerts.filter(
+      (alert) => alert.timestamp.getTime() >= cutoff || !alert.resolved,
     );
   }
 

@@ -1,5 +1,5 @@
-import { CircuitBreaker } from './CircuitBreaker';
-import crypto from 'crypto';
+import { CircuitBreaker } from "./CircuitBreaker";
+import crypto from "crypto";
 
 interface ServiceNode {
   url: string;
@@ -21,13 +21,13 @@ export class LoadBalancer {
     const { healthCheckInterval = 10000, healthCheckTimeout = 5000 } = options;
     this.healthCheckTimeout = healthCheckTimeout;
 
-    this.nodes = urls.map(url => ({
+    this.nodes = urls.map((url) => ({
       url,
       isHealthy: true,
       circuitBreaker: new CircuitBreaker(),
-      activeRequests: 0
+      activeRequests: 0,
     }));
-    
+
     // Start routine health check polling
     setInterval(() => this.healthCheck(), healthCheckInterval);
   }
@@ -36,12 +36,15 @@ export class LoadBalancer {
     for (const node of this.nodes) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.healthCheckTimeout);
+        const timeoutId = setTimeout(
+          () => controller.abort(),
+          this.healthCheckTimeout,
+        );
 
         try {
           // Active ping to backend /health endpoint to verify service availability
           const response = await fetch(`${node.url}/health`, {
-            signal: controller.signal
+            signal: controller.signal,
           });
           node.isHealthy = response.ok;
         } finally {
@@ -53,11 +56,14 @@ export class LoadBalancer {
     }
   }
 
-  public async routeRequest(requestPath: string, handlerFn: (url: string) => Promise<any>): Promise<any> {
+  public async routeRequest(
+    requestPath: string,
+    handlerFn: (url: string) => Promise<any>,
+  ): Promise<any> {
     // Optimize routing: Least connections algorithm
-    const availableNodes = this.nodes.filter(n => n.isHealthy);
+    const availableNodes = this.nodes.filter((n) => n.isHealthy);
     if (availableNodes.length === 0) {
-      throw new Error('503 Service Unavailable: No healthy backend services');
+      throw new Error("503 Service Unavailable: No healthy backend services");
     }
 
     availableNodes.sort((a, b) => a.activeRequests - b.activeRequests);
@@ -66,8 +72,12 @@ export class LoadBalancer {
     selectedNode.activeRequests++;
     try {
       // Request tracing capability
-      console.log(`[TRACE ${crypto.randomUUID()}] Routing request to ${selectedNode.url}${requestPath}`);
-      return await selectedNode.circuitBreaker.execute(() => handlerFn(selectedNode.url));
+      console.log(
+        `[TRACE ${crypto.randomUUID()}] Routing request to ${selectedNode.url}${requestPath}`,
+      );
+      return await selectedNode.circuitBreaker.execute(() =>
+        handlerFn(selectedNode.url),
+      );
     } finally {
       selectedNode.activeRequests--;
     }

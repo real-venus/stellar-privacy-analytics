@@ -17,17 +17,17 @@ export const DataPreview: React.FC<DataPreviewProps> = ({
   isAnonymized = true,
   onToggleAnonymization,
   onRefresh,
-  onDownload
+  onDownload,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
     if (!searchTerm.trim()) return data;
-    
+
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return data.filter(row => {
-      return Object.values(row).some(value => 
+    return data.filter((row) => {
+      return Object.values(row).some((value) =>
         String(value).toLowerCase().includes(lowerSearchTerm)
       );
     });
@@ -48,7 +48,7 @@ export const DataPreview: React.FC<DataPreviewProps> = ({
 
   const getCellValue = (value: any, isAnonymized: boolean) => {
     if (value === null || value === undefined) return '—';
-    
+
     if (isAnonymized) {
       // Simple anonymization logic
       if (typeof value === 'string') {
@@ -59,7 +59,7 @@ export const DataPreview: React.FC<DataPreviewProps> = ({
       }
       return '***';
     }
-    
+
     return value.toString();
   };
 
@@ -74,7 +74,7 @@ export const DataPreview: React.FC<DataPreviewProps> = ({
             {filteredData.length} of {data.length} rows
           </span>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           {/* Search */}
           <SearchBar
@@ -88,8 +88,8 @@ export const DataPreview: React.FC<DataPreviewProps> = ({
           <button
             onClick={onToggleAnonymization}
             className={`flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors ${
-              isAnonymized 
-                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+              isAnonymized
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             title={isAnonymized ? 'Show real data' : 'Hide sensitive data'}
@@ -176,7 +176,7 @@ export const DataPreview: React.FC<DataPreviewProps> = ({
             {filteredData.length === 0 && searchTerm && (
               <div className="px-4 py-8 text-center">
                 <p className="text-gray-500">No data matches your search</p>
-                <button 
+                <button
                   onClick={() => setSearchTerm('')}
                   className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
                 >

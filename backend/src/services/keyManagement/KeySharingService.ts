@@ -1,8 +1,14 @@
-import { EventEmitter } from 'events';
-import { randomBytes, createCipheriv, createDecipheriv, createHash, scryptSync } from 'crypto';
-import { logger } from '../../utils/logger';
-import { getErrorMessage } from '../../utils/errorHandler';
-import { ThresholdCryptography } from './ThresholdCryptography';
+import { EventEmitter } from "events";
+import {
+  randomBytes,
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  scryptSync,
+} from "crypto";
+import { logger } from "../../utils/logger";
+import { getErrorMessage } from "../../utils/errorHandler";
+import { ThresholdCryptography } from "./ThresholdCryptography";
 
 export interface ShareDistribution {
   keyId: string;
@@ -11,7 +17,7 @@ export interface ShareDistribution {
   encryptedShare: string;
   distributedAt: Date;
   expiresAt?: Date;
-  status: 'active' | 'revoked' | 'expired';
+  status: "active" | "revoked" | "expired";
 }
 
 export interface ShareRequest {
@@ -20,7 +26,7 @@ export interface ShareRequest {
   requestedAt: Date;
   approvals: string[];
   requiredApprovals: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
 }
 
 /**
@@ -45,7 +51,7 @@ export class KeySharingService extends EventEmitter {
     keyId: string,
     keyMaterial: Buffer,
     threshold: number,
-    shareHolders: string[]
+    shareHolders: string[],
   ): Promise<{ shareId: string; holder: string; encryptedShare: string }[]> {
     try {
       // Create threshold shares
@@ -53,18 +59,25 @@ export class KeySharingService extends EventEmitter {
         keyMaterial,
         threshold,
         shareHolders.length,
-        shareHolders
+        shareHolders,
       );
 
       // Encrypt each share for its holder
-      const encryptedShares: { shareId: string; holder: string; encryptedShare: string }[] = [];
+      const encryptedShares: {
+        shareId: string;
+        holder: string;
+        encryptedShare: string;
+      }[] = [];
 
       for (const share of shares) {
         // Get or generate holder encryption key
         const holderKey = await this.getOrCreateHolderKey(share.holder);
 
         // Encrypt share
-        const encrypted = await this.encryptShareForHolder(share.share, holderKey);
+        const encrypted = await this.encryptShareForHolder(
+          share.share,
+          holderKey,
+        );
 
         // Register share distribution
         const distribution: ShareDistribution = {
@@ -73,7 +86,7 @@ export class KeySharingService extends EventEmitter {
           holder: share.holder,
           encryptedShare: encrypted,
           distributedAt: new Date(),
-          status: 'active'
+          status: "active",
         };
 
         this.shareRegistry.set(share.shareId, distribution);
@@ -81,20 +94,20 @@ export class KeySharingService extends EventEmitter {
         encryptedShares.push({
           shareId: share.shareId,
           holder: share.holder,
-          encryptedShare: encrypted
+          encryptedShare: encrypted,
         });
       }
 
-      logger.info('Key shared with holders', {
+      logger.info("Key shared with holders", {
         keyId,
         threshold,
-        holders: shareHolders.length
+        holders: shareHolders.length,
       });
 
-      this.emit('keyShared', {
+      this.emit("keyShared", {
         keyId,
         threshold,
-        holders: shareHolders
+        holders: shareHolders,
       });
 
       return encryptedShares;
@@ -110,7 +123,7 @@ export class KeySharingService extends EventEmitter {
   async reconstructKey(
     keyId: string,
     shares: { shareId: string; holder: string; encryptedShare: string }[],
-    threshold: number
+    threshold: number,
   ): Promise<Buffer> {
     try {
       // Verify all shares are valid and active
@@ -120,12 +133,14 @@ export class KeySharingService extends EventEmitter {
           throw new Error(`Share ${share.shareId} not found`);
         }
 
-        if (distribution.status !== 'active') {
+        if (distribution.status !== "active") {
           throw new Error(`Share ${share.shareId} is not active`);
         }
 
         if (distribution.keyId !== keyId) {
-          throw new Error(`Share ${share.shareId} does not belong to key ${keyId}`);
+          throw new Error(
+            `Share ${share.shareId} does not belong to key ${keyId}`,
+          );
         }
 
         if (distribution.expiresAt && distribution.expiresAt < new Date()) {
@@ -134,7 +149,11 @@ export class KeySharingService extends EventEmitter {
       }
 
       // Decrypt shares
-      const decryptedShares: { shareId: string; holder: string; share: string }[] = [];
+      const decryptedShares: {
+        shareId: string;
+        holder: string;
+        share: string;
+      }[] = [];
 
       for (const share of shares) {
         const holderKey = this.holderKeys.get(share.holder);
@@ -142,30 +161,33 @@ export class KeySharingService extends EventEmitter {
           throw new Error(`Holder key not found for ${share.holder}`);
         }
 
-        const decrypted = await this.decryptShareForHolder(share.encryptedShare, holderKey);
+        const decrypted = await this.decryptShareForHolder(
+          share.encryptedShare,
+          holderKey,
+        );
 
         decryptedShares.push({
           shareId: share.shareId,
           holder: share.holder,
-          share: decrypted
+          share: decrypted,
         });
       }
 
       // Reconstruct secret
       const keyMaterial = await this.thresholdCrypto.reconstructSecret(
         decryptedShares,
-        threshold
+        threshold,
       );
 
-      logger.info('Key reconstructed from shares', {
+      logger.info("Key reconstructed from shares", {
         keyId,
         sharesUsed: shares.length,
-        threshold
+        threshold,
       });
 
-      this.emit('keyReconstructed', {
+      this.emit("keyReconstructed", {
         keyId,
-        sharesUsed: shares.length
+        sharesUsed: shares.length,
       });
 
       return keyMaterial;
@@ -181,7 +203,7 @@ export class KeySharingService extends EventEmitter {
   async requestKeyAccess(
     keyId: string,
     requestedBy: string,
-    requiredApprovals: number
+    requiredApprovals: number,
   ): Promise<string> {
     const requestId = this.generateRequestId();
 
@@ -191,22 +213,22 @@ export class KeySharingService extends EventEmitter {
       requestedAt: new Date(),
       approvals: [],
       requiredApprovals,
-      status: 'pending'
+      status: "pending",
     };
 
     this.shareRequests.set(requestId, request);
 
-    logger.info('Key access requested', {
+    logger.info("Key access requested", {
       requestId,
       keyId,
       requestedBy,
-      requiredApprovals
+      requiredApprovals,
     });
 
-    this.emit('accessRequested', {
+    this.emit("accessRequested", {
       requestId,
       keyId,
-      requestedBy
+      requestedBy,
     });
 
     return requestId;
@@ -221,7 +243,7 @@ export class KeySharingService extends EventEmitter {
       throw new Error(`Request ${requestId} not found`);
     }
 
-    if (request.status !== 'pending') {
+    if (request.status !== "pending") {
       throw new Error(`Request ${requestId} is not pending`);
     }
 
@@ -232,18 +254,18 @@ export class KeySharingService extends EventEmitter {
 
     // Check if enough approvals
     if (request.approvals.length >= request.requiredApprovals) {
-      request.status = 'approved';
+      request.status = "approved";
       this.shareRequests.set(requestId, request);
 
-      logger.info('Key access request approved', {
+      logger.info("Key access request approved", {
         requestId,
         keyId: request.keyId,
-        approvals: request.approvals.length
+        approvals: request.approvals.length,
       });
 
-      this.emit('accessApproved', {
+      this.emit("accessApproved", {
         requestId,
-        keyId: request.keyId
+        keyId: request.keyId,
       });
 
       return true;
@@ -251,11 +273,11 @@ export class KeySharingService extends EventEmitter {
 
     this.shareRequests.set(requestId, request);
 
-    logger.info('Approval added to request', {
+    logger.info("Approval added to request", {
       requestId,
       approver,
       totalApprovals: request.approvals.length,
-      required: request.requiredApprovals
+      required: request.requiredApprovals,
     });
 
     return false;
@@ -264,27 +286,31 @@ export class KeySharingService extends EventEmitter {
   /**
    * Reject a key access request
    */
-  async rejectRequest(requestId: string, rejector: string, reason?: string): Promise<void> {
+  async rejectRequest(
+    requestId: string,
+    rejector: string,
+    reason?: string,
+  ): Promise<void> {
     const request = this.shareRequests.get(requestId);
     if (!request) {
       throw new Error(`Request ${requestId} not found`);
     }
 
-    request.status = 'rejected';
+    request.status = "rejected";
     this.shareRequests.set(requestId, request);
 
-    logger.info('Key access request rejected', {
+    logger.info("Key access request rejected", {
       requestId,
       keyId: request.keyId,
       rejector,
-      reason
+      reason,
     });
 
-    this.emit('accessRejected', {
+    this.emit("accessRejected", {
       requestId,
       keyId: request.keyId,
       rejector,
-      reason
+      reason,
     });
   }
 
@@ -297,21 +323,21 @@ export class KeySharingService extends EventEmitter {
       throw new Error(`Share ${shareId} not found`);
     }
 
-    distribution.status = 'revoked';
+    distribution.status = "revoked";
     this.shareRegistry.set(shareId, distribution);
 
-    logger.warn('Share revoked', {
+    logger.warn("Share revoked", {
       shareId,
       keyId: distribution.keyId,
       holder: distribution.holder,
-      reason
+      reason,
     });
 
-    this.emit('shareRevoked', {
+    this.emit("shareRevoked", {
       shareId,
       keyId: distribution.keyId,
       holder: distribution.holder,
-      reason
+      reason,
     });
   }
 
@@ -320,11 +346,12 @@ export class KeySharingService extends EventEmitter {
    */
   async refreshShares(
     keyId: string,
-    threshold: number
+    threshold: number,
   ): Promise<{ shareId: string; holder: string; encryptedShare: string }[]> {
     // Get all active shares for the key
-    const activeShares = Array.from(this.shareRegistry.values())
-      .filter(d => d.keyId === keyId && d.status === 'active');
+    const activeShares = Array.from(this.shareRegistry.values()).filter(
+      (d) => d.keyId === keyId && d.status === "active",
+    );
 
     if (activeShares.length < threshold) {
       throw new Error(`Insufficient active shares to refresh key ${keyId}`);
@@ -332,36 +359,45 @@ export class KeySharingService extends EventEmitter {
 
     try {
       // Collect shares for reconstruction
-      const sharesToReconstruct = activeShares.slice(0, threshold).map(d => ({
+      const sharesToReconstruct = activeShares.slice(0, threshold).map((d) => ({
         shareId: d.shareId,
         holder: d.holder,
-        share: d.encryptedShare
+        share: d.encryptedShare,
       }));
 
       // Reconstruct the key
-      const keyMaterial = await this.reconstructKey(keyId, sharesToReconstruct, threshold);
+      const keyMaterial = await this.reconstructKey(
+        keyId,
+        sharesToReconstruct,
+        threshold,
+      );
 
       // Get holders
-      const holders = activeShares.map(d => d.holder);
+      const holders = activeShares.map((d) => d.holder);
 
       // Revoke old shares
       for (const share of activeShares) {
-        await this.revokeShare(share.shareId, 'Share refresh');
+        await this.revokeShare(share.shareId, "Share refresh");
       }
 
       // Create new shares
-      const newShares = await this.shareKey(keyId, keyMaterial, threshold, holders);
+      const newShares = await this.shareKey(
+        keyId,
+        keyMaterial,
+        threshold,
+        holders,
+      );
 
-      logger.info('Shares refreshed', {
+      logger.info("Shares refreshed", {
         keyId,
         threshold,
-        holders: holders.length
+        holders: holders.length,
       });
 
-      this.emit('sharesRefreshed', {
+      this.emit("sharesRefreshed", {
         keyId,
         threshold,
-        holders: holders.length
+        holders: holders.length,
       });
 
       return newShares;
@@ -382,16 +418,18 @@ export class KeySharingService extends EventEmitter {
    * List shares for a key
    */
   listSharesForKey(keyId: string): ShareDistribution[] {
-    return Array.from(this.shareRegistry.values())
-      .filter(d => d.keyId === keyId);
+    return Array.from(this.shareRegistry.values()).filter(
+      (d) => d.keyId === keyId,
+    );
   }
 
   /**
    * List shares for a holder
    */
   listSharesForHolder(holder: string): ShareDistribution[] {
-    return Array.from(this.shareRegistry.values())
-      .filter(d => d.holder === holder);
+    return Array.from(this.shareRegistry.values()).filter(
+      (d) => d.holder === holder,
+    );
   }
 
   /**
@@ -405,8 +443,9 @@ export class KeySharingService extends EventEmitter {
    * List pending requests
    */
   listPendingRequests(): ShareRequest[] {
-    return Array.from(this.shareRequests.values())
-      .filter(r => r.status === 'pending');
+    return Array.from(this.shareRequests.values()).filter(
+      (r) => r.status === "pending",
+    );
   }
 
   /**
@@ -427,13 +466,13 @@ export class KeySharingService extends EventEmitter {
 
     return {
       totalShares: shares.length,
-      activeShares: shares.filter(s => s.status === 'active').length,
-      revokedShares: shares.filter(s => s.status === 'revoked').length,
-      expiredShares: shares.filter(s => s.status === 'expired').length,
+      activeShares: shares.filter((s) => s.status === "active").length,
+      revokedShares: shares.filter((s) => s.status === "revoked").length,
+      expiredShares: shares.filter((s) => s.status === "expired").length,
       totalRequests: requests.length,
-      pendingRequests: requests.filter(r => r.status === 'pending').length,
-      approvedRequests: requests.filter(r => r.status === 'approved').length,
-      rejectedRequests: requests.filter(r => r.status === 'rejected').length
+      pendingRequests: requests.filter((r) => r.status === "pending").length,
+      approvedRequests: requests.filter((r) => r.status === "approved").length,
+      rejectedRequests: requests.filter((r) => r.status === "rejected").length,
     };
   }
 
@@ -441,7 +480,7 @@ export class KeySharingService extends EventEmitter {
 
   private async getOrCreateHolderKey(holder: string): Promise<Buffer> {
     let key = this.holderKeys.get(holder);
-    
+
     if (!key) {
       // Generate a new key for the holder
       // In production, this would be derived from the holder's public key
@@ -452,26 +491,32 @@ export class KeySharingService extends EventEmitter {
     return key;
   }
 
-  private async encryptShareForHolder(share: string, holderKey: Buffer): Promise<string> {
-    const algorithm = 'aes-256-gcm';
+  private async encryptShareForHolder(
+    share: string,
+    holderKey: Buffer,
+  ): Promise<string> {
+    const algorithm = "aes-256-gcm";
     const iv = randomBytes(16);
-    
+
     const cipher = createCipheriv(algorithm, holderKey, iv);
     const encrypted = Buffer.concat([
       cipher.update(Buffer.from(share)),
-      cipher.final()
+      cipher.final(),
     ]);
     const tag = cipher.getAuthTag();
 
     // Combine iv, tag, and encrypted data
     const combined = Buffer.concat([iv, tag, encrypted]);
-    return combined.toString('base64');
+    return combined.toString("base64");
   }
 
-  private async decryptShareForHolder(encryptedShare: string, holderKey: Buffer): Promise<string> {
-    const algorithm = 'aes-256-gcm';
-    const data = Buffer.from(encryptedShare, 'base64');
-    
+  private async decryptShareForHolder(
+    encryptedShare: string,
+    holderKey: Buffer,
+  ): Promise<string> {
+    const algorithm = "aes-256-gcm";
+    const data = Buffer.from(encryptedShare, "base64");
+
     // Extract components
     const iv = data.slice(0, 16);
     const tag = data.slice(16, 32);
@@ -479,17 +524,17 @@ export class KeySharingService extends EventEmitter {
 
     const decipher = createDecipheriv(algorithm, holderKey, iv);
     decipher.setAuthTag(tag);
-    
+
     const decrypted = Buffer.concat([
       decipher.update(encrypted),
-      decipher.final()
+      decipher.final(),
     ]);
 
     return decrypted.toString();
   }
 
   private generateRequestId(): string {
-    return `req_${Date.now()}_${randomBytes(8).toString('hex')}`;
+    return `req_${Date.now()}_${randomBytes(8).toString("hex")}`;
   }
 }
 

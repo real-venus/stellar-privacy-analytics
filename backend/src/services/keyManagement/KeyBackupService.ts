@@ -1,11 +1,17 @@
-import { EventEmitter } from 'events';
-import { randomBytes, createCipheriv, createDecipheriv, createHash, scryptSync } from 'crypto';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { HSMService, WrappedKey } from '../hsmService';
-import { logger } from '../../utils/logger';
-import { getErrorMessage } from '../../utils/errorHandler';
-import type { KeyMetadata } from './KeyManagementService';
+import { EventEmitter } from "events";
+import {
+  randomBytes,
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  scryptSync,
+} from "crypto";
+import { promises as fs } from "fs";
+import * as path from "path";
+import { HSMService, WrappedKey } from "../hsmService";
+import { logger } from "../../utils/logger";
+import { getErrorMessage } from "../../utils/errorHandler";
+import type { KeyMetadata } from "./KeyManagementService";
 
 export interface BackupConfig {
   backupPath: string;
@@ -27,7 +33,7 @@ export interface BackupRecord {
   size: number;
   checksum: string;
   metadata: KeyMetadata;
-  status: 'pending' | 'completed' | 'failed' | 'expired';
+  status: "pending" | "completed" | "failed" | "expired";
 }
 
 /**
@@ -45,15 +51,16 @@ export class KeyBackupService extends EventEmitter {
   constructor(hsmService: HSMService, config?: Partial<BackupConfig>) {
     super();
     this.hsmService = hsmService;
-    
+
     this.config = {
-      backupPath: process.env.KEY_BACKUP_PATH || './backups/keys',
-      encryptionPassword: process.env.BACKUP_ENCRYPTION_PASSWORD || 'change-me-in-production',
+      backupPath: process.env.KEY_BACKUP_PATH || "./backups/keys",
+      encryptionPassword:
+        process.env.BACKUP_ENCRYPTION_PASSWORD || "change-me-in-production",
       compressionEnabled: true,
       redundancyLevel: 3,
       remoteBackupEnabled: false,
       retentionDays: 90,
-      ...config
+      ...config,
     };
   }
 
@@ -68,14 +75,14 @@ export class KeyBackupService extends EventEmitter {
       // Start cleanup scheduler
       this.startCleanupScheduler();
 
-      logger.info('Key Backup Service initialized', {
+      logger.info("Key Backup Service initialized", {
         backupPath: this.config.backupPath,
-        redundancyLevel: this.config.redundancyLevel
+        redundancyLevel: this.config.redundancyLevel,
       });
 
-      this.emit('initialized');
+      this.emit("initialized");
     } catch (error) {
-      logger.error('Failed to initialize Key Backup Service:', error);
+      logger.error("Failed to initialize Key Backup Service:", error);
       throw error;
     }
   }
@@ -89,7 +96,7 @@ export class KeyBackupService extends EventEmitter {
     // Save backup registry
     await this.saveBackupRegistry();
 
-    logger.info('Key Backup Service shutdown completed');
+    logger.info("Key Backup Service shutdown completed");
   }
 
   /**
@@ -98,7 +105,7 @@ export class KeyBackupService extends EventEmitter {
   async scheduleBackup(keyId: string, wrappedKey: WrappedKey): Promise<void> {
     if (!this.backupQueue.includes(keyId)) {
       this.backupQueue.push(keyId);
-      logger.info('Backup scheduled', { keyId });
+      logger.info("Backup scheduled", { keyId });
     }
 
     // Start processing if not already running
@@ -112,7 +119,7 @@ export class KeyBackupService extends EventEmitter {
    */
   async backupKey(
     keyId: string,
-    metadata: KeyMetadata
+    metadata: KeyMetadata,
   ): Promise<{ backupId: string; location: string }> {
     try {
       const backupId = this.generateBackupId(keyId);
@@ -122,20 +129,20 @@ export class KeyBackupService extends EventEmitter {
         backupId,
         keyId,
         timestamp: new Date(),
-        location: '',
+        location: "",
         encrypted: true,
         compressed: this.config.compressionEnabled,
         size: 0,
-        checksum: '',
+        checksum: "",
         metadata,
-        status: 'pending'
+        status: "pending",
       };
 
       // Serialize key data
       const keyData = {
         keyId,
         metadata,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       const serialized = JSON.stringify(keyData);
@@ -150,14 +157,14 @@ export class KeyBackupService extends EventEmitter {
       const encrypted = await this.encryptBackup(data);
 
       // Calculate checksum
-      const checksum = createHash('sha256').update(encrypted).digest('hex');
+      const checksum = createHash("sha256").update(encrypted).digest("hex");
 
       // Save to disk with redundancy
       const locations: string[] = [];
       for (let i = 0; i < this.config.redundancyLevel; i++) {
         const location = path.join(
           this.config.backupPath,
-          `${backupId}_copy${i}.bak`
+          `${backupId}_copy${i}.bak`,
         );
         await fs.writeFile(location, encrypted);
         locations.push(location);
@@ -167,21 +174,21 @@ export class KeyBackupService extends EventEmitter {
       record.location = locations[0];
       record.size = encrypted.length;
       record.checksum = checksum;
-      record.status = 'completed';
+      record.status = "completed";
 
       this.backupRegistry.set(backupId, record);
 
       // Save registry
       await this.saveBackupRegistry();
 
-      logger.info('Key backed up', {
+      logger.info("Key backed up", {
         keyId,
         backupId,
         size: record.size,
-        redundancy: this.config.redundancyLevel
+        redundancy: this.config.redundancyLevel,
       });
 
-      this.emit('backupCompleted', keyId);
+      this.emit("backupCompleted", keyId);
 
       // Backup to remote if enabled
       if (this.config.remoteBackupEnabled && this.config.remoteBackupEndpoint) {
@@ -198,13 +205,15 @@ export class KeyBackupService extends EventEmitter {
   /**
    * Restore a key from backup
    */
-  async restoreKey(backupId: string): Promise<{ keyId: string; metadata: KeyMetadata }> {
+  async restoreKey(
+    backupId: string,
+  ): Promise<{ keyId: string; metadata: KeyMetadata }> {
     const record = this.backupRegistry.get(backupId);
     if (!record) {
       throw new Error(`Backup ${backupId} not found`);
     }
 
-    if (record.status !== 'completed') {
+    if (record.status !== "completed") {
       throw new Error(`Backup ${backupId} is not in completed state`);
     }
 
@@ -219,9 +228,9 @@ export class KeyBackupService extends EventEmitter {
       }
 
       // Verify checksum
-      const checksum = createHash('sha256').update(encrypted).digest('hex');
+      const checksum = createHash("sha256").update(encrypted).digest("hex");
       if (checksum !== record.checksum) {
-        throw new Error('Backup checksum mismatch - data may be corrupted');
+        throw new Error("Backup checksum mismatch - data may be corrupted");
       }
 
       // Decrypt backup
@@ -236,16 +245,16 @@ export class KeyBackupService extends EventEmitter {
       // Parse key data
       const keyData = JSON.parse(data.toString());
 
-      logger.info('Key restored from backup', {
+      logger.info("Key restored from backup", {
         keyId: keyData.keyId,
-        backupId
+        backupId,
       });
 
-      this.emit('keyRestored', keyData.keyId);
+      this.emit("keyRestored", keyData.keyId);
 
       return {
         keyId: keyData.keyId,
-        metadata: keyData.metadata
+        metadata: keyData.metadata,
       };
     } catch (error: unknown) {
       logger.error(`Failed to restore key from backup ${backupId}:`, error);
@@ -258,7 +267,7 @@ export class KeyBackupService extends EventEmitter {
    */
   listBackups(filters?: {
     keyId?: string;
-    status?: BackupRecord['status'];
+    status?: BackupRecord["status"];
     startDate?: Date;
     endDate?: Date;
   }): BackupRecord[] {
@@ -266,16 +275,16 @@ export class KeyBackupService extends EventEmitter {
 
     if (filters) {
       if (filters.keyId) {
-        backups = backups.filter(b => b.keyId === filters.keyId);
+        backups = backups.filter((b) => b.keyId === filters.keyId);
       }
       if (filters.status) {
-        backups = backups.filter(b => b.status === filters.status);
+        backups = backups.filter((b) => b.status === filters.status);
       }
       if (filters.startDate) {
-        backups = backups.filter(b => b.timestamp >= filters.startDate!);
+        backups = backups.filter((b) => b.timestamp >= filters.startDate!);
       }
       if (filters.endDate) {
-        backups = backups.filter(b => b.timestamp <= filters.endDate!);
+        backups = backups.filter((b) => b.timestamp <= filters.endDate!);
       }
     }
 
@@ -296,7 +305,7 @@ export class KeyBackupService extends EventEmitter {
       for (let i = 0; i < this.config.redundancyLevel; i++) {
         const location = path.join(
           this.config.backupPath,
-          `${backupId}_copy${i}.bak`
+          `${backupId}_copy${i}.bak`,
         );
         try {
           await fs.unlink(location);
@@ -309,8 +318,8 @@ export class KeyBackupService extends EventEmitter {
       this.backupRegistry.delete(backupId);
       await this.saveBackupRegistry();
 
-      logger.info('Backup deleted', { backupId });
-      this.emit('backupDeleted', backupId);
+      logger.info("Backup deleted", { backupId });
+      this.emit("backupDeleted", backupId);
     } catch (error) {
       logger.error(`Failed to delete backup ${backupId}:`, error);
       throw error;
@@ -326,7 +335,7 @@ export class KeyBackupService extends EventEmitter {
   }> {
     const record = this.backupRegistry.get(backupId);
     if (!record) {
-      return { valid: false, issues: ['Backup not found'] };
+      return { valid: false, issues: ["Backup not found"] };
     }
 
     const issues: string[] = [];
@@ -336,15 +345,15 @@ export class KeyBackupService extends EventEmitter {
       try {
         await fs.access(record.location);
       } catch {
-        issues.push('Primary backup file not found');
+        issues.push("Primary backup file not found");
       }
 
       // Verify checksum
       try {
         const data = await fs.readFile(record.location);
-        const checksum = createHash('sha256').update(data).digest('hex');
+        const checksum = createHash("sha256").update(data).digest("hex");
         if (checksum !== record.checksum) {
-          issues.push('Checksum mismatch');
+          issues.push("Checksum mismatch");
         }
       } catch (error: unknown) {
         issues.push(`Failed to verify checksum: ${getErrorMessage(error)}`);
@@ -355,7 +364,7 @@ export class KeyBackupService extends EventEmitter {
       for (let i = 0; i < this.config.redundancyLevel; i++) {
         const location = path.join(
           this.config.backupPath,
-          `${backupId}_copy${i}.bak`
+          `${backupId}_copy${i}.bak`,
         );
         try {
           await fs.access(location);
@@ -366,12 +375,14 @@ export class KeyBackupService extends EventEmitter {
       }
 
       if (validCopies < this.config.redundancyLevel) {
-        issues.push(`Only ${validCopies}/${this.config.redundancyLevel} redundant copies available`);
+        issues.push(
+          `Only ${validCopies}/${this.config.redundancyLevel} redundant copies available`,
+        );
       }
 
       return {
         valid: issues.length === 0,
-        issues
+        issues,
       };
     } catch (error: unknown) {
       issues.push(`Verification failed: ${getErrorMessage(error)}`);
@@ -385,7 +396,7 @@ export class KeyBackupService extends EventEmitter {
   isHealthy(): boolean {
     // Check if backup directory is accessible
     try {
-      require('fs').accessSync(this.config.backupPath);
+      require("fs").accessSync(this.config.backupPath);
       return true;
     } catch {
       return false;
@@ -406,10 +417,10 @@ export class KeyBackupService extends EventEmitter {
 
     return {
       totalBackups: backups.length,
-      completedBackups: backups.filter(b => b.status === 'completed').length,
-      failedBackups: backups.filter(b => b.status === 'failed').length,
+      completedBackups: backups.filter((b) => b.status === "completed").length,
+      failedBackups: backups.filter((b) => b.status === "failed").length,
       totalSize: backups.reduce((sum, b) => sum + b.size, 0),
-      queueSize: this.backupQueue.length
+      queueSize: this.backupQueue.length,
     };
   }
 
@@ -424,11 +435,11 @@ export class KeyBackupService extends EventEmitter {
 
     while (this.backupQueue.length > 0) {
       const keyId = this.backupQueue.shift()!;
-      
+
       try {
         // Get key metadata (would come from key management service)
         // For now, we'll skip the actual backup
-        logger.info('Processing backup from queue', { keyId });
+        logger.info("Processing backup from queue", { keyId });
       } catch (error) {
         logger.error(`Failed to process backup for ${keyId}:`, error);
       }
@@ -438,11 +449,11 @@ export class KeyBackupService extends EventEmitter {
   }
 
   private async encryptBackup(data: Buffer): Promise<Buffer> {
-    const algorithm = 'aes-256-gcm';
+    const algorithm = "aes-256-gcm";
     const salt = randomBytes(32);
     const key = scryptSync(this.config.encryptionPassword, salt, 32);
     const iv = randomBytes(16);
-    
+
     const cipher = createCipheriv(algorithm, key, iv);
     const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
     const tag = cipher.getAuthTag();
@@ -452,8 +463,8 @@ export class KeyBackupService extends EventEmitter {
   }
 
   private async decryptBackup(data: Buffer): Promise<Buffer> {
-    const algorithm = 'aes-256-gcm';
-    
+    const algorithm = "aes-256-gcm";
+
     // Extract components
     const salt = data.slice(0, 32);
     const iv = data.slice(32, 48);
@@ -461,16 +472,16 @@ export class KeyBackupService extends EventEmitter {
     const encrypted = data.slice(64);
 
     const key = scryptSync(this.config.encryptionPassword, salt, 32);
-    
+
     const decipher = createDecipheriv(algorithm, key, iv);
     decipher.setAuthTag(tag);
-    
+
     return Buffer.concat([decipher.update(encrypted), decipher.final()]);
   }
 
   private async compress(data: Buffer): Promise<Buffer> {
     // Simple compression using zlib
-    const zlib = require('zlib');
+    const zlib = require("zlib");
     return new Promise((resolve, reject) => {
       zlib.gzip(data, (err: Error, result: Buffer) => {
         if (err) reject(err);
@@ -480,7 +491,7 @@ export class KeyBackupService extends EventEmitter {
   }
 
   private async decompress(data: Buffer): Promise<Buffer> {
-    const zlib = require('zlib');
+    const zlib = require("zlib");
     return new Promise((resolve, reject) => {
       zlib.gunzip(data, (err: Error, result: Buffer) => {
         if (err) reject(err);
@@ -493,7 +504,7 @@ export class KeyBackupService extends EventEmitter {
     for (let i = 0; i < this.config.redundancyLevel; i++) {
       const location = path.join(
         this.config.backupPath,
-        `${backupId}_copy${i}.bak`
+        `${backupId}_copy${i}.bak`,
       );
       try {
         return await fs.readFile(location);
@@ -501,43 +512,48 @@ export class KeyBackupService extends EventEmitter {
         // Try next copy
       }
     }
-    throw new Error('All redundant copies failed');
+    throw new Error("All redundant copies failed");
   }
 
   private async backupToRemote(backupId: string, data: Buffer): Promise<void> {
     // Implement remote backup (S3, Azure Blob, etc.)
-    logger.info('Remote backup not yet implemented', { backupId });
+    logger.info("Remote backup not yet implemented", { backupId });
   }
 
   private generateBackupId(keyId: string): string {
     const timestamp = Date.now();
-    const random = randomBytes(8).toString('hex');
+    const random = randomBytes(8).toString("hex");
     return `backup_${keyId}_${timestamp}_${random}`;
   }
 
   private async loadBackupRegistry(): Promise<void> {
-    const registryPath = path.join(this.config.backupPath, 'registry.json');
+    const registryPath = path.join(this.config.backupPath, "registry.json");
     try {
-      const data = await fs.readFile(registryPath, 'utf-8');
+      const data = await fs.readFile(registryPath, "utf-8");
       const records = JSON.parse(data);
       this.backupRegistry = new Map(Object.entries(records));
-      logger.info('Backup registry loaded', { count: this.backupRegistry.size });
+      logger.info("Backup registry loaded", {
+        count: this.backupRegistry.size,
+      });
     } catch (error) {
-      logger.info('No existing backup registry found, starting fresh');
+      logger.info("No existing backup registry found, starting fresh");
     }
   }
 
   private async saveBackupRegistry(): Promise<void> {
-    const registryPath = path.join(this.config.backupPath, 'registry.json');
+    const registryPath = path.join(this.config.backupPath, "registry.json");
     const records = Object.fromEntries(this.backupRegistry);
     await fs.writeFile(registryPath, JSON.stringify(records, null, 2));
   }
 
   private startCleanupScheduler(): void {
     // Run cleanup daily
-    this.cleanupInterval = setInterval(async () => {
-      await this.cleanupExpiredBackups();
-    }, 24 * 60 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      async () => {
+        await this.cleanupExpiredBackups();
+      },
+      24 * 60 * 60 * 1000,
+    );
   }
 
   private async cleanupExpiredBackups(): Promise<void> {
@@ -548,7 +564,7 @@ export class KeyBackupService extends EventEmitter {
 
     for (const [backupId, record] of this.backupRegistry.entries()) {
       const age = now.getTime() - record.timestamp.getTime();
-      
+
       if (age > retentionMs) {
         try {
           await this.deleteBackup(backupId);
@@ -560,7 +576,7 @@ export class KeyBackupService extends EventEmitter {
     }
 
     if (deletedCount > 0) {
-      logger.info('Expired backups cleaned up', { deletedCount });
+      logger.info("Expired backups cleaned up", { deletedCount });
     }
   }
 }

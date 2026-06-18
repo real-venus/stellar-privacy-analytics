@@ -1,8 +1,8 @@
-import { EventEmitter } from 'events';
-import { LRUCache } from 'lru-cache';
-import { logger } from '../../utils/logger';
-import { getErrorMessage } from '../../utils/errorHandler';
-import type { KeyMetadata } from './KeyManagementService';
+import { EventEmitter } from "events";
+import { LRUCache } from "lru-cache";
+import { logger } from "../../utils/logger";
+import { getErrorMessage } from "../../utils/errorHandler";
+import type { KeyMetadata } from "./KeyManagementService";
 
 export interface CacheConfig {
   maxSize: number;
@@ -39,7 +39,7 @@ export class PerformanceOptimizer extends EventEmitter {
   private operationQueue: Map<string, any[]> = new Map();
   private operationMetrics: Map<string, number[]> = new Map();
   private strategy: OptimizationStrategy;
-  
+
   private metrics: PerformanceMetrics = {
     cacheHits: 0,
     cacheMisses: 0,
@@ -47,7 +47,7 @@ export class PerformanceOptimizer extends EventEmitter {
     averageOperationTime: 0,
     totalOperations: 0,
     batchOperations: 0,
-    parallelOperations: 0
+    parallelOperations: 0,
   };
 
   private batchTimer: NodeJS.Timeout | null = null;
@@ -59,7 +59,7 @@ export class PerformanceOptimizer extends EventEmitter {
     const cacheConfig: CacheConfig = {
       maxSize: config?.maxSize || 1000,
       ttl: config?.ttl || 3600000, // 1 hour
-      updateAgeOnGet: config?.updateAgeOnGet !== false
+      updateAgeOnGet: config?.updateAgeOnGet !== false,
     };
 
     this.strategy = {
@@ -69,7 +69,7 @@ export class PerformanceOptimizer extends EventEmitter {
       enablePrefetching: config?.enablePrefetching !== false,
       batchSize: config?.batchSize || 10,
       maxParallelOps: config?.maxParallelOps || 5,
-      prefetchThreshold: config?.prefetchThreshold || 0.8
+      prefetchThreshold: config?.prefetchThreshold || 0.8,
     };
 
     this.keyCache = new LRUCache({
@@ -77,8 +77,8 @@ export class PerformanceOptimizer extends EventEmitter {
       ttl: cacheConfig.ttl,
       updateAgeOnGet: cacheConfig.updateAgeOnGet,
       dispose: (value, key) => {
-        this.emit('cacheEviction', { key, value });
-      }
+        this.emit("cacheEviction", { key, value });
+      },
     });
   }
 
@@ -91,11 +91,11 @@ export class PerformanceOptimizer extends EventEmitter {
       this.startPrefetcher();
     }
 
-    logger.info('Performance Optimizer initialized', {
-      strategy: this.strategy
+    logger.info("Performance Optimizer initialized", {
+      strategy: this.strategy,
     });
 
-    this.emit('initialized');
+    this.emit("initialized");
   }
 
   async shutdown(): Promise<void> {
@@ -114,7 +114,7 @@ export class PerformanceOptimizer extends EventEmitter {
 
     this.keyCache.clear();
 
-    logger.info('Performance Optimizer shutdown completed');
+    logger.info("Performance Optimizer shutdown completed");
   }
 
   /**
@@ -132,7 +132,7 @@ export class PerformanceOptimizer extends EventEmitter {
       // Analyze usage patterns
       this.analyzeUsagePattern(keyId, metadata);
 
-      logger.debug('Key optimized', { keyId });
+      logger.debug("Key optimized", { keyId });
     } catch (error: unknown) {
       logger.error(`Failed to optimize key ${keyId}:`, error);
     }
@@ -147,7 +147,7 @@ export class PerformanceOptimizer extends EventEmitter {
     }
 
     const cached = this.keyCache.get(`metadata:${keyId}`);
-    
+
     if (cached) {
       this.metrics.cacheHits++;
       this.updateCacheHitRate();
@@ -162,20 +162,25 @@ export class PerformanceOptimizer extends EventEmitter {
   /**
    * Cache operation result
    */
-  cacheOperationResult(operationType: string, key: string, result: any, ttl?: number): void {
+  cacheOperationResult(
+    operationType: string,
+    key: string,
+    result: any,
+    ttl?: number,
+  ): void {
     if (!this.strategy.enableCaching) {
       return;
     }
 
     const cacheKey = `${operationType}:${key}`;
-    
+
     if (ttl) {
       this.keyCache.set(cacheKey, result, { ttl });
     } else {
       this.keyCache.set(cacheKey, result);
     }
 
-    logger.debug('Operation result cached', { operationType, key });
+    logger.debug("Operation result cached", { operationType, key });
   }
 
   /**
@@ -205,7 +210,7 @@ export class PerformanceOptimizer extends EventEmitter {
    */
   async queueOperation(
     operationType: string,
-    operation: () => Promise<any>
+    operation: () => Promise<any>,
   ): Promise<any> {
     if (!this.strategy.enableBatching) {
       return await this.executeOperation(operationType, operation);
@@ -226,9 +231,7 @@ export class PerformanceOptimizer extends EventEmitter {
   /**
    * Execute operations in parallel
    */
-  async executeParallel<T>(
-    operations: (() => Promise<T>)[]
-  ): Promise<T[]> {
+  async executeParallel<T>(operations: (() => Promise<T>)[]): Promise<T[]> {
     if (!this.strategy.enableParallelization) {
       // Execute sequentially
       const results: T[] = [];
@@ -243,7 +246,7 @@ export class PerformanceOptimizer extends EventEmitter {
     const chunks = this.chunkArray(operations, this.strategy.maxParallelOps);
 
     for (const chunk of chunks) {
-      const chunkResults = await Promise.all(chunk.map(op => op()));
+      const chunkResults = await Promise.all(chunk.map((op) => op()));
       results.push(...chunkResults);
       this.metrics.parallelOperations += chunk.length;
     }
@@ -259,8 +262,8 @@ export class PerformanceOptimizer extends EventEmitter {
       return;
     }
 
-    logger.info('Prefetching keys', { count: keyIds.length });
-    this.emit('cacheWarming', keyIds);
+    logger.info("Prefetching keys", { count: keyIds.length });
+    this.emit("cacheWarming", keyIds);
 
     // This would trigger actual key loading in the key management service
     // For now, we just emit the event
@@ -281,8 +284,8 @@ export class PerformanceOptimizer extends EventEmitter {
       warmedCount++;
     }
 
-    logger.info('Cache warmed', { count: warmedCount });
-    this.emit('cacheWarmed', { count: warmedCount });
+    logger.info("Cache warmed", { count: warmedCount });
+    this.emit("cacheWarmed", { count: warmedCount });
   }
 
   /**
@@ -290,8 +293,8 @@ export class PerformanceOptimizer extends EventEmitter {
    */
   clearCache(): void {
     this.keyCache.clear();
-    logger.info('Cache cleared');
-    this.emit('cacheCleared');
+    logger.info("Cache cleared");
+    this.emit("cacheCleared");
   }
 
   /**
@@ -299,7 +302,7 @@ export class PerformanceOptimizer extends EventEmitter {
    */
   invalidateCache(key: string): void {
     this.keyCache.delete(key);
-    logger.debug('Cache invalidated', { key });
+    logger.debug("Cache invalidated", { key });
   }
 
   /**
@@ -320,11 +323,11 @@ export class PerformanceOptimizer extends EventEmitter {
       averageOperationTime: 0,
       totalOperations: 0,
       batchOperations: 0,
-      parallelOperations: 0
+      parallelOperations: 0,
     };
 
     this.operationMetrics.clear();
-    logger.info('Metrics reset');
+    logger.info("Metrics reset");
   }
 
   /**
@@ -352,8 +355,8 @@ export class PerformanceOptimizer extends EventEmitter {
       }
     }
 
-    logger.info('Optimization strategy updated', { updates });
-    this.emit('strategyUpdated', this.strategy);
+    logger.info("Optimization strategy updated", { updates });
+    this.emit("strategyUpdated", this.strategy);
   }
 
   /**
@@ -376,7 +379,7 @@ export class PerformanceOptimizer extends EventEmitter {
       size: this.keyCache.size,
       maxSize: this.keyCache.max,
       hitRate: this.metrics.cacheHitRate,
-      evictions: this.listenerCount('cacheEviction')
+      evictions: this.listenerCount("cacheEviction"),
     };
   }
 
@@ -384,13 +387,13 @@ export class PerformanceOptimizer extends EventEmitter {
 
   private async executeOperation(
     operationType: string,
-    operation: () => Promise<any>
+    operation: () => Promise<any>,
   ): Promise<any> {
     const startTime = Date.now();
 
     try {
       const result = await operation();
-      
+
       const duration = Date.now() - startTime;
       this.recordOperationTime(operationType, duration);
       this.metrics.totalOperations++;
@@ -427,15 +430,18 @@ export class PerformanceOptimizer extends EventEmitter {
     const batch = queue.splice(0, this.strategy.batchSize);
     this.operationQueue.set(operationType, queue);
 
-    logger.debug('Processing batch', {
+    logger.debug("Processing batch", {
       operationType,
-      batchSize: batch.length
+      batchSize: batch.length,
     });
 
     // Execute batch operations
     for (const item of batch) {
       try {
-        const result = await this.executeOperation(operationType, item.operation);
+        const result = await this.executeOperation(
+          operationType,
+          item.operation,
+        );
         item.resolve(result);
       } catch (error: unknown) {
         item.reject(error);
@@ -447,15 +453,18 @@ export class PerformanceOptimizer extends EventEmitter {
 
   private startPrefetcher(): void {
     // Analyze usage patterns every 5 minutes
-    this.prefetchTimer = setInterval(() => {
-      this.analyzePrefetchOpportunities();
-    }, 5 * 60 * 1000);
+    this.prefetchTimer = setInterval(
+      () => {
+        this.analyzePrefetchOpportunities();
+      },
+      5 * 60 * 1000,
+    );
   }
 
   private analyzePrefetchOpportunities(): void {
     // Analyze cache hit rates and identify frequently accessed keys
     // This would trigger prefetching of related keys
-    logger.debug('Analyzing prefetch opportunities');
+    logger.debug("Analyzing prefetch opportunities");
   }
 
   private analyzeUsagePattern(keyId: string, metadata: KeyMetadata): void {
@@ -476,7 +485,7 @@ export class PerformanceOptimizer extends EventEmitter {
 
     // Update average
     const allTimes = Array.from(this.operationMetrics.values()).flat();
-    this.metrics.averageOperationTime = 
+    this.metrics.averageOperationTime =
       allTimes.reduce((sum, t) => sum + t, 0) / allTimes.length;
   }
 

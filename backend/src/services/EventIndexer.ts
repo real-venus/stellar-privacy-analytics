@@ -1,5 +1,5 @@
-import { rpc, Contract, xdr } from '@stellar/stellar-sdk';
-import axios from 'axios';
+import { rpc, Contract, xdr } from "@stellar/stellar-sdk";
+import axios from "axios";
 
 export interface IndexedEvent {
   id: string;
@@ -17,7 +17,11 @@ export class EventIndexer {
   private cache: Map<string, IndexedEvent> = new Map();
   private webhooks: string[] = [];
 
-  constructor(rpcUrl: string, startingCursor?: string, webhooks: string[] = []) {
+  constructor(
+    rpcUrl: string,
+    startingCursor?: string,
+    webhooks: string[] = [],
+  ) {
     this.server = new rpc.Server(rpcUrl);
     this.cursor = startingCursor;
     this.webhooks = webhooks;
@@ -26,7 +30,7 @@ export class EventIndexer {
   public async start() {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log('Starting Soroban Event Indexer...');
+    console.log("Starting Soroban Event Indexer...");
     this.pollEvents();
   }
 
@@ -42,21 +46,21 @@ export class EventIndexer {
     while (this.isRunning) {
       try {
         const latestLedger = await this.server.getLatestLedger();
-        
+
         // Handle re-orgs/gaps by ensuring cursor is valid, otherwise fallback to recent ledgers
-        const startLedger = this.cursor ? parseInt(this.cursor) : latestLedger.sequence - 100;
+        const startLedger = this.cursor
+          ? parseInt(this.cursor)
+          : latestLedger.sequence - 100;
 
         const response = await this.server.getEvents({
           startLedger,
           filters: [
             {
-              type: 'contract',
-              topics: [
-                xdr.ScVal.scvSymbol('analytics_ready')
-              ]
-            }
+              type: "contract",
+              topics: [xdr.ScVal.scvSymbol("analytics_ready")],
+            },
           ],
-          limit: 100
+          limit: 100,
         });
 
         for (const event of response.events) {
@@ -68,10 +72,10 @@ export class EventIndexer {
         }
 
         // Wait 5 seconds before next poll
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
-        console.error('Error fetching events, retrying...', error);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        console.error("Error fetching events, retrying...", error);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
   }
@@ -86,9 +90,9 @@ export class EventIndexer {
       id: event.id,
       contractId: event.contractId.toString(),
       ledger: event.ledger,
-      topic: event.topic.map(t => t.value()?.toString() || ''),
+      topic: event.topic.map((t) => t.value()?.toString() || ""),
       sanitizedData,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     this.cache.set(event.id, indexedEvent);
@@ -100,14 +104,18 @@ export class EventIndexer {
     // Removes anything explicitly labeled 'blob', 'raw_data', or 'encrypted'
     // In production, robust XDR decoding specific to the contract schema is utilized here
     const strValue = JSON.stringify(value);
-    if (strValue.includes('encrypted') || strValue.includes('blob')) {
-      return '[REDACTED_SENSITIVE_DATA]';
+    if (strValue.includes("encrypted") || strValue.includes("blob")) {
+      return "[REDACTED_SENSITIVE_DATA]";
     }
-    return strValue; 
+    return strValue;
   }
 
   private async notifyWebhooks(event: IndexedEvent) {
-    const promises = this.webhooks.map(url => axios.post(url, event).catch(e => console.error(`Webhook failed for ${url}`)));
+    const promises = this.webhooks.map((url) =>
+      axios
+        .post(url, event)
+        .catch((e) => console.error(`Webhook failed for ${url}`)),
+    );
     await Promise.allSettled(promises);
   }
 }

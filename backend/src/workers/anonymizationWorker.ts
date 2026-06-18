@@ -1,17 +1,17 @@
-import { Queue, Worker, Job } from 'bullmq';
-import { createClient } from 'redis';
-import { logger } from '../utils/logger';
-import { PIIMasker } from './piMasker';
-import { NERProcessor } from './nerProcessor';
-import { SandboxManager } from './sandboxManager';
-import { MetadataRepository } from '../repositories/metadataRepository';
-import { DeadLetterQueue } from './deadLetterQueue';
+import { Queue, Worker, Job } from "bullmq";
+import { createClient } from "redis";
+import { logger } from "../utils/logger";
+import { PIIMasker } from "./piMasker";
+import { NERProcessor } from "./nerProcessor";
+import { SandboxManager } from "./sandboxManager";
+import { MetadataRepository } from "../repositories/metadataRepository";
+import { DeadLetterQueue } from "./deadLetterQueue";
 
 export interface AnonymizationJob {
   id: string;
   datasetId: string;
   metadata: Record<string, any>;
-  priority: 'low' | 'normal' | 'high';
+  priority: "low" | "normal" | "high";
   createdAt: Date;
   retryCount?: number;
   maxRetries?: number;
@@ -30,7 +30,15 @@ export interface AnonymizationResult {
 }
 
 export interface PIIDetection {
-  type: 'email' | 'phone' | 'ssn' | 'credit_card' | 'name' | 'address' | 'date' | 'custom';
+  type:
+    | "email"
+    | "phone"
+    | "ssn"
+    | "credit_card"
+    | "name"
+    | "address"
+    | "date"
+    | "custom";
   value: string;
   maskedValue: string;
   position: {
@@ -38,7 +46,7 @@ export interface PIIDetection {
     end: number;
   };
   confidence: number;
-  method: 'regex' | 'ner' | 'custom';
+  method: "regex" | "ner" | "custom";
 }
 
 export class AnonymizationWorker {
@@ -96,27 +104,27 @@ export class AnonymizationWorker {
     const redisConnection = createClient({
       socket: {
         host: redisConfig.host,
-        port: redisConfig.port
+        port: redisConfig.port,
       },
       password: redisConfig.password,
-      database: redisConfig.db || 0
+      database: redisConfig.db || 0,
     });
 
-    redisConnection.on('error', (err) => {
-      logger.error('Redis connection error:', err);
+    redisConnection.on("error", (err) => {
+      logger.error("Redis connection error:", err);
     });
 
-    redisConnection.on('connect', () => {
-      logger.info('Connected to Redis for BullMQ');
+    redisConnection.on("connect", () => {
+      logger.info("Connected to Redis for BullMQ");
     });
   }
 
   private initializeQueues(): void {
     // Main anonymization queue
-    this.queue = new Queue('anonymization', {
+    this.queue = new Queue("anonymization", {
       connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
+        host: process.env.REDIS_HOST || "localhost",
+        port: parseInt(process.env.REDIS_PORT || "6379"),
         password: process.env.REDIS_PASSWORD,
       },
       defaultJobOptions: {
@@ -124,25 +132,25 @@ export class AnonymizationWorker {
         removeOnFail: 50, // Keep last 50 failed jobs
         attempts: 3,
         backoff: {
-          type: 'exponential',
+          type: "exponential",
           delay: 2000,
         },
       },
     });
 
     // Queue scheduler for delayed jobs
-    this.scheduler = new (any as any)('anonymization', {
+    this.scheduler = new (any as any)("anonymization", {
       connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
+        host: process.env.REDIS_HOST || "localhost",
+        port: parseInt(process.env.REDIS_PORT || "6379"),
         password: process.env.REDIS_PASSWORD,
       },
     });
 
     // Dead letter queue for failed jobs
-    this.deadLetterQueue = new DeadLetterQueue('anonymization-dead-letter');
+    this.deadLetterQueue = new DeadLetterQueue("anonymization-dead-letter");
 
-    logger.info('BullMQ queues initialized');
+    logger.info("BullMQ queues initialized");
   }
 
   private initializeComponents(config: any): void {
@@ -155,8 +163,8 @@ export class AnonymizationWorker {
 
     // NER Processor
     this.nerProcessor = new NERProcessor({
-      modelsPath: process.env.NER_MODELS_PATH || './models/ner',
-      languages: ['en'],
+      modelsPath: process.env.NER_MODELS_PATH || "./models/ner",
+      languages: ["en"],
       confidenceThreshold: 0.8,
     });
 
@@ -168,36 +176,38 @@ export class AnonymizationWorker {
     });
 
     // Metadata Repository
-    this.metadataRepository = new MetadataRepository(config.postgres.readReplica);
+    this.metadataRepository = new MetadataRepository(
+      config.postgres.readReplica,
+    );
 
-    logger.info('Worker components initialized');
+    logger.info("Worker components initialized");
   }
 
   private initializeWorker(workerConfig: any): void {
     this.worker = new Worker(
-      'anonymization',
+      "anonymization",
       async (job: Job<AnonymizationJob>) => {
         return this.processJob(job);
       },
       {
         connection: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
+          host: process.env.REDIS_HOST || "localhost",
+          port: parseInt(process.env.REDIS_PORT || "6379"),
           password: process.env.REDIS_PASSWORD,
         },
         concurrency: workerConfig.concurrency || 5,
         attempts: workerConfig.maxRetries || 3,
         retryDelay: workerConfig.retryDelay || 2000,
-      }
+      },
     );
 
     this.setupWorkerEvents();
-    logger.info('Anonymization worker started');
+    logger.info("Anonymization worker started");
   }
 
   private setupWorkerEvents(): void {
-    this.worker.on('completed', (job: Job, result: AnonymizationResult) => {
-      logger.info('Job completed', {
+    this.worker.on("completed", (job: Job, result: AnonymizationResult) => {
+      logger.info("Job completed", {
         jobId: job.id,
         datasetId: result.datasetId,
         processingTime: result.processingTime,
@@ -205,8 +215,8 @@ export class AnonymizationWorker {
       });
     });
 
-    this.worker.on('failed', (job: Job, err: Error) => {
-      logger.error('Job failed', {
+    this.worker.on("failed", (job: Job, err: Error) => {
+      logger.error("Job failed", {
         jobId: job.id,
         datasetId: job.data?.datasetId,
         error: err.message,
@@ -226,21 +236,26 @@ export class AnonymizationWorker {
       }
     });
 
-    this.worker.on('error', (err: Error) => {
-      logger.error('Worker error:', err);
+    this.worker.on("error", (err: Error) => {
+      logger.error("Worker error:", err);
     });
 
-    this.worker.on('stalled', (job: Job) => {
-      logger.warn('Job stalled', { jobId: job.id, datasetId: job.data?.datasetId });
+    this.worker.on("stalled", (job: Job) => {
+      logger.warn("Job stalled", {
+        jobId: job.id,
+        datasetId: job.data?.datasetId,
+      });
     });
   }
 
-  private async processJob(job: Job<AnonymizationJob>): Promise<AnonymizationResult> {
+  private async processJob(
+    job: Job<AnonymizationJob>,
+  ): Promise<AnonymizationResult> {
     const startTime = Date.now();
     const { id: jobId, datasetId, metadata } = job.data;
 
     try {
-      logger.info('Processing anonymization job', {
+      logger.info("Processing anonymization job", {
         jobId,
         datasetId,
         metadataKeys: Object.keys(metadata),
@@ -257,14 +272,17 @@ export class AnonymizationWorker {
         : await this.performAnonymization(jobId, datasetId, metadata);
 
       // Store sanitized metadata
-      await this.metadataRepository.storeSanitizedMetadata(datasetId, result.sanitizedMetadata);
+      await this.metadataRepository.storeSanitizedMetadata(
+        datasetId,
+        result.sanitizedMetadata,
+      );
 
       // Update job progress
       await job.updateProgress(100);
 
       const processingTime = Date.now() - startTime;
 
-      logger.info('Anonymization job completed successfully', {
+      logger.info("Anonymization job completed successfully", {
         jobId,
         datasetId,
         processingTime,
@@ -276,10 +294,9 @@ export class AnonymizationWorker {
         processingTime,
         processedAt: new Date(),
       };
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      logger.error('Anonymization job failed', {
+      logger.error("Anonymization job failed", {
         jobId,
         datasetId,
         error: error.message,
@@ -292,33 +309,36 @@ export class AnonymizationWorker {
 
   private validateJobData(jobData: AnonymizationJob): void {
     if (!jobData.id || !jobData.datasetId || !jobData.metadata) {
-      throw new Error('Invalid job data: missing required fields');
+      throw new Error("Invalid job data: missing required fields");
     }
 
-    if (typeof jobData.metadata !== 'object' || Array.isArray(jobData.metadata)) {
-      throw new Error('Invalid job data: metadata must be an object');
+    if (
+      typeof jobData.metadata !== "object" ||
+      Array.isArray(jobData.metadata)
+    ) {
+      throw new Error("Invalid job data: metadata must be an object");
     }
 
     if (Object.keys(jobData.metadata).length === 0) {
-      throw new Error('Invalid job data: metadata cannot be empty');
+      throw new Error("Invalid job data: metadata cannot be empty");
     }
   }
 
   private async performAnonymization(
     jobId: string,
     datasetId: string,
-    metadata: Record<string, any>
-  ): Promise<Omit<AnonymizationResult, 'processingTime' | 'processedAt'>> {
+    metadata: Record<string, any>,
+  ): Promise<Omit<AnonymizationResult, "processingTime" | "processedAt">> {
     const piiDetections: PIIDetection[] = [];
     const sanitizedMetadata = JSON.parse(JSON.stringify(metadata)); // Deep clone
 
     // Process each metadata field
     for (const [key, value] of Object.entries(metadata)) {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         const fieldResult = await this.anonymizeField(key, value);
         sanitizedMetadata[key] = fieldResult.sanitizedValue;
         piiDetections.push(...fieldResult.detections);
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         // Recursively process nested objects
         const nestedResult = await this.anonymizeObject(value);
         sanitizedMetadata[key] = nestedResult.sanitizedObject;
@@ -338,7 +358,7 @@ export class AnonymizationWorker {
 
   private async anonymizeField(
     fieldName: string,
-    fieldValue: string
+    fieldValue: string,
   ): Promise<{ sanitizedValue: string; detections: PIIDetection[] }> {
     const detections: PIIDetection[] = [];
     let sanitizedValue = fieldValue;
@@ -361,17 +381,20 @@ export class AnonymizationWorker {
   }
 
   private async anonymizeObject(
-    obj: Record<string, any>
-  ): Promise<{ sanitizedObject: Record<string, any>; detections: PIIDetection[] }> {
+    obj: Record<string, any>,
+  ): Promise<{
+    sanitizedObject: Record<string, any>;
+    detections: PIIDetection[];
+  }> {
     const detections: PIIDetection[] = [];
     const sanitizedObject: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(obj)) {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         const fieldResult = await this.anonymizeField(key, value);
         sanitizedObject[key] = fieldResult.sanitizedValue;
         detections.push(...fieldResult.detections);
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         // Recursively process nested objects
         const nestedResult = await this.anonymizeObject(value);
         sanitizedObject[key] = nestedResult.sanitizedObject;
@@ -388,28 +411,26 @@ export class AnonymizationWorker {
   /**
    * Add a new anonymization job to the queue
    */
-  async addJob(jobData: Omit<AnonymizationJob, 'id' | 'createdAt'>): Promise<string> {
+  async addJob(
+    jobData: Omit<AnonymizationJob, "id" | "createdAt">,
+  ): Promise<string> {
     const job: AnonymizationJob = {
       ...jobData,
       id: this.generateJobId(),
       createdAt: new Date(),
     };
 
-    const bullJob = await this.queue.add(
-      'anonymize-metadata',
-      job,
-      {
-        priority: this.getPriorityValue(job.priority),
-        delay: 0,
-        attempts: job.maxRetries || 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-      }
-    );
+    const bullJob = await this.queue.add("anonymize-metadata", job, {
+      priority: this.getPriorityValue(job.priority),
+      delay: 0,
+      attempts: job.maxRetries || 3,
+      backoff: {
+        type: "exponential",
+        delay: 2000,
+      },
+    });
 
-    logger.info('Anonymization job added to queue', {
+    logger.info("Anonymization job added to queue", {
       jobId: job.id,
       datasetId: job.datasetId,
       priority: job.priority,
@@ -424,7 +445,7 @@ export class AnonymizationWorker {
    */
   async getJobStatus(jobId: string): Promise<any> {
     const job = await this.queue.getJob(jobId);
-    
+
     if (!job) {
       throw new Error(`Job ${jobId} not found`);
     }
@@ -467,7 +488,7 @@ export class AnonymizationWorker {
    */
   async pause(): Promise<void> {
     await this.worker.pause();
-    logger.info('Anonymization worker paused');
+    logger.info("Anonymization worker paused");
   }
 
   /**
@@ -475,7 +496,7 @@ export class AnonymizationWorker {
    */
   async resume(): Promise<void> {
     await this.worker.resume();
-    logger.info('Anonymization worker resumed');
+    logger.info("Anonymization worker resumed");
   }
 
   /**
@@ -484,18 +505,20 @@ export class AnonymizationWorker {
   private setupGracefulShutdown(): void {
     const shutdown = async (signal: string) => {
       if (this.isShuttingDown) return;
-      
+
       this.isShuttingDown = true;
       logger.info(`Received ${signal}, shutting down gracefully...`);
 
       try {
         // Stop accepting new jobs
         await this.worker.close();
-        
+
         // Wait for active jobs to complete (with timeout)
         const activeJobs = await this.queue.getActive();
         if (activeJobs.length > 0) {
-          logger.info(`Waiting for ${activeJobs.length} active jobs to complete...`);
+          logger.info(
+            `Waiting for ${activeJobs.length} active jobs to complete...`,
+          );
           await this.waitUntilEmpty(30000); // 30 seconds timeout
         }
 
@@ -508,42 +531,46 @@ export class AnonymizationWorker {
         await this.sandboxManager.cleanup();
         await this.nerProcessor.cleanup();
 
-        logger.info('Graceful shutdown completed');
+        logger.info("Graceful shutdown completed");
         process.exit(0);
       } catch (error) {
-        logger.error('Error during shutdown:', error);
+        logger.error("Error during shutdown:", error);
         process.exit(1);
       }
     };
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   }
 
   private async waitUntilEmpty(timeout: number): Promise<void> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeout) {
       const active = await this.queue.getActive();
       if (active.length === 0) {
         return;
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    
-    logger.warn('Timeout waiting for queue to empty');
+
+    logger.warn("Timeout waiting for queue to empty");
   }
 
   private generateJobId(): string {
     return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
   }
 
-  private getPriorityValue(priority: 'low' | 'normal' | 'high'): number {
+  private getPriorityValue(priority: "low" | "normal" | "high"): number {
     switch (priority) {
-      case 'low': return 1;
-      case 'normal': return 5;
-      case 'high': return 10;
-      default: return 5;
+      case "low":
+        return 1;
+      case "normal":
+        return 5;
+      case "high":
+        return 10;
+      default:
+        return 5;
     }
   }
 
@@ -551,7 +578,7 @@ export class AnonymizationWorker {
    * Health check for orchestrators
    */
   async healthCheck(): Promise<{
-    status: 'healthy' | 'degraded' | 'unhealthy';
+    status: "healthy" | "degraded" | "unhealthy";
     timestamp: Date;
     worker: {
       status: string;
@@ -574,7 +601,7 @@ export class AnonymizationWorker {
   }> {
     try {
       const queueStats = await this.getQueueStats();
-      
+
       // Check component health
       const components = {
         redis: await this.checkRedisHealth(),
@@ -584,23 +611,25 @@ export class AnonymizationWorker {
         sandbox: this.sandboxManager.isHealthy(),
       };
 
-      const allComponentsHealthy = Object.values(components).every(status => status);
+      const allComponentsHealthy = Object.values(components).every(
+        (status) => status,
+      );
       const hasActiveJobs = queueStats.active > 0;
       const highFailureRate = queueStats.failed > queueStats.completed * 0.1; // >10% failure rate
 
-      let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-      
+      let status: "healthy" | "degraded" | "unhealthy" = "healthy";
+
       if (!allComponentsHealthy || highFailureRate) {
-        status = 'unhealthy';
+        status = "unhealthy";
       } else if (hasActiveJobs) {
-        status = 'degraded';
+        status = "degraded";
       }
 
       return {
         status,
         timestamp: new Date(),
         worker: {
-          status: this.isShuttingDown ? 'shutting_down' : 'running',
+          status: this.isShuttingDown ? "shutting_down" : "running",
           activeJobs: queueStats.active,
           processedJobs: queueStats.completed,
           failedJobs: queueStats.failed,
@@ -613,13 +642,13 @@ export class AnonymizationWorker {
         components,
       };
     } catch (error) {
-      logger.error('Health check failed:', error);
-      
+      logger.error("Health check failed:", error);
+
       return {
-        status: 'unhealthy',
+        status: "unhealthy",
         timestamp: new Date(),
         worker: {
-          status: 'error',
+          status: "error",
           activeJobs: 0,
           processedJobs: 0,
           failedJobs: 0,
@@ -644,16 +673,16 @@ export class AnonymizationWorker {
     try {
       const client = createClient({
         socket: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
+          host: process.env.REDIS_HOST || "localhost",
+          port: parseInt(process.env.REDIS_PORT || "6379"),
         },
         password: process.env.REDIS_PASSWORD,
       });
-      
+
       await client.connect();
       await client.ping();
       await client.disconnect();
-      
+
       return true;
     } catch (error) {
       return false;

@@ -1,15 +1,15 @@
 export function downloadTextFile(
   content: string,
   filename: string,
-  mimeType = "text/plain;charset=utf-8",
+  mimeType = 'text/plain;charset=utf-8'
 ): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
-  const linkElement = document.createElement("a");
+  const linkElement = document.createElement('a');
 
   linkElement.href = url;
   linkElement.download = filename;
-  linkElement.rel = "noopener noreferrer";
+  linkElement.rel = 'noopener noreferrer';
   document.body.appendChild(linkElement);
   linkElement.click();
   linkElement.remove();
@@ -18,23 +18,19 @@ export function downloadTextFile(
 }
 
 export function downloadJsonFile(content: unknown, filename: string): void {
-  downloadTextFile(
-    JSON.stringify(content, null, 2),
-    filename,
-    "application/json;charset=utf-8",
-  );
+  downloadTextFile(JSON.stringify(content, null, 2), filename, 'application/json;charset=utf-8');
 }
 
 export function downloadCsvFile(content: string, filename: string): void {
-  downloadTextFile(content, filename, "text/csv;charset=utf-8");
+  downloadTextFile(content, filename, 'text/csv;charset=utf-8');
 }
 
 export function buildCsvFromObjects(
   rows: Record<string, any>[],
-  preferredColumns?: string[],
+  preferredColumns?: string[]
 ): string {
   if (rows.length === 0) {
-    return "";
+    return '';
   }
 
   const columns =
@@ -44,13 +40,13 @@ export function buildCsvFromObjects(
 
   const escapeValue = (value: unknown): string => {
     if (value === null || value === undefined) {
-      return "";
+      return '';
     }
 
     const normalized =
       value instanceof Date
         ? value.toISOString()
-        : typeof value === "object"
+        : typeof value === 'object'
           ? JSON.stringify(value)
           : String(value);
 
@@ -62,19 +58,13 @@ export function buildCsvFromObjects(
   };
 
   return [
-    columns.join(","),
-    ...rows.map((row) =>
-      columns.map((column) => escapeValue(row[column])).join(","),
-    ),
-  ].join("\n");
+    columns.join(','),
+    ...rows.map((row) => columns.map((column) => escapeValue(row[column])).join(',')),
+  ].join('\n');
 }
 
 export function openPrintableReport(title: string, html: string): boolean {
-  const printWindow = window.open(
-    "",
-    "_blank",
-    "noopener,noreferrer,width=1024,height=768",
-  );
+  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1024,height=768');
 
   if (!printWindow) {
     return false;

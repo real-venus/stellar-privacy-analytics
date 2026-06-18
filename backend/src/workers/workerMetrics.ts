@@ -1,5 +1,5 @@
-import { logger } from '../utils/logger';
-import { EventEmitter } from 'events';
+import { logger } from "../utils/logger";
+import { EventEmitter } from "events";
 
 export interface MetricsConfig {
   interval: number;
@@ -21,12 +21,15 @@ export interface WorkerMetricsData {
   concurrencyChanges: number;
   currentConcurrency: number;
   timestamp: Date;
-  byPriority: Record<string, {
-    added: number;
-    completed: number;
-    failed: number;
-    averageTime: number;
-  }>;
+  byPriority: Record<
+    string,
+    {
+      added: number;
+      completed: number;
+      failed: number;
+      averageTime: number;
+    }
+  >;
 }
 
 export class WorkerMetrics extends EventEmitter {
@@ -80,7 +83,7 @@ export class WorkerMetrics extends EventEmitter {
       this.logMetrics();
     }, this.config.interval);
 
-    logger.info('Worker metrics collection started', {
+    logger.info("Worker metrics collection started", {
       workerName: this.config.workerName,
       interval: this.config.interval,
     });
@@ -92,19 +95,22 @@ export class WorkerMetrics extends EventEmitter {
       this.interval = null;
     }
 
-    logger.info('Worker metrics collection stopped', {
+    logger.info("Worker metrics collection stopped", {
       workerName: this.config.workerName,
     });
   }
 
-  recordJobAdded(priority: string = 'normal'): void {
+  recordJobAdded(priority: string = "normal"): void {
     this.metrics.jobsAdded++;
     if (this.metrics.byPriority[priority]) {
       this.metrics.byPriority[priority].added++;
     }
   }
 
-  recordJobCompleted(processingTime: number, priority: string = 'normal'): void {
+  recordJobCompleted(
+    processingTime: number,
+    priority: string = "normal",
+  ): void {
     this.metrics.jobsCompleted++;
     this.processingTimes.push(processingTime);
 
@@ -121,7 +127,7 @@ export class WorkerMetrics extends EventEmitter {
     }
   }
 
-  recordJobFailed(priority: string = 'normal'): void {
+  recordJobFailed(priority: string = "normal"): void {
     this.metrics.jobsFailed++;
     if (this.metrics.byPriority[priority]) {
       this.metrics.byPriority[priority].failed++;
@@ -175,11 +181,11 @@ export class WorkerMetrics extends EventEmitter {
   }
 
   private emitMetrics(): void {
-    this.emit('metrics', this.getMetrics());
+    this.emit("metrics", this.getMetrics());
   }
 
   private logMetrics(): void {
-    logger.info('Worker metrics', {
+    logger.info("Worker metrics", {
       workerName: this.config.workerName,
       metrics: {
         jobsAdded: this.metrics.jobsAdded,
@@ -212,9 +218,10 @@ export class WorkerMetrics extends EventEmitter {
   } {
     const uptime = Date.now() - this.startTime.getTime();
     const totalProcessed = this.metrics.jobsCompleted + this.metrics.jobsFailed;
-    const successRate = totalProcessed > 0 
-      ? (this.metrics.jobsCompleted / totalProcessed) * 100 
-      : 0;
+    const successRate =
+      totalProcessed > 0
+        ? (this.metrics.jobsCompleted / totalProcessed) * 100
+        : 0;
 
     return {
       uptime,
@@ -227,7 +234,7 @@ export class WorkerMetrics extends EventEmitter {
   reset(): void {
     this.resetMetrics();
     this.lastResetTime = new Date();
-    logger.info('Worker metrics reset', {
+    logger.info("Worker metrics reset", {
       workerName: this.config.workerName,
     });
   }

@@ -13,7 +13,7 @@ import {
   Lock,
   BarChart3,
   Target,
-  Zap
+  Zap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -55,15 +55,20 @@ const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
     type: 'single',
     options: ['Public', 'Internal', 'Confidential', 'Highly Sensitive (PII, Health, Financial)'],
     required: true,
-    category: 'data'
+    category: 'data',
   },
   {
     id: 'data-volume',
     question: 'What is the approximate volume of data to be processed?',
     type: 'single',
-    options: ['< 1,000 records', '1,000 - 10,000 records', '10,000 - 100,000 records', '> 100,000 records'],
+    options: [
+      '< 1,000 records',
+      '1,000 - 10,000 records',
+      '10,000 - 100,000 records',
+      '> 100,000 records',
+    ],
     required: true,
-    category: 'data'
+    category: 'data',
   },
   {
     id: 'analysis-purpose',
@@ -76,10 +81,10 @@ const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
       'Risk Assessment',
       'Customer Insights',
       'Operational Optimization',
-      'Regulatory Requirements'
+      'Regulatory Requirements',
     ],
     required: true,
-    category: 'purpose'
+    category: 'purpose',
   },
   {
     id: 'user-access',
@@ -91,10 +96,10 @@ const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
       'Executives',
       'External Partners',
       'Public (aggregated)',
-      'Regulators'
+      'Regulators',
     ],
     required: true,
-    category: 'users'
+    category: 'users',
   },
   {
     id: 'retention-period',
@@ -102,7 +107,7 @@ const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
     type: 'single',
     options: ['< 30 days', '30-90 days', '90-365 days', '> 1 year', 'Indefinitely'],
     required: true,
-    category: 'data'
+    category: 'data',
   },
   {
     id: 'privacy-risks',
@@ -115,10 +120,10 @@ const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
       'Inadequate anonymization',
       'Cross-border data transfers',
       'Third-party sharing',
-      'Long-term data linkage'
+      'Long-term data linkage',
     ],
     required: false,
-    category: 'risks'
+    category: 'risks',
   },
   {
     id: 'existing-controls',
@@ -132,27 +137,19 @@ const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
       'Audit logging',
       'Data classification',
       'Privacy impact assessments',
-      'None'
+      'None',
     ],
     required: false,
-    category: 'mitigation'
+    category: 'mitigation',
   },
   {
     id: 'compliance-requirements',
     question: 'Which compliance frameworks apply?',
     type: 'multiple',
-    options: [
-      'GDPR',
-      'CCPA',
-      'HIPAA',
-      'SOX',
-      'PCI DSS',
-      'Industry-specific regulations',
-      'None'
-    ],
+    options: ['GDPR', 'CCPA', 'HIPAA', 'SOX', 'PCI DSS', 'Industry-specific regulations', 'None'],
     required: false,
-    category: 'mitigation'
-  }
+    category: 'mitigation',
+  },
 ];
 
 export const PrivacyImpactAssessmentWizard: React.FC = () => {
@@ -169,17 +166,17 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
   const handleAnswer = (answer: string | string[] | number) => {
     const newAnswer: AssessmentAnswer = {
       questionId: currentQuestion.id,
-      answer
+      answer,
     };
 
-    setAnswers(prev => {
-      const filtered = prev.filter(a => a.questionId !== currentQuestion.id);
+    setAnswers((prev) => {
+      const filtered = prev.filter((a) => a.questionId !== currentQuestion.id);
       return [...filtered, newAnswer];
     });
   };
 
   const getCurrentAnswer = (): string | string[] | number | undefined => {
-    const answer = answers.find(a => a.questionId === currentQuestion.id);
+    const answer = answers.find((a) => a.questionId === currentQuestion.id);
     return answer?.answer;
   };
 
@@ -210,8 +207,8 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
     const recommendations: string[] = [];
 
     // Analyze answers to calculate risk
-    answers.forEach(answer => {
-      const question = ASSESSMENT_QUESTIONS.find(q => q.id === answer.questionId);
+    answers.forEach((answer) => {
+      const question = ASSESSMENT_QUESTIONS.find((q) => q.id === answer.questionId);
       if (!question) return;
 
       switch (question.id) {
@@ -242,7 +239,10 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
 
         case 'user-access':
           const accessList = answer.answer as string[];
-          if (accessList.includes('External Partners') || accessList.includes('Public (aggregated)')) {
+          if (
+            accessList.includes('External Partners') ||
+            accessList.includes('Public (aggregated)')
+          ) {
             score += 25;
             factors.push('Broad user access');
             recommendations.push('Implement strict access controls and data sharing agreements');
@@ -284,7 +284,9 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
 
     // Add general recommendations
     if (score > 50) {
-      recommendations.push('Consider privacy-preserving techniques (differential privacy, federated learning)');
+      recommendations.push(
+        'Consider privacy-preserving techniques (differential privacy, federated learning)'
+      );
       recommendations.push('Implement regular privacy audits');
     }
 
@@ -307,10 +309,10 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
           'Use privacy-preserving computation techniques',
           'Regular privacy training for staff',
           'Automated privacy monitoring',
-          'Data retention policies'
+          'Data retention policies',
         ],
         complianceFrameworks: ['GDPR', 'CCPA'],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       setResult(assessmentResult);
@@ -333,22 +335,33 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
   const getStepIcon = (stepIndex: number) => {
     const question = ASSESSMENT_QUESTIONS[stepIndex];
     switch (question.category) {
-      case 'data': return <Database className="h-5 w-5" />;
-      case 'purpose': return <Target className="h-5 w-5" />;
-      case 'users': return <Users className="h-5 w-5" />;
-      case 'risks': return <AlertTriangle className="h-5 w-5" />;
-      case 'mitigation': return <Shield className="h-5 w-5" />;
-      default: return <Info className="h-5 w-5" />;
+      case 'data':
+        return <Database className="h-5 w-5" />;
+      case 'purpose':
+        return <Target className="h-5 w-5" />;
+      case 'users':
+        return <Users className="h-5 w-5" />;
+      case 'risks':
+        return <AlertTriangle className="h-5 w-5" />;
+      case 'mitigation':
+        return <Shield className="h-5 w-5" />;
+      default:
+        return <Info className="h-5 w-5" />;
     }
   };
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low': return 'text-green-600 bg-green-50 border-green-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'low':
+        return 'text-green-600 bg-green-50 border-green-200';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'high':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'critical':
+        return 'text-red-600 bg-red-50 border-red-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
@@ -442,18 +455,16 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
       {/* Header */}
       <div className="text-center mb-8">
         <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Privacy Impact Assessment
-        </h1>
-        <p className="text-gray-600">
-          Evaluate privacy risks for your data analysis project
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Privacy Impact Assessment</h1>
+        <p className="text-gray-600">Evaluate privacy risks for your data analysis project</p>
       </div>
 
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-          <span>Step {currentStep + 1} of {totalSteps}</span>
+          <span>
+            Step {currentStep + 1} of {totalSteps}
+          </span>
           <span>{Math.round(progress)}% Complete</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -475,15 +486,11 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
               index < currentStep
                 ? 'bg-green-500 text-white'
                 : index === currentStep
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-400'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-400'
             }`}
           >
-            {index < currentStep ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              getStepIcon(index)
-            )}
+            {index < currentStep ? <CheckCircle className="h-4 w-4" /> : getStepIcon(index)}
           </div>
         ))}
       </div>
@@ -497,14 +504,15 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
           exit={{ opacity: 0, x: -20 }}
           className="mb-8"
         >
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {currentQuestion.question}
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{currentQuestion.question}</h2>
 
           {currentQuestion.type === 'single' && currentQuestion.options && (
             <div className="space-y-3">
               {currentQuestion.options.map((option) => (
-                <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label
+                  key={option}
+                  className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                >
                   <input
                     type="radio"
                     name={currentQuestion.id}
@@ -522,7 +530,10 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
           {currentQuestion.type === 'multiple' && currentQuestion.options && (
             <div className="space-y-3">
               {currentQuestion.options.map((option) => (
-                <label key={option} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label
+                  key={option}
+                  className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                >
                   <input
                     type="checkbox"
                     value={option}
@@ -530,7 +541,7 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
                     onChange={(e) => {
                       const current = (getCurrentAnswer() as string[]) || [];
                       const updated = current.includes(option)
-                        ? current.filter(item => item !== option)
+                        ? current.filter((item) => item !== option)
                         : [...current, option];
                       handleAnswer(updated);
                     }}

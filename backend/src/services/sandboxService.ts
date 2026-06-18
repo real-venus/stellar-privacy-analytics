@@ -1,7 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../utils/logger';
-import { sandboxConfig } from '../config/sandboxConfig';
-import { getRedisClient } from '../config/redis';
+import { v4 as uuidv4 } from "uuid";
+import { logger } from "../utils/logger";
+import { sandboxConfig } from "../config/sandboxConfig";
+import { getRedisClient } from "../config/redis";
 
 export interface SubscriptionBilledEvent {
   eventId: string;
@@ -10,7 +10,7 @@ export interface SubscriptionBilledEvent {
   currency: string;
   billingPeriodStart: string;
   billingPeriodEnd: string;
-  paymentStatus: 'success' | 'failed' | 'pending';
+  paymentStatus: "success" | "failed" | "pending";
   timestamp: string;
   metadata: {
     environment: string;
@@ -33,10 +33,10 @@ export interface DunningProcess {
   dunningId: string;
   subscriptionId: string;
   dunningLevel: number;
-  contactMethod: 'email' | 'sms' | 'push' | 'webhook';
+  contactMethod: "email" | "sms" | "push" | "webhook";
   message?: string;
   sentAt: string;
-  status: 'sent' | 'failed' | 'pending';
+  status: "sent" | "failed" | "pending";
   responseReceived?: boolean;
 }
 
@@ -49,11 +49,11 @@ export class SandboxService {
     currency: string;
     billingPeriodStart: string;
     billingPeriodEnd: string;
-    paymentStatus?: 'success' | 'failed' | 'pending';
+    paymentStatus?: "success" | "failed" | "pending";
   }): Promise<SubscriptionBilledEvent> {
     const eventId = uuidv4();
     const timestamp = new Date().toISOString();
-    
+
     const event: SubscriptionBilledEvent = {
       eventId,
       subscriptionId: data.subscriptionId,
@@ -61,38 +61,42 @@ export class SandboxService {
       currency: data.currency,
       billingPeriodStart: data.billingPeriodStart,
       billingPeriodEnd: data.billingPeriodEnd,
-      paymentStatus: data.paymentStatus || 'success',
+      paymentStatus: data.paymentStatus || "success",
       timestamp,
       metadata: {
         environment: sandboxConfig.getConfig().environment,
-        mockData: true
-      }
+        mockData: true,
+      },
     };
 
     // Store in Redis for webhooks and indexing
     await this.redisClient.setEx(
       `sandbox:subscription_billed:${eventId}`,
       86400, // 24 hours
-      JSON.stringify(event)
+      JSON.stringify(event),
     );
 
     // Add to subscription history
     await this.redisClient.lPush(
       `sandbox:subscription:${data.subscriptionId}:billing_events`,
-      JSON.stringify(event)
+      JSON.stringify(event),
     );
-    
+
     // Trim list to last 100 events
-    await this.redisClient.lTrim(`sandbox:subscription:${data.subscriptionId}:billing_events`, 0, 99);
+    await this.redisClient.lTrim(
+      `sandbox:subscription:${data.subscriptionId}:billing_events`,
+      0,
+      99,
+    );
 
     // Emit to internal indexer (simulate)
-    await this.emitToIndexer('SubscriptionBilled', event);
+    await this.emitToIndexer("SubscriptionBilled", event);
 
-    logger.info('Subscription billed event simulated', { 
-      eventId, 
+    logger.info("Subscription billed event simulated", {
+      eventId,
       subscriptionId: data.subscriptionId,
       amount: data.amount,
-      status: event.paymentStatus
+      status: event.paymentStatus,
     });
 
     return event;
@@ -106,7 +110,9 @@ export class SandboxService {
     const gracePeriodId = uuidv4();
     const timestamp = new Date().toISOString();
     const startDate = timestamp;
-    const endDate = new Date(Date.now() + data.gracePeriodDays * 24 * 60 * 60 * 1000).toISOString();
+    const endDate = new Date(
+      Date.now() + data.gracePeriodDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     const gracePeriod: GracePeriod = {
       gracePeriodId,
@@ -116,29 +122,29 @@ export class SandboxService {
       endDate,
       reason: data.reason,
       isActive: true,
-      timestamp
+      timestamp,
     };
 
     // Store in Redis
     await this.redisClient.setEx(
       `sandbox:grace_period:${gracePeriodId}`,
       data.gracePeriodDays * 86400, // Duration of grace period
-      JSON.stringify(gracePeriod)
+      JSON.stringify(gracePeriod),
     );
 
     // Add to subscription grace periods
     await this.redisClient.lPush(
       `sandbox:subscription:${data.subscriptionId}:grace_periods`,
-      JSON.stringify(gracePeriod)
+      JSON.stringify(gracePeriod),
     );
 
     // Emit to internal indexer
-    await this.emitToIndexer('GracePeriodStarted', gracePeriod);
+    await this.emitToIndexer("GracePeriodStarted", gracePeriod);
 
-    logger.info('Grace period simulated', { 
-      gracePeriodId, 
+    logger.info("Grace period simulated", {
+      gracePeriodId,
       subscriptionId: data.subscriptionId,
-      days: data.gracePeriodDays
+      days: data.gracePeriodDays,
     });
 
     return gracePeriod;
@@ -147,7 +153,7 @@ export class SandboxService {
   async simulateDunningProcess(data: {
     subscriptionId: string;
     dunningLevel: number;
-    contactMethod: 'email' | 'sms' | 'push' | 'webhook';
+    contactMethod: "email" | "sms" | "push" | "webhook";
     message?: string;
   }): Promise<DunningProcess> {
     const dunningId = uuidv4();
@@ -160,34 +166,34 @@ export class SandboxService {
       contactMethod: data.contactMethod,
       message: data.message || this.generateDunningMessage(data.dunningLevel),
       sentAt: timestamp,
-      status: 'sent',
-      responseReceived: false
+      status: "sent",
+      responseReceived: false,
     };
 
     // Store in Redis
     await this.redisClient.setEx(
       `sandbox:dunning:${dunningId}`,
       86400 * 30, // 30 days
-      JSON.stringify(dunningProcess)
+      JSON.stringify(dunningProcess),
     );
 
     // Add to subscription dunning history
     await this.redisClient.lPush(
       `sandbox:subscription:${data.subscriptionId}:dunning`,
-      JSON.stringify(dunningProcess)
+      JSON.stringify(dunningProcess),
     );
 
     // Simulate webhook/notification
     await this.simulateNotification(data.contactMethod, dunningProcess);
 
     // Emit to internal indexer
-    await this.emitToIndexer('DunningProcessInitiated', dunningProcess);
+    await this.emitToIndexer("DunningProcessInitiated", dunningProcess);
 
-    logger.info('Dunning process simulated', { 
-      dunningId, 
+    logger.info("Dunning process simulated", {
+      dunningId,
       subscriptionId: data.subscriptionId,
       level: data.dunningLevel,
-      method: data.contactMethod
+      method: data.contactMethod,
     });
 
     return dunningProcess;
@@ -201,44 +207,50 @@ export class SandboxService {
     const [billingEvents, gracePeriods, dunningProcesses] = await Promise.all([
       this.getSubscriptionBillingEvents(subscriptionId),
       this.getSubscriptionGracePeriods(subscriptionId),
-      this.getSubscriptionDunningProcesses(subscriptionId)
+      this.getSubscriptionDunningProcesses(subscriptionId),
     ]);
 
     return {
       billingEvents,
       gracePeriods,
-      dunningProcesses
+      dunningProcesses,
     };
   }
 
-  private async getSubscriptionBillingEvents(subscriptionId: string): Promise<SubscriptionBilledEvent[]> {
+  private async getSubscriptionBillingEvents(
+    subscriptionId: string,
+  ): Promise<SubscriptionBilledEvent[]> {
     const events = await this.redisClient.lRange(
       `sandbox:subscription:${subscriptionId}:billing_events`,
       0,
-      -1
+      -1,
     );
-    
-    return events.map(event => JSON.parse(event));
+
+    return events.map((event) => JSON.parse(event));
   }
 
-  private async getSubscriptionGracePeriods(subscriptionId: string): Promise<GracePeriod[]> {
+  private async getSubscriptionGracePeriods(
+    subscriptionId: string,
+  ): Promise<GracePeriod[]> {
     const gracePeriods = await this.redisClient.lRange(
       `sandbox:subscription:${subscriptionId}:grace_periods`,
       0,
-      -1
+      -1,
     );
-    
-    return gracePeriods.map(period => JSON.parse(period));
+
+    return gracePeriods.map((period) => JSON.parse(period));
   }
 
-  private async getSubscriptionDunningProcesses(subscriptionId: string): Promise<DunningProcess[]> {
+  private async getSubscriptionDunningProcesses(
+    subscriptionId: string,
+  ): Promise<DunningProcess[]> {
     const dunningProcesses = await this.redisClient.lRange(
       `sandbox:subscription:${subscriptionId}:dunning`,
       0,
-      -1
+      -1,
     );
-    
-    return dunningProcesses.map(process => JSON.parse(process));
+
+    return dunningProcesses.map((process) => JSON.parse(process));
   }
 
   private generateDunningMessage(level: number): string {
@@ -247,27 +259,27 @@ export class SandboxService {
       2: "Payment overdue: Your subscription payment is now overdue. Please update your payment method immediately.",
       3: "Urgent: Your subscription will be suspended soon due to unpaid balance. Please take action now.",
       4: "Final notice: Your subscription will be terminated within 24 hours due to unpaid balance.",
-      5: "Account terminated: Your subscription has been terminated due to non-payment. Contact support if you believe this is an error."
+      5: "Account terminated: Your subscription has been terminated due to non-payment. Contact support if you believe this is an error.",
     };
-    
+
     return messages[level as keyof typeof messages] || messages[1];
   }
 
   private async simulateNotification(
-    contactMethod: 'email' | 'sms' | 'push' | 'webhook',
-    dunningProcess: DunningProcess
+    contactMethod: "email" | "sms" | "push" | "webhook",
+    dunningProcess: DunningProcess,
   ): Promise<void> {
     // Simulate notification delay
-    const delay = sandboxConfig.isMockDataEnabled('webhookDelays') 
+    const delay = sandboxConfig.isMockDataEnabled("webhookDelays")
       ? Math.random() * 2000 + 500 // 500ms to 2.5s delay
       : 0;
 
     setTimeout(async () => {
-      logger.info('Mock notification sent', {
+      logger.info("Mock notification sent", {
         method: contactMethod,
         dunningId: dunningProcess.dunningId,
         subscriptionId: dunningProcess.subscriptionId,
-        delay: `${delay}ms`
+        delay: `${delay}ms`,
       });
 
       // Store notification result
@@ -278,8 +290,8 @@ export class SandboxService {
           sent: true,
           sentAt: new Date().toISOString(),
           method: contactMethod,
-          delay: delay
-        })
+          delay: delay,
+        }),
       );
     }, delay);
   }
@@ -291,19 +303,25 @@ export class SandboxService {
         eventType,
         data,
         timestamp: new Date().toISOString(),
-        source: 'sandbox',
-        environment: sandboxConfig.getConfig().environment
+        source: "sandbox",
+        environment: sandboxConfig.getConfig().environment,
       };
 
       // Store in indexer queue
-      await this.redisClient.lPush('sandbox:indexer:events', JSON.stringify(indexerEvent));
-      
-      // Trim queue to last 1000 events
-      await this.redisClient.lTrim('sandbox:indexer:events', 0, 999);
+      await this.redisClient.lPush(
+        "sandbox:indexer:events",
+        JSON.stringify(indexerEvent),
+      );
 
-      logger.debug('Event emitted to indexer', { eventType, eventId: data.eventId || data.gracePeriodId || data.dunningId });
+      // Trim queue to last 1000 events
+      await this.redisClient.lTrim("sandbox:indexer:events", 0, 999);
+
+      logger.debug("Event emitted to indexer", {
+        eventType,
+        eventId: data.eventId || data.gracePeriodId || data.dunningId,
+      });
     } catch (error) {
-      logger.error('Failed to emit event to indexer', { eventType, error });
+      logger.error("Failed to emit event to indexer", { eventType, error });
     }
   }
 
@@ -313,20 +331,20 @@ export class SandboxService {
       const keys = [
         `sandbox:subscription:${subscriptionId}:billing_events`,
         `sandbox:subscription:${subscriptionId}:grace_periods`,
-        `sandbox:subscription:${subscriptionId}:dunning`
+        `sandbox:subscription:${subscriptionId}:dunning`,
       ];
 
-      await Promise.all(keys.map(key => this.redisClient.del(key)));
-      
-      logger.info('Sandbox data cleared for subscription', { subscriptionId });
+      await Promise.all(keys.map((key) => this.redisClient.del(key)));
+
+      logger.info("Sandbox data cleared for subscription", { subscriptionId });
     } else {
       // Clear all sandbox data (use with caution)
-      const pattern = 'sandbox:*';
+      const pattern = "sandbox:*";
       const keys = await this.redisClient.keys(pattern);
-      
+
       if (keys.length > 0) {
         await this.redisClient.del(...keys);
-        logger.warn('All sandbox data cleared', { keyCount: keys.length });
+        logger.warn("All sandbox data cleared", { keyCount: keys.length });
       }
     }
   }

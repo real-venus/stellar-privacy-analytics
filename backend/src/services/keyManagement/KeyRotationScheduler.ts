@@ -1,7 +1,7 @@
-import { EventEmitter } from 'events';
-import { logger } from '../../utils/logger';
-import { getErrorMessage } from '../../utils/errorHandler';
-import type { KeyMetadata } from './KeyManagementService';
+import { EventEmitter } from "events";
+import { logger } from "../../utils/logger";
+import { getErrorMessage } from "../../utils/errorHandler";
+import type { KeyMetadata } from "./KeyManagementService";
 
 export interface RotationPolicy {
   keyId: string;
@@ -19,7 +19,13 @@ export interface RotationSchedule {
   lastRotation?: Date;
   rotationCount: number;
   policy: RotationPolicy;
-  status: 'scheduled' | 'due' | 'overdue' | 'in_progress' | 'completed' | 'failed';
+  status:
+    | "scheduled"
+    | "due"
+    | "overdue"
+    | "in_progress"
+    | "completed"
+    | "failed";
 }
 
 /**
@@ -41,7 +47,7 @@ export class KeyRotationScheduler extends EventEmitter {
       autoRotate: true,
       notificationThresholdDays: 14,
       maxUsageBeforeRotation: 1000000,
-      rotateOnExpiry: true
+      rotateOnExpiry: true,
     },
     data: {
       rotationIntervalDays: 30,
@@ -49,7 +55,7 @@ export class KeyRotationScheduler extends EventEmitter {
       autoRotate: true,
       notificationThresholdDays: 7,
       maxUsageBeforeRotation: 100000,
-      rotateOnExpiry: true
+      rotateOnExpiry: true,
     },
     session: {
       rotationIntervalDays: 1,
@@ -57,7 +63,7 @@ export class KeyRotationScheduler extends EventEmitter {
       autoRotate: true,
       notificationThresholdDays: 0,
       maxUsageBeforeRotation: 1000,
-      rotateOnExpiry: true
+      rotateOnExpiry: true,
     },
     smpc: {
       rotationIntervalDays: 60,
@@ -65,7 +71,7 @@ export class KeyRotationScheduler extends EventEmitter {
       autoRotate: true,
       notificationThresholdDays: 10,
       maxUsageBeforeRotation: 10000,
-      rotateOnExpiry: true
+      rotateOnExpiry: true,
     },
     zkp: {
       rotationIntervalDays: 45,
@@ -73,8 +79,8 @@ export class KeyRotationScheduler extends EventEmitter {
       autoRotate: true,
       notificationThresholdDays: 10,
       maxUsageBeforeRotation: 50000,
-      rotateOnExpiry: true
-    }
+      rotateOnExpiry: true,
+    },
   };
 
   constructor(keyManagementService: any) {
@@ -87,22 +93,25 @@ export class KeyRotationScheduler extends EventEmitter {
    */
   async start(): Promise<void> {
     if (this.running) {
-      logger.warn('Rotation scheduler already running');
+      logger.warn("Rotation scheduler already running");
       return;
     }
 
     this.running = true;
 
     // Check for due rotations every hour
-    this.checkInterval = setInterval(() => {
-      this.checkDueRotations();
-    }, 60 * 60 * 1000);
+    this.checkInterval = setInterval(
+      () => {
+        this.checkDueRotations();
+      },
+      60 * 60 * 1000,
+    );
 
     // Initial check
     await this.checkDueRotations();
 
-    logger.info('Key rotation scheduler started');
-    this.emit('started');
+    logger.info("Key rotation scheduler started");
+    this.emit("started");
   }
 
   /**
@@ -127,8 +136,8 @@ export class KeyRotationScheduler extends EventEmitter {
     }
     this.rotationTimers.clear();
 
-    logger.info('Key rotation scheduler stopped');
-    this.emit('stopped');
+    logger.info("Key rotation scheduler stopped");
+    this.emit("stopped");
   }
 
   /**
@@ -148,7 +157,7 @@ export class KeyRotationScheduler extends EventEmitter {
       lastRotation: metadata.lastRotated,
       rotationCount: 0,
       policy,
-      status: 'scheduled'
+      status: "scheduled",
     };
 
     this.schedules.set(keyId, schedule);
@@ -156,13 +165,13 @@ export class KeyRotationScheduler extends EventEmitter {
     // Set timer for rotation
     this.setRotationTimer(keyId, nextRotation);
 
-    logger.info('Rotation scheduled', {
+    logger.info("Rotation scheduled", {
       keyId,
       nextRotation: nextRotation.toISOString(),
-      policy: policy.rotationIntervalDays
+      policy: policy.rotationIntervalDays,
     });
 
-    this.emit('rotationScheduled', { keyId, nextRotation });
+    this.emit("rotationScheduled", { keyId, nextRotation });
   }
 
   /**
@@ -184,8 +193,8 @@ export class KeyRotationScheduler extends EventEmitter {
     // Remove schedule
     this.schedules.delete(keyId);
 
-    logger.info('Rotation cancelled', { keyId });
-    this.emit('rotationCancelled', { keyId });
+    logger.info("Rotation cancelled", { keyId });
+    this.emit("rotationCancelled", { keyId });
   }
 
   /**
@@ -203,16 +212,19 @@ export class KeyRotationScheduler extends EventEmitter {
     // Recalculate next rotation
     const metadata = this.keyManagementService.getKeyMetadata(keyId);
     if (metadata) {
-      schedule.nextRotation = this.calculateNextRotation(metadata, schedule.policy);
-      
+      schedule.nextRotation = this.calculateNextRotation(
+        metadata,
+        schedule.policy,
+      );
+
       // Reset timer
       this.setRotationTimer(keyId, schedule.nextRotation);
     }
 
     this.schedules.set(keyId, schedule);
 
-    logger.info('Rotation policy updated', { keyId, updates });
-    this.emit('policyUpdated', { keyId, policy: schedule.policy });
+    logger.info("Rotation policy updated", { keyId, updates });
+    this.emit("policyUpdated", { keyId, policy: schedule.policy });
   }
 
   /**
@@ -225,28 +237,28 @@ export class KeyRotationScheduler extends EventEmitter {
     }
 
     try {
-      schedule.status = 'in_progress';
+      schedule.status = "in_progress";
       this.schedules.set(keyId, schedule);
 
-      logger.info('Forcing key rotation', { keyId, reason });
-      this.emit('rotationStarted', { keyId, reason });
+      logger.info("Forcing key rotation", { keyId, reason });
+      this.emit("rotationStarted", { keyId, reason });
 
       // Trigger rotation
-      await this.performRotation(keyId, reason || 'Forced rotation');
+      await this.performRotation(keyId, reason || "Forced rotation");
 
-      schedule.status = 'completed';
+      schedule.status = "completed";
       schedule.rotationCount++;
       schedule.lastRotation = new Date();
       this.schedules.set(keyId, schedule);
 
-      logger.info('Forced rotation completed', { keyId });
-      this.emit('rotationCompleted', { keyId });
+      logger.info("Forced rotation completed", { keyId });
+      this.emit("rotationCompleted", { keyId });
     } catch (error: unknown) {
-      schedule.status = 'failed';
+      schedule.status = "failed";
       this.schedules.set(keyId, schedule);
 
       logger.error(`Forced rotation failed for key ${keyId}:`, error);
-      this.emit('rotationFailed', { keyId, error: getErrorMessage(error) });
+      this.emit("rotationFailed", { keyId, error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -268,8 +280,10 @@ export class KeyRotationScheduler extends EventEmitter {
   /**
    * Get schedules by status
    */
-  getSchedulesByStatus(status: RotationSchedule['status']): RotationSchedule[] {
-    return Array.from(this.schedules.values()).filter(s => s.status === status);
+  getSchedulesByStatus(status: RotationSchedule["status"]): RotationSchedule[] {
+    return Array.from(this.schedules.values()).filter(
+      (s) => s.status === status,
+    );
   }
 
   /**
@@ -294,11 +308,11 @@ export class KeyRotationScheduler extends EventEmitter {
 
     return {
       totalScheduled: schedules.length,
-      dueRotations: schedules.filter(s => s.status === 'due').length,
-      overdueRotations: schedules.filter(s => s.status === 'overdue').length,
-      inProgress: schedules.filter(s => s.status === 'in_progress').length,
+      dueRotations: schedules.filter((s) => s.status === "due").length,
+      overdueRotations: schedules.filter((s) => s.status === "overdue").length,
+      inProgress: schedules.filter((s) => s.status === "in_progress").length,
       totalRotations: schedules.reduce((sum, s) => sum + s.rotationCount, 0),
-      failedRotations: schedules.filter(s => s.status === 'failed').length
+      failedRotations: schedules.filter((s) => s.status === "failed").length,
     };
   }
 
@@ -313,39 +327,40 @@ export class KeyRotationScheduler extends EventEmitter {
       }
 
       // Check if rotation is due
-      if (schedule.nextRotation <= now && schedule.status === 'scheduled') {
-        schedule.status = 'due';
+      if (schedule.nextRotation <= now && schedule.status === "scheduled") {
+        schedule.status = "due";
         this.schedules.set(keyId, schedule);
-        this.emit('rotationDue', keyId);
+        this.emit("rotationDue", keyId);
 
         // Perform rotation
-        await this.performRotation(keyId, 'Scheduled rotation');
+        await this.performRotation(keyId, "Scheduled rotation");
       }
 
       // Check if rotation is overdue
       const gracePeriodEnd = new Date(
-        schedule.nextRotation.getTime() + 
-        schedule.policy.gracePeriodDays * 24 * 60 * 60 * 1000
+        schedule.nextRotation.getTime() +
+          schedule.policy.gracePeriodDays * 24 * 60 * 60 * 1000,
       );
 
-      if (now > gracePeriodEnd && schedule.status === 'due') {
-        schedule.status = 'overdue';
+      if (now > gracePeriodEnd && schedule.status === "due") {
+        schedule.status = "overdue";
         this.schedules.set(keyId, schedule);
-        this.emit('rotationOverdue', keyId);
+        this.emit("rotationOverdue", keyId);
       }
 
       // Check notification threshold
       const notificationDate = new Date(
-        schedule.nextRotation.getTime() - 
-        schedule.policy.notificationThresholdDays * 24 * 60 * 60 * 1000
+        schedule.nextRotation.getTime() -
+          schedule.policy.notificationThresholdDays * 24 * 60 * 60 * 1000,
       );
 
-      if (now >= notificationDate && schedule.status === 'scheduled') {
-        this.emit('rotationWarning', {
+      if (now >= notificationDate && schedule.status === "scheduled") {
+        this.emit("rotationWarning", {
           keyId,
           daysUntilRotation: Math.ceil(
-            (schedule.nextRotation.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
-          )
+            (schedule.nextRotation.getTime() - now.getTime()) /
+              (24 * 60 * 60 * 1000),
+          ),
         });
       }
 
@@ -353,20 +368,20 @@ export class KeyRotationScheduler extends EventEmitter {
       const metadata = this.keyManagementService.getKeyMetadata(keyId);
       if (metadata && schedule.policy.maxUsageBeforeRotation) {
         if (metadata.usageCount >= schedule.policy.maxUsageBeforeRotation) {
-          logger.warn('Key usage threshold exceeded', {
+          logger.warn("Key usage threshold exceeded", {
             keyId,
             usageCount: metadata.usageCount,
-            threshold: schedule.policy.maxUsageBeforeRotation
+            threshold: schedule.policy.maxUsageBeforeRotation,
           });
-          await this.performRotation(keyId, 'Usage threshold exceeded');
+          await this.performRotation(keyId, "Usage threshold exceeded");
         }
       }
 
       // Check expiry-based rotation
       if (metadata && metadata.expiresAt && schedule.policy.rotateOnExpiry) {
-        if (metadata.expiresAt <= now && metadata.status === 'active') {
-          logger.warn('Key expired', { keyId, expiresAt: metadata.expiresAt });
-          await this.performRotation(keyId, 'Key expired');
+        if (metadata.expiresAt <= now && metadata.status === "active") {
+          logger.warn("Key expired", { keyId, expiresAt: metadata.expiresAt });
+          await this.performRotation(keyId, "Key expired");
         }
       }
     }
@@ -379,42 +394,49 @@ export class KeyRotationScheduler extends EventEmitter {
     }
 
     try {
-      schedule.status = 'in_progress';
+      schedule.status = "in_progress";
       this.schedules.set(keyId, schedule);
 
-      logger.info('Starting key rotation', { keyId, reason });
+      logger.info("Starting key rotation", { keyId, reason });
 
       // Perform rotation through key management service
       // Note: This will be called by the service itself to avoid circular dependency
-      this.emit('rotationDue', keyId);
+      this.emit("rotationDue", keyId);
 
       // Update schedule after successful rotation
-      schedule.status = 'completed';
+      schedule.status = "completed";
       schedule.rotationCount++;
       schedule.lastRotation = new Date();
-      
+
       // Calculate next rotation
       const metadata = this.keyManagementService.getKeyMetadata(keyId);
       if (metadata) {
-        schedule.nextRotation = this.calculateNextRotation(metadata, schedule.policy);
+        schedule.nextRotation = this.calculateNextRotation(
+          metadata,
+          schedule.policy,
+        );
         this.setRotationTimer(keyId, schedule.nextRotation);
       }
 
       this.schedules.set(keyId, schedule);
 
-      logger.info('Key rotation completed', { keyId });
-      this.emit('rotationCompleted', { keyId });
+      logger.info("Key rotation completed", { keyId });
+      this.emit("rotationCompleted", { keyId });
     } catch (error) {
-      schedule.status = 'failed';
+      schedule.status = "failed";
       this.schedules.set(keyId, schedule);
 
       logger.error(`Key rotation failed for ${keyId}:`, error);
-      this.emit('rotationFailed', { keyId, error: getErrorMessage(error) });
+      this.emit("rotationFailed", { keyId, error: getErrorMessage(error) });
     }
   }
 
-  private getOrCreatePolicy(keyId: string, metadata: KeyMetadata): RotationPolicy {
-    const defaultPolicy = this.DEFAULT_POLICIES[metadata.keyType] || this.DEFAULT_POLICIES.data;
+  private getOrCreatePolicy(
+    keyId: string,
+    metadata: KeyMetadata,
+  ): RotationPolicy {
+    const defaultPolicy =
+      this.DEFAULT_POLICIES[metadata.keyType] || this.DEFAULT_POLICIES.data;
 
     return {
       keyId,
@@ -423,18 +445,23 @@ export class KeyRotationScheduler extends EventEmitter {
       autoRotate: defaultPolicy.autoRotate!,
       notificationThresholdDays: defaultPolicy.notificationThresholdDays!,
       maxUsageBeforeRotation: defaultPolicy.maxUsageBeforeRotation,
-      rotateOnExpiry: defaultPolicy.rotateOnExpiry!
+      rotateOnExpiry: defaultPolicy.rotateOnExpiry!,
     };
   }
 
-  private calculateNextRotation(metadata: KeyMetadata, policy: RotationPolicy): Date {
+  private calculateNextRotation(
+    metadata: KeyMetadata,
+    policy: RotationPolicy,
+  ): Date {
     const baseDate = metadata.lastRotated || metadata.createdAt;
     const nextRotation = new Date(baseDate);
     nextRotation.setDate(nextRotation.getDate() + policy.rotationIntervalDays);
 
     // If key has expiry, use the earlier of rotation date or expiry
     if (metadata.expiresAt && policy.rotateOnExpiry) {
-      return metadata.expiresAt < nextRotation ? metadata.expiresAt : nextRotation;
+      return metadata.expiresAt < nextRotation
+        ? metadata.expiresAt
+        : nextRotation;
     }
 
     return nextRotation;
@@ -453,7 +480,7 @@ export class KeyRotationScheduler extends EventEmitter {
     // Only set timer if rotation is in the future
     if (delay > 0) {
       const timer = setTimeout(() => {
-        this.emit('rotationDue', keyId);
+        this.emit("rotationDue", keyId);
       }, delay);
 
       this.rotationTimers.set(keyId, timer);

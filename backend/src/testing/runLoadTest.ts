@@ -4,15 +4,15 @@
  * Run load tests against the message queue system
  */
 
-import { OptimizedAnonymizationWorker } from '../workers/optimizedAnonymizationWorker';
-import { LoadTester, runLoadTestScenario, LoadTestConfig } from './loadTest';
-import { getWorkerConfig, validateConfig } from '../config/workerConfig';
-import { logger } from '../utils/logger';
-import * as fs from 'fs';
-import * as path from 'path';
+import { OptimizedAnonymizationWorker } from "../workers/optimizedAnonymizationWorker";
+import { LoadTester, runLoadTestScenario, LoadTestConfig } from "./loadTest";
+import { getWorkerConfig, validateConfig } from "../config/workerConfig";
+import { logger } from "../utils/logger";
+import * as fs from "fs";
+import * as path from "path";
 
 interface CLIOptions {
-  scenario?: 'light' | 'moderate' | 'heavy' | 'peak';
+  scenario?: "light" | "moderate" | "heavy" | "peak";
   duration?: number;
   jobsPerSecond?: number;
   output?: string;
@@ -25,26 +25,26 @@ function parseArgs(): CLIOptions {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     switch (arg) {
-      case '--scenario':
-      case '-s':
+      case "--scenario":
+      case "-s":
         options.scenario = args[++i] as any;
         break;
-      case '--duration':
-      case '-d':
+      case "--duration":
+      case "-d":
         options.duration = parseInt(args[++i]);
         break;
-      case '--jobs-per-second':
-      case '-j':
+      case "--jobs-per-second":
+      case "-j":
         options.jobsPerSecond = parseInt(args[++i]);
         break;
-      case '--output':
-      case '-o':
+      case "--output":
+      case "-o":
         options.output = args[++i];
         break;
-      case '--help':
-      case '-h':
+      case "--help":
+      case "-h":
         options.help = true;
         break;
     }
@@ -87,7 +87,7 @@ Predefined Scenarios:
 
 async function runTest(options: CLIOptions): Promise<void> {
   try {
-    logger.info('Starting load test...', options);
+    logger.info("Starting load test...", options);
 
     // Get worker configuration
     const config = getWorkerConfig();
@@ -96,7 +96,7 @@ async function runTest(options: CLIOptions): Promise<void> {
     // Create worker instance
     const worker = new OptimizedAnonymizationWorker(config);
 
-    logger.info('Worker initialized, starting load test...');
+    logger.info("Worker initialized, starting load test...");
 
     let results;
 
@@ -118,15 +118,17 @@ async function runTest(options: CLIOptions): Promise<void> {
       const tester = new LoadTester(worker, testConfig);
       results = await tester.run();
     } else {
-      logger.error('Either --scenario or both --duration and --jobs-per-second must be specified');
+      logger.error(
+        "Either --scenario or both --duration and --jobs-per-second must be specified",
+      );
       printHelp();
       process.exit(1);
     }
 
     // Print results
-    console.log('\n' + '='.repeat(80));
-    console.log('LOAD TEST RESULTS');
-    console.log('='.repeat(80));
+    console.log("\n" + "=".repeat(80));
+    console.log("LOAD TEST RESULTS");
+    console.log("=".repeat(80));
     console.log(`\nTest Duration: ${(results.duration / 1000).toFixed(2)}s`);
     console.log(`Jobs Submitted: ${results.totalJobsSubmitted}`);
     console.log(`Jobs Completed: ${results.totalJobsCompleted}`);
@@ -148,7 +150,7 @@ async function runTest(options: CLIOptions): Promise<void> {
       });
     }
 
-    console.log('\n' + '='.repeat(80));
+    console.log("\n" + "=".repeat(80));
 
     // Save results to file if specified
     if (options.output) {
@@ -159,13 +161,12 @@ async function runTest(options: CLIOptions): Promise<void> {
 
     // Close worker
     await worker.pause();
-    
-    logger.info('Load test completed successfully');
-    process.exit(0);
 
+    logger.info("Load test completed successfully");
+    process.exit(0);
   } catch (error) {
-    logger.error('Load test failed:', error);
-    console.error('\nError:', error.message);
+    logger.error("Load test failed:", error);
+    console.error("\nError:", error.message);
     process.exit(1);
   }
 }

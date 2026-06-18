@@ -97,7 +97,7 @@ export const PrivacyScoreVisualization: React.FC = () => {
   const label = scoreLabel(score);
 
   // Radar data: merge user score + benchmark
-  const radarData = DIMENSION_SCORES.map(d => ({
+  const radarData = DIMENSION_SCORES.map((d) => ({
     dimension: d.dimension,
     'Your Score': d.score,
     Benchmark: d.benchmark,
@@ -116,11 +116,12 @@ export const PrivacyScoreVisualization: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Privacy Score</h1>
-          <p className="text-gray-600 mt-1">
-            Multi-dimensional privacy protection rating
-          </p>
+          <p className="text-gray-600 mt-1">Multi-dimensional privacy protection rating</p>
         </div>
-        <div className="text-center" aria-label={`Overall privacy score: ${score} out of 100, ${label}`}>
+        <div
+          className="text-center"
+          aria-label={`Overall privacy score: ${score} out of 100, ${label}`}
+        >
           <div className="text-5xl font-bold text-blue-600">{score}</div>
           <div className="text-sm text-gray-500 mt-1">/ 100</div>
           <div className="mt-1 flex items-center gap-1 text-green-600 font-medium">
@@ -147,7 +148,12 @@ export const PrivacyScoreVisualization: React.FC = () => {
         </div>
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>0</span>
-          <span>Industry avg: {Math.round(DIMENSION_SCORES.reduce((s, d) => s + d.benchmark, 0) / DIMENSION_SCORES.length)}</span>
+          <span>
+            Industry avg:{' '}
+            {Math.round(
+              DIMENSION_SCORES.reduce((s, d) => s + d.benchmark, 0) / DIMENSION_SCORES.length
+            )}
+          </span>
           <span>100</span>
         </div>
       </div>
@@ -159,7 +165,7 @@ export const PrivacyScoreVisualization: React.FC = () => {
           aria-label="Privacy score views"
           className="flex border-b border-gray-200"
         >
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               role="tab"
@@ -225,16 +231,22 @@ export const PrivacyScoreVisualization: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {DIMENSION_SCORES.map(d => (
+              {DIMENSION_SCORES.map((d) => (
                 <tr key={d.dimension} className="border-b border-gray-50">
                   <td className="py-2 text-gray-900">{d.dimension}</td>
                   <td className="py-2 text-right font-medium text-blue-600">{d.score}</td>
                   <td className="py-2 text-right text-gray-500">{d.benchmark}</td>
                   <td className="py-2 text-right">
                     {d.score >= d.benchmark ? (
-                      <CheckCircle className="h-4 w-4 text-green-500 inline" aria-label="Above benchmark" />
+                      <CheckCircle
+                        className="h-4 w-4 text-green-500 inline"
+                        aria-label="Above benchmark"
+                      />
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-yellow-500 inline" aria-label="Below benchmark" />
+                      <AlertCircle
+                        className="h-4 w-4 text-yellow-500 inline"
+                        aria-label="Below benchmark"
+                      />
                     )}
                   </td>
                 </tr>
@@ -295,10 +307,7 @@ export const PrivacyScoreVisualization: React.FC = () => {
           </h2>
           <ul className="space-y-4" aria-label="Improvement suggestions">
             {SUGGESTIONS.map((s, i) => (
-              <li
-                key={i}
-                className="border border-gray-200 rounded-lg p-4 flex items-start gap-3"
-              >
+              <li key={i} className="border border-gray-200 rounded-lg p-4 flex items-start gap-3">
                 <span
                   className={`px-2 py-0.5 text-xs font-semibold rounded capitalize ${PRIORITY_STYLES[s.priority]}`}
                   aria-label={`Priority: ${s.priority}`}

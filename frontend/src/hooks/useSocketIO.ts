@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket, ManagerOptions, SocketOptions } from 'socket.io-client';
 
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'failed';
+export type ConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'reconnecting'
+  | 'failed';
 
 interface UseSocketIOReturn {
   socket: Socket | null;
@@ -35,7 +40,7 @@ export const useSocketIO = (options: UseSocketIOOptions = {}): UseSocketIOReturn
     maxReconnectDelay = 30000,
     enableHeartbeat = true,
     heartbeatInterval = 30000,
-    enableOfflineQueue = true
+    enableOfflineQueue = true,
   } = options;
 
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -49,10 +54,13 @@ export const useSocketIO = (options: UseSocketIOOptions = {}): UseSocketIOReturn
   const offlineQueueRef = useRef<any[]>([]);
 
   // Calculate exponential backoff delay
-  const getReconnectDelay = useCallback((attempt: number): number => {
-    const delay = initialReconnectDelay * Math.pow(2, attempt);
-    return Math.min(delay, maxReconnectDelay);
-  }, [initialReconnectDelay, maxReconnectDelay]);
+  const getReconnectDelay = useCallback(
+    (attempt: number): number => {
+      const delay = initialReconnectDelay * Math.pow(2, attempt);
+      return Math.min(delay, maxReconnectDelay);
+    },
+    [initialReconnectDelay, maxReconnectDelay]
+  );
 
   // Handle online/offline status
   useEffect(() => {
@@ -230,6 +238,6 @@ export const useSocketIO = (options: UseSocketIOOptions = {}): UseSocketIOReturn
     disconnect,
     isOnline,
     reconnectAttempts,
-    lastError
+    lastError,
   };
 };

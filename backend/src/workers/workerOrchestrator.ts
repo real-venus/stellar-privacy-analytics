@@ -1,7 +1,10 @@
-import { OptimizedAnonymizationWorker, WorkerConfig } from './optimizedAnonymizationWorker';
-import { logger } from '../utils/logger';
-import { EventEmitter } from 'events';
-import * as os from 'os';
+import {
+  OptimizedAnonymizationWorker,
+  WorkerConfig,
+} from "./optimizedAnonymizationWorker";
+import { logger } from "../utils/logger";
+import { EventEmitter } from "events";
+import * as os from "os";
 
 export interface OrchestratorConfig extends WorkerConfig {
   orchestrator: {
@@ -18,10 +21,10 @@ export interface OrchestratorConfig extends WorkerConfig {
 export interface WorkerInstance {
   id: string;
   worker: OptimizedAnonymizationWorker;
-  status: 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
+  status: "starting" | "running" | "stopping" | "stopped" | "error";
   startedAt: Date;
   lastHealthCheck?: Date;
-  healthStatus?: 'healthy' | 'degraded' | 'unhealthy';
+  healthStatus?: "healthy" | "degraded" | "unhealthy";
   processedJobs: number;
   failedJobs: number;
 }
@@ -45,7 +48,7 @@ export class WorkerOrchestrator extends EventEmitter {
   }
 
   private async initialize(): Promise<void> {
-    logger.info('Initializing Worker Orchestrator', {
+    logger.info("Initializing Worker Orchestrator", {
       minWorkers: this.config.orchestrator.minWorkers,
       maxWorkers: this.config.orchestrator.maxWorkers,
       horizontalScaling: this.config.orchestrator.enableHorizontalScaling,
@@ -63,7 +66,7 @@ export class WorkerOrchestrator extends EventEmitter {
     this.setupHealthMonitor();
     this.setupGracefulShutdown();
 
-    logger.info('Worker Orchestrator initialized', {
+    logger.info("Worker Orchestrator initialized", {
       activeWorkers: this.workers.size,
     });
   }
@@ -73,8 +76,8 @@ export class WorkerOrchestrator extends EventEmitter {
    */
   private async startWorker(): Promise<string> {
     const workerId = this.generateWorkerId();
-    
-    logger.info('Starting new worker instance', { workerId });
+
+    logger.info("Starting new worker instance", { workerId });
 
     try {
       // Extract WorkerConfig from OrchestratorConfig
@@ -86,13 +89,13 @@ export class WorkerOrchestrator extends EventEmitter {
         worker: this.config.worker,
         monitoring: this.config.monitoring,
       };
-      
+
       const worker = new OptimizedAnonymizationWorker(workerConfig);
-      
+
       const instance: WorkerInstance = {
         id: workerId,
         worker,
-        status: 'starting',
+        status: "starting",
         startedAt: new Date(),
         processedJobs: 0,
         failedJobs: 0,
@@ -102,28 +105,28 @@ export class WorkerOrchestrator extends EventEmitter {
 
       // Wait for worker to be ready
       await this.waitForWorkerReady(worker);
-      
-      instance.status = 'running';
-      instance.lastHealthCheck = new Date();
-      instance.healthStatus = 'healthy';
 
-      logger.info('Worker instance started successfully', {
+      instance.status = "running";
+      instance.lastHealthCheck = new Date();
+      instance.healthStatus = "healthy";
+
+      logger.info("Worker instance started successfully", {
         workerId,
         totalWorkers: this.workers.size,
       });
 
-      this.emit('workerStarted', { workerId, totalWorkers: this.workers.size });
+      this.emit("workerStarted", { workerId, totalWorkers: this.workers.size });
 
       return workerId;
     } catch (error) {
-      logger.error('Failed to start worker instance', {
+      logger.error("Failed to start worker instance", {
         workerId,
         error: error.message,
       });
 
       const instance = this.workers.get(workerId);
       if (instance) {
-        instance.status = 'error';
+        instance.status = "error";
       }
 
       throw error;
@@ -136,37 +139,37 @@ export class WorkerOrchestrator extends EventEmitter {
   private async stopWorker(workerId: string): Promise<void> {
     const instance = this.workers.get(workerId);
     if (!instance) {
-      logger.warn('Worker instance not found', { workerId });
+      logger.warn("Worker instance not found", { workerId });
       return;
     }
 
-    logger.info('Stopping worker instance', { workerId });
+    logger.info("Stopping worker instance", { workerId });
 
     try {
-      instance.status = 'stopping';
-      
+      instance.status = "stopping";
+
       // Pause the worker to stop accepting new jobs
       await instance.worker.pause();
-      
+
       // Wait for active jobs to complete (with timeout)
       await this.waitForWorkerIdle(instance.worker, 60000);
-      
+
       // Perform health check to get final stats
       const health = await instance.worker.healthCheck();
       instance.processedJobs = health.worker.processedJobs;
       instance.failedJobs = health.worker.failedJobs;
 
-      instance.status = 'stopped';
+      instance.status = "stopped";
       this.workers.delete(workerId);
 
-      logger.info('Worker instance stopped successfully', {
+      logger.info("Worker instance stopped successfully", {
         workerId,
         totalWorkers: this.workers.size,
         processedJobs: instance.processedJobs,
         failedJobs: instance.failedJobs,
       });
 
-      this.emit('workerStopped', {
+      this.emit("workerStopped", {
         workerId,
         totalWorkers: this.workers.size,
         stats: {
@@ -175,11 +178,11 @@ export class WorkerOrchestrator extends EventEmitter {
         },
       });
     } catch (error) {
-      logger.error('Error stopping worker instance', {
+      logger.error("Error stopping worker instance", {
         workerId,
         error: error.message,
       });
-      instance.status = 'error';
+      instance.status = "error";
     }
   }
 
@@ -193,11 +196,11 @@ export class WorkerOrchestrator extends EventEmitter {
       try {
         await this.checkAndScale();
       } catch (error) {
-        logger.error('Error in scaling monitor:', error);
+        logger.error("Error in scaling monitor:", error);
       }
     }, this.config.orchestrator.scaleCheckInterval);
 
-    logger.info('Scaling monitor started', {
+    logger.info("Scaling monitor started", {
       interval: this.config.orchestrator.scaleCheckInterval,
     });
   }
@@ -211,7 +214,7 @@ export class WorkerOrchestrator extends EventEmitter {
     try {
       // Get queue stats from any worker
       const firstWorker = Array.from(this.workers.values())[0];
-      if (!firstWorker || firstWorker.status !== 'running') {
+      if (!firstWorker || firstWorker.status !== "running") {
         return;
       }
 
@@ -224,7 +227,7 @@ export class WorkerOrchestrator extends EventEmitter {
       const scaleUpThreshold = this.config.orchestrator.scaleUpThreshold;
       const scaleDownThreshold = this.config.orchestrator.scaleDownThreshold;
 
-      logger.debug('Scaling check', {
+      logger.debug("Scaling check", {
         queueDepth,
         currentWorkers,
         scaleUpThreshold,
@@ -232,13 +235,16 @@ export class WorkerOrchestrator extends EventEmitter {
       });
 
       // Scale up if queue depth is high
-      if (queueDepth > scaleUpThreshold && currentWorkers < this.config.orchestrator.maxWorkers) {
+      if (
+        queueDepth > scaleUpThreshold &&
+        currentWorkers < this.config.orchestrator.maxWorkers
+      ) {
         const workersToAdd = Math.min(
           Math.ceil((queueDepth - scaleUpThreshold) / 100),
-          this.config.orchestrator.maxWorkers - currentWorkers
+          this.config.orchestrator.maxWorkers - currentWorkers,
         );
 
-        logger.info('Scaling up workers', {
+        logger.info("Scaling up workers", {
           currentWorkers,
           workersToAdd,
           queueDepth,
@@ -248,21 +254,24 @@ export class WorkerOrchestrator extends EventEmitter {
           await this.startWorker();
         }
 
-        this.emit('scaledUp', {
+        this.emit("scaledUp", {
           from: currentWorkers,
           to: this.workers.size,
           queueDepth,
         });
       }
       // Scale down if queue depth is low
-      else if (queueDepth < scaleDownThreshold && currentWorkers > this.config.orchestrator.minWorkers) {
+      else if (
+        queueDepth < scaleDownThreshold &&
+        currentWorkers > this.config.orchestrator.minWorkers
+      ) {
         const workersToRemove = Math.min(
           Math.floor((scaleDownThreshold - queueDepth) / 50),
-          currentWorkers - this.config.orchestrator.minWorkers
+          currentWorkers - this.config.orchestrator.minWorkers,
         );
 
         if (workersToRemove > 0) {
-          logger.info('Scaling down workers', {
+          logger.info("Scaling down workers", {
             currentWorkers,
             workersToRemove,
             queueDepth,
@@ -270,7 +279,7 @@ export class WorkerOrchestrator extends EventEmitter {
 
           // Stop the least utilized workers
           const sortedWorkers = Array.from(this.workers.values())
-            .filter(w => w.status === 'running')
+            .filter((w) => w.status === "running")
             .sort((a, b) => a.processedJobs - b.processedJobs);
 
           for (let i = 0; i < workersToRemove; i++) {
@@ -279,7 +288,7 @@ export class WorkerOrchestrator extends EventEmitter {
             }
           }
 
-          this.emit('scaledDown', {
+          this.emit("scaledDown", {
             from: currentWorkers,
             to: this.workers.size,
             queueDepth,
@@ -301,11 +310,11 @@ export class WorkerOrchestrator extends EventEmitter {
       try {
         await this.checkWorkersHealth();
       } catch (error) {
-        logger.error('Error in health monitor:', error);
+        logger.error("Error in health monitor:", error);
       }
     }, this.config.orchestrator.workerHealthCheckInterval);
 
-    logger.info('Health monitor started', {
+    logger.info("Health monitor started", {
       interval: this.config.orchestrator.workerHealthCheckInterval,
     });
   }
@@ -316,7 +325,7 @@ export class WorkerOrchestrator extends EventEmitter {
   private async checkWorkersHealth(): Promise<void> {
     const healthChecks = Array.from(this.workers.entries()).map(
       async ([workerId, instance]) => {
-        if (instance.status !== 'running') return;
+        if (instance.status !== "running") return;
 
         try {
           const health = await instance.worker.healthCheck();
@@ -326,8 +335,8 @@ export class WorkerOrchestrator extends EventEmitter {
           instance.failedJobs = health.worker.failedJobs;
 
           // Restart unhealthy workers
-          if (health.status === 'unhealthy') {
-            logger.warn('Unhealthy worker detected, restarting', {
+          if (health.status === "unhealthy") {
+            logger.warn("Unhealthy worker detected, restarting", {
               workerId,
               health,
             });
@@ -335,17 +344,17 @@ export class WorkerOrchestrator extends EventEmitter {
             await this.stopWorker(workerId);
             await this.startWorker();
 
-            this.emit('workerRestarted', { workerId, reason: 'unhealthy' });
+            this.emit("workerRestarted", { workerId, reason: "unhealthy" });
           }
         } catch (error) {
-          logger.error('Health check failed for worker', {
+          logger.error("Health check failed for worker", {
             workerId,
             error: error.message,
           });
 
-          instance.healthStatus = 'unhealthy';
+          instance.healthStatus = "unhealthy";
         }
-      }
+      },
     );
 
     await Promise.allSettled(healthChecks);
@@ -371,11 +380,13 @@ export class WorkerOrchestrator extends EventEmitter {
     let totalProcessedJobs = 0;
     let totalFailedJobs = 0;
 
-    this.workers.forEach(instance => {
-      workersByStatus[instance.status] = (workersByStatus[instance.status] || 0) + 1;
-      
+    this.workers.forEach((instance) => {
+      workersByStatus[instance.status] =
+        (workersByStatus[instance.status] || 0) + 1;
+
       if (instance.healthStatus) {
-        workersByHealth[instance.healthStatus] = (workersByHealth[instance.healthStatus] || 0) + 1;
+        workersByHealth[instance.healthStatus] =
+          (workersByHealth[instance.healthStatus] || 0) + 1;
       }
 
       totalProcessedJobs += instance.processedJobs;
@@ -393,7 +404,8 @@ export class WorkerOrchestrator extends EventEmitter {
       totalProcessedJobs,
       totalFailedJobs,
       systemResources: {
-        cpuUsage: cpus.reduce((acc, cpu) => acc + cpu.times.user, 0) / cpus.length,
+        cpuUsage:
+          cpus.reduce((acc, cpu) => acc + cpu.times.user, 0) / cpus.length,
         memoryUsage: ((totalMemory - freeMemory) / totalMemory) * 100,
         loadAverage: os.loadavg(),
       },
@@ -412,17 +424,21 @@ export class WorkerOrchestrator extends EventEmitter {
    */
   async scaleTo(targetWorkers: number): Promise<void> {
     if (targetWorkers < this.config.orchestrator.minWorkers) {
-      throw new Error(`Cannot scale below minimum workers (${this.config.orchestrator.minWorkers})`);
+      throw new Error(
+        `Cannot scale below minimum workers (${this.config.orchestrator.minWorkers})`,
+      );
     }
 
     if (targetWorkers > this.config.orchestrator.maxWorkers) {
-      throw new Error(`Cannot scale above maximum workers (${this.config.orchestrator.maxWorkers})`);
+      throw new Error(
+        `Cannot scale above maximum workers (${this.config.orchestrator.maxWorkers})`,
+      );
     }
 
     const currentWorkers = this.workers.size;
     const diff = targetWorkers - currentWorkers;
 
-    logger.info('Manual scaling requested', {
+    logger.info("Manual scaling requested", {
       from: currentWorkers,
       to: targetWorkers,
       diff,
@@ -435,13 +451,16 @@ export class WorkerOrchestrator extends EventEmitter {
       }
     } else if (diff < 0) {
       // Scale down
-      const workersToStop = Array.from(this.workers.keys()).slice(0, Math.abs(diff));
+      const workersToStop = Array.from(this.workers.keys()).slice(
+        0,
+        Math.abs(diff),
+      );
       for (const workerId of workersToStop) {
         await this.stopWorker(workerId);
       }
     }
 
-    this.emit('manualScale', {
+    this.emit("manualScale", {
       from: currentWorkers,
       to: this.workers.size,
     });
@@ -471,44 +490,46 @@ export class WorkerOrchestrator extends EventEmitter {
         logger.info(`Stopping ${workerIds.length} workers...`);
 
         await Promise.all(
-          workerIds.map(workerId => this.stopWorker(workerId))
+          workerIds.map((workerId) => this.stopWorker(workerId)),
         );
 
-        logger.info('Orchestrator shutdown completed');
+        logger.info("Orchestrator shutdown completed");
         process.exit(0);
       } catch (error) {
-        logger.error('Error during orchestrator shutdown:', error);
+        logger.error("Error during orchestrator shutdown:", error);
         process.exit(1);
       }
     };
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   }
 
-  private async waitForWorkerReady(worker: OptimizedAnonymizationWorker): Promise<void> {
+  private async waitForWorkerReady(
+    worker: OptimizedAnonymizationWorker,
+  ): Promise<void> {
     const maxAttempts = 10;
     const delay = 1000;
 
     for (let i = 0; i < maxAttempts; i++) {
       try {
         const health = await worker.healthCheck();
-        if (health.status !== 'unhealthy') {
+        if (health.status !== "unhealthy") {
           return;
         }
       } catch (error) {
         // Worker not ready yet
       }
 
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
-    throw new Error('Worker failed to become ready');
+    throw new Error("Worker failed to become ready");
   }
 
   private async waitForWorkerIdle(
     worker: OptimizedAnonymizationWorker,
-    timeout: number
+    timeout: number,
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -522,10 +543,10 @@ export class WorkerOrchestrator extends EventEmitter {
         // Ignore errors during shutdown
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
-    logger.warn('Timeout waiting for worker to become idle');
+    logger.warn("Timeout waiting for worker to become idle");
   }
 
   private generateWorkerId(): string {

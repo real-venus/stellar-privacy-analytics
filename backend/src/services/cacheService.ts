@@ -1,6 +1,6 @@
-import Redis from 'redis';
-import LRUCache from 'lru-cache';
-import { logger } from '../utils/logger';
+import Redis from "redis";
+import LRUCache from "lru-cache";
+import { logger } from "../utils/logger";
 
 export interface CacheOptions {
   ttl?: number; // Time to live in seconds
@@ -30,10 +30,10 @@ export class CacheService {
     redisHits: 0,
     redisMisses: 0,
     localHits: 0,
-    localMisses: 0
+    localMisses: 0,
   };
   private defaultTTL = 3600; // 1 hour
-  private keyPrefix = 'stellar:';
+  private keyPrefix = "stellar:";
 
   constructor(redisClient?: Redis.RedisClientType) {
     this.redisClient = redisClient || null;
@@ -43,14 +43,18 @@ export class CacheService {
       max: 1000, // Maximum 1000 items
       ttl: this.defaultTTL * 1000, // Convert to milliseconds
       updateAgeOnGet: true,
-      allowStale: false
+      allowStale: false,
     });
   }
 
   /**
    * Set a value in cache
    */
-  async set(key: string, value: any, options: CacheOptions = {}): Promise<void> {
+  async set(
+    key: string,
+    value: any,
+    options: CacheOptions = {},
+  ): Promise<void> {
     const fullKey = this.getFullKey(key, options.prefix);
     const ttl = options.ttl || this.defaultTTL;
 
@@ -76,7 +80,10 @@ export class CacheService {
   /**
    * Get a value from cache
    */
-  async get<T = any>(key: string, options: CacheOptions = {}): Promise<T | null> {
+  async get<T = any>(
+    key: string,
+    options: CacheOptions = {},
+  ): Promise<T | null> {
     const fullKey = this.getFullKey(key, options.prefix);
 
     try {
@@ -156,7 +163,11 @@ export class CacheService {
 
     try {
       // Check local cache first
-      if (options.useLocalCache !== false && this.localCache && this.localCache.has(fullKey)) {
+      if (
+        options.useLocalCache !== false &&
+        this.localCache &&
+        this.localCache.has(fullKey)
+      ) {
         return true;
       }
 
@@ -177,7 +188,9 @@ export class CacheService {
    * Clear all cache entries with a prefix
    */
   async clear(prefix?: string): Promise<void> {
-    const prefixToClear = prefix ? `${this.keyPrefix}${prefix}:*` : `${this.keyPrefix}*`;
+    const prefixToClear = prefix
+      ? `${this.keyPrefix}${prefix}:*`
+      : `${this.keyPrefix}*`;
 
     try {
       // Clear local cache
@@ -190,7 +203,7 @@ export class CacheService {
               keysToDelete.push(key);
             }
           }
-          keysToDelete.forEach(key => this.localCache!.delete(key));
+          keysToDelete.forEach((key) => this.localCache!.delete(key));
         } else {
           this.localCache.clear();
         }
@@ -204,7 +217,7 @@ export class CacheService {
         }
       }
 
-      logger.info(`Cache cleared with prefix: ${prefix || 'all'}`);
+      logger.info(`Cache cleared with prefix: ${prefix || "all"}`);
     } catch (error) {
       logger.error(`Cache clear failed for prefix ${prefix}:`, error);
     }
@@ -229,7 +242,7 @@ export class CacheService {
       redisHits: 0,
       redisMisses: 0,
       localHits: 0,
-      localMisses: 0
+      localMisses: 0,
     };
   }
 
@@ -242,7 +255,7 @@ export class CacheService {
   }
 
   private getFullKey(key: string, prefix?: string): string {
-    const prefixPart = prefix ? `${prefix}:` : '';
+    const prefixPart = prefix ? `${prefix}:` : "";
     return `${this.keyPrefix}${prefixPart}${key}`;
   }
 }
@@ -250,17 +263,21 @@ export class CacheService {
 // Global cache instance
 let globalCacheService: CacheService | null = null;
 
-export function initializeCacheService(redisClient?: Redis.RedisClientType): CacheService {
+export function initializeCacheService(
+  redisClient?: Redis.RedisClientType,
+): CacheService {
   if (!globalCacheService) {
     globalCacheService = new CacheService(redisClient);
-    logger.info('Cache service initialized');
+    logger.info("Cache service initialized");
   }
   return globalCacheService;
 }
 
 export function getCacheService(): CacheService {
   if (!globalCacheService) {
-    throw new Error('Cache service not initialized. Call initializeCacheService() first.');
+    throw new Error(
+      "Cache service not initialized. Call initializeCacheService() first.",
+    );
   }
   return globalCacheService;
 }

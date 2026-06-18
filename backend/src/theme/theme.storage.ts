@@ -1,5 +1,5 @@
-import { THEME_STORAGE_KEY } from './theme.constants';
-import { ThemeMode } from './theme.types';
+import { THEME_STORAGE_KEY } from "./theme.constants";
+import { ThemeMode } from "./theme.types";
 
 export const saveTheme = (theme: ThemeMode) => {
   try {

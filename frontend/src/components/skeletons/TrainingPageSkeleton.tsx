@@ -37,7 +37,10 @@ export function TrainingPageSkeleton() {
       {/* Course cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-white dark:bg-obsidian-900 shadow-sm p-6 space-y-4">
+          <div
+            key={i}
+            className="rounded-lg border bg-white dark:bg-obsidian-900 shadow-sm p-6 space-y-4"
+          >
             <div className="flex items-start justify-between">
               <div className="space-y-2 flex-1">
                 <Skeleton className="h-5 w-3/4" />

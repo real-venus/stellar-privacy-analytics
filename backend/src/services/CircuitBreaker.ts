@@ -1,10 +1,10 @@
-import { EventEmitter } from 'events';
-import { logger } from '../utils/logger';
+import { EventEmitter } from "events";
+import { logger } from "../utils/logger";
 
 export enum CircuitState {
-  CLOSED = 'closed',
-  OPEN = 'open',
-  HALF_OPEN = 'half_open'
+  CLOSED = "closed",
+  OPEN = "open",
+  HALF_OPEN = "half_open",
 }
 
 export interface CircuitBreakerOptions {
@@ -24,7 +24,10 @@ export class CircuitBreaker extends EventEmitter {
   private readonly monitoringPeriod: number;
   private readonly expectedRecoveryTime: number;
 
-  constructor(private serviceName: string, options: CircuitBreakerOptions = {}) {
+  constructor(
+    private serviceName: string,
+    options: CircuitBreakerOptions = {},
+  ) {
     super();
     this.failureThreshold = options.failureThreshold || 5;
     this.resetTimeout = options.resetTimeout || 60000; // 1 minute
@@ -36,10 +39,14 @@ export class CircuitBreaker extends EventEmitter {
     if (this.state === CircuitState.OPEN) {
       if (this.shouldAttemptReset()) {
         this.state = CircuitState.HALF_OPEN;
-        this.emit('stateChanged', this.state, this.serviceName);
-        logger.info(`Circuit breaker for ${this.serviceName} entering HALF_OPEN state`);
+        this.emit("stateChanged", this.state, this.serviceName);
+        logger.info(
+          `Circuit breaker for ${this.serviceName} entering HALF_OPEN state`,
+        );
       } else {
-        throw new Error(`Circuit breaker is OPEN for service: ${this.serviceName}`);
+        throw new Error(
+          `Circuit breaker is OPEN for service: ${this.serviceName}`,
+        );
       }
     }
 
@@ -55,14 +62,17 @@ export class CircuitBreaker extends EventEmitter {
 
   private onSuccess(): void {
     this.failureCount = 0;
-    
+
     if (this.state === CircuitState.HALF_OPEN) {
       this.successCount++;
-      if (this.successCount >= 3) { // Need 3 consecutive successes to close
+      if (this.successCount >= 3) {
+        // Need 3 consecutive successes to close
         this.state = CircuitState.CLOSED;
         this.successCount = 0;
-        this.emit('stateChanged', this.state, this.serviceName);
-        logger.info(`Circuit breaker for ${this.serviceName} CLOSED after recovery`);
+        this.emit("stateChanged", this.state, this.serviceName);
+        logger.info(
+          `Circuit breaker for ${this.serviceName} CLOSED after recovery`,
+        );
       }
     }
   }
@@ -74,12 +84,16 @@ export class CircuitBreaker extends EventEmitter {
     if (this.state === CircuitState.HALF_OPEN) {
       this.state = CircuitState.OPEN;
       this.successCount = 0;
-      this.emit('stateChanged', this.state, this.serviceName);
-      logger.warn(`Circuit breaker for ${this.serviceName} OPEN again after half-open failure`);
+      this.emit("stateChanged", this.state, this.serviceName);
+      logger.warn(
+        `Circuit breaker for ${this.serviceName} OPEN again after half-open failure`,
+      );
     } else if (this.failureCount >= this.failureThreshold) {
       this.state = CircuitState.OPEN;
-      this.emit('stateChanged', this.state, this.serviceName);
-      logger.warn(`Circuit breaker for ${this.serviceName} OPEN after ${this.failureCount} failures`);
+      this.emit("stateChanged", this.state, this.serviceName);
+      logger.warn(
+        `Circuit breaker for ${this.serviceName} OPEN after ${this.failureCount} failures`,
+      );
     }
   }
 
@@ -104,7 +118,7 @@ export class CircuitBreaker extends EventEmitter {
     this.failureCount = 0;
     this.lastFailureTime = 0;
     this.successCount = 0;
-    this.emit('stateChanged', this.state, this.serviceName);
+    this.emit("stateChanged", this.state, this.serviceName);
     logger.info(`Circuit breaker for ${this.serviceName} manually reset`);
   }
 
@@ -115,7 +129,7 @@ export class CircuitBreaker extends EventEmitter {
       lastFailureTime: this.lastFailureTime,
       successCount: this.successCount,
       failureThreshold: this.failureThreshold,
-      resetTimeout: this.resetTimeout
+      resetTimeout: this.resetTimeout,
     };
   }
 }
@@ -123,17 +137,22 @@ export class CircuitBreaker extends EventEmitter {
 export class CircuitBreakerRegistry {
   private circuitBreakers: Map<string, CircuitBreaker> = new Map();
 
-  getCircuitBreaker(serviceName: string, options?: CircuitBreakerOptions): CircuitBreaker {
+  getCircuitBreaker(
+    serviceName: string,
+    options?: CircuitBreakerOptions,
+  ): CircuitBreaker {
     if (!this.circuitBreakers.has(serviceName)) {
       const circuitBreaker = new CircuitBreaker(serviceName, options);
       this.circuitBreakers.set(serviceName, circuitBreaker);
-      
+
       // Set up event listeners
-      circuitBreaker.on('stateChanged', (state: CircuitState) => {
-        logger.info(`Circuit breaker state changed for ${serviceName}: ${state}`);
+      circuitBreaker.on("stateChanged", (state: CircuitState) => {
+        logger.info(
+          `Circuit breaker state changed for ${serviceName}: ${state}`,
+        );
       });
     }
-    
+
     return this.circuitBreakers.get(serviceName)!;
   }
 
@@ -143,11 +162,14 @@ export class CircuitBreakerRegistry {
 
   getMetrics(): Record<string, any> {
     const metrics: Record<string, any> = {};
-    
-    for (const [serviceName, circuitBreaker] of this.circuitBreakers.entries()) {
+
+    for (const [
+      serviceName,
+      circuitBreaker,
+    ] of this.circuitBreakers.entries()) {
       metrics[serviceName] = circuitBreaker.getMetrics();
     }
-    
+
     return metrics;
   }
 

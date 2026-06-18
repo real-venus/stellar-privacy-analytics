@@ -44,7 +44,7 @@ export function useDataProcessor<T, R>(
     intervalRef.current = setInterval(() => {
       if (!mountedRef.current) return;
       const mb = perf.memory!.usedJSHeapSize / 1024 / 1024;
-      setStats(prev => ({ ...prev, memoryUsageMB: Math.round(mb * 10) / 10 }));
+      setStats((prev) => ({ ...prev, memoryUsageMB: Math.round(mb * 10) / 10 }));
     }, 2000);
 
     return () => {
@@ -68,7 +68,7 @@ export function useDataProcessor<T, R>(
 
       setError(null);
       setResults([]);
-      setStats(prev => ({ ...prev, isProcessing: true, itemsProcessed: 0 }));
+      setStats((prev) => ({ ...prev, isProcessing: true, itemsProcessed: 0 }));
 
       const accumulated: R[] = [];
       const total = data.length;
@@ -85,12 +85,12 @@ export function useDataProcessor<T, R>(
           const progress = Math.round((processed / total) * 100);
 
           if (mountedRef.current) {
-            setStats(prev => ({ ...prev, itemsProcessed: processed }));
+            setStats((prev) => ({ ...prev, itemsProcessed: processed }));
             onProgress?.(progress);
           }
 
           // Yield to event loop between chunks to avoid blocking UI
-          await new Promise<void>(resolve => setTimeout(resolve, 0));
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
         }
 
         if (mountedRef.current && !abortRef.current) {
@@ -102,7 +102,7 @@ export function useDataProcessor<T, R>(
         }
       } finally {
         if (mountedRef.current) {
-          setStats(prev => ({ ...prev, isProcessing: false }));
+          setStats((prev) => ({ ...prev, isProcessing: false }));
         }
       }
     },
@@ -112,7 +112,7 @@ export function useDataProcessor<T, R>(
   const cancel = useCallback(() => {
     abortRef.current = true;
     if (mountedRef.current) {
-      setStats(prev => ({ ...prev, isProcessing: false }));
+      setStats((prev) => ({ ...prev, isProcessing: false }));
     }
   }, []);
 
@@ -121,7 +121,7 @@ export function useDataProcessor<T, R>(
     if (mountedRef.current) {
       setResults([]);
       setError(null);
-      setStats(prev => ({ ...prev, isProcessing: false, itemsProcessed: 0 }));
+      setStats((prev) => ({ ...prev, isProcessing: false, itemsProcessed: 0 }));
     }
   }, []);
 

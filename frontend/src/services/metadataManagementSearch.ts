@@ -15,7 +15,7 @@ import {
   SchemaField,
   PrivacyMetadata,
   UsageMetadata,
-  QualityMetadata
+  QualityMetadata,
 } from '../types/dataCatalog';
 
 export interface MetadataIndexConfig {
@@ -159,7 +159,7 @@ export class MetadataManagementSearch {
           maxFields: 1000,
           maxFieldLength: 32766,
           compressionEnabled: true,
-          encryptionEnabled: false
+          encryptionEnabled: false,
         };
       }
       if (!searchConfig) {
@@ -170,7 +170,7 @@ export class MetadataManagementSearch {
           facetEnabled: true,
           suggestionEnabled: true,
           aggregationEnabled: true,
-          timeout: 30
+          timeout: 30,
         };
       }
       MetadataManagementSearch.instance = new MetadataManagementSearch(indexConfig, searchConfig);
@@ -188,7 +188,7 @@ export class MetadataManagementSearch {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       documentCount: 0,
-      size: 0
+      size: 0,
     };
   }
 
@@ -200,7 +200,7 @@ export class MetadataManagementSearch {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         name: {
           type: 'text',
@@ -211,13 +211,13 @@ export class MetadataManagementSearch {
           fields: {
             keyword: {
               type: 'keyword',
-              ignoreAbove: 256
+              ignoreAbove: 256,
             },
             suggest: {
               type: 'completion',
-              analyzer: 'simple'
-            }
-          }
+              analyzer: 'simple',
+            },
+          },
         },
         description: {
           type: 'text',
@@ -225,59 +225,59 @@ export class MetadataManagementSearch {
           searchAnalyzer: 'standard',
           index: true,
           store: false,
-          fielddata: true
+          fielddata: true,
         },
         owner: {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         department: {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         createdAt: {
           type: 'date',
           index: true,
           store: true,
           docValues: true,
-          format: 'strict_date_optional_time||epoch_millis'
+          format: 'strict_date_optional_time||epoch_millis',
         },
         updatedAt: {
           type: 'date',
           index: true,
           store: true,
           docValues: true,
-          format: 'strict_date_optional_time||epoch_millis'
+          format: 'strict_date_optional_time||epoch_millis',
         },
         version: {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         status: {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         tags: {
           type: 'keyword',
           index: true,
           store: false,
           docValues: true,
-          multiValued: true
+          multiValued: true,
         },
         categories: {
           type: 'keyword',
           index: true,
           store: false,
           docValues: true,
-          multiValued: true
+          multiValued: true,
         },
 
         // Privacy metadata
@@ -285,25 +285,25 @@ export class MetadataManagementSearch {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'privacy.classification': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'privacy.sensitivity': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'privacy.anonymizationLevel': {
           type: 'float',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'privacy.dataTypes': {
           type: 'nested',
@@ -312,21 +312,21 @@ export class MetadataManagementSearch {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             category: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             sensitivity: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
-            }
-          }
+              docValues: true,
+            },
+          },
         },
 
         // Schema metadata
@@ -334,13 +334,13 @@ export class MetadataManagementSearch {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'schema.format': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'schema.fields': {
           type: 'nested',
@@ -349,64 +349,64 @@ export class MetadataManagementSearch {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             type: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             nullable: {
               type: 'boolean',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             description: {
               type: 'text',
               analyzer: 'standard',
               index: true,
-              store: false
+              store: false,
             },
             tags: {
               type: 'keyword',
               index: true,
               store: false,
               docValues: true,
-              multiValued: true
+              multiValued: true,
             },
             'privacy.isPersonal': {
               type: 'boolean',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             'privacy.isSensitive': {
               type: 'boolean',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             'privacy.accessRestricted': {
               type: 'boolean',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             'statistics.distinctCount': {
               type: 'integer',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             'statistics.nullCount': {
               type: 'integer',
               index: true,
               store: true,
-              docValues: true
-            }
-          }
+              docValues: true,
+            },
+          },
         },
 
         // Quality metadata
@@ -414,13 +414,13 @@ export class MetadataManagementSearch {
           type: 'float',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'quality.overall.grade': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'quality.dimensions': {
           type: 'nested',
@@ -429,21 +429,21 @@ export class MetadataManagementSearch {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             score: {
               type: 'float',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             weight: {
               type: 'float',
               index: true,
               store: true,
-              docValues: true
-            }
-          }
+              docValues: true,
+            },
+          },
         },
 
         // Usage metadata
@@ -451,25 +451,25 @@ export class MetadataManagementSearch {
           type: 'integer',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'usage.statistics.uniqueUsers': {
           type: 'integer',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'usage.statistics.avgQueriesPerDay': {
           type: 'float',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'usage.statistics.dataVolumeAccessed': {
           type: 'long',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'usage.consumers': {
           type: 'nested',
@@ -478,39 +478,39 @@ export class MetadataManagementSearch {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             type: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             department: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             accessLevel: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             queryCount: {
               type: 'integer',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             favorite: {
               type: 'boolean',
               index: true,
               store: true,
-              docValues: true
-            }
-          }
+              docValues: true,
+            },
+          },
         },
 
         // Location metadata
@@ -518,37 +518,37 @@ export class MetadataManagementSearch {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'location.source.name': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'location.storage.provider': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'location.storage.region': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'location.format.type': {
           type: 'keyword',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
         'location.size.total': {
           type: 'long',
           index: true,
           store: true,
-          docValues: true
+          docValues: true,
         },
 
         // Processing metadata
@@ -559,7 +559,7 @@ export class MetadataManagementSearch {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             name: {
               type: 'text',
@@ -569,23 +569,23 @@ export class MetadataManagementSearch {
               fields: {
                 keyword: {
                   type: 'keyword',
-                  ignoreAbove: 256
-                }
-              }
+                  ignoreAbove: 256,
+                },
+              },
             },
             type: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             status: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
-            }
-          }
+              docValues: true,
+            },
+          },
         },
 
         // Compliance metadata
@@ -596,21 +596,21 @@ export class MetadataManagementSearch {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             version: {
               type: 'keyword',
               index: true,
               store: true,
-              docValues: true
+              docValues: true,
             },
             maturity: {
               type: 'integer',
               index: true,
               store: true,
-              docValues: true
-            }
-          }
+              docValues: true,
+            },
+          },
         },
 
         // Full text search
@@ -620,12 +620,12 @@ export class MetadataManagementSearch {
           searchAnalyzer: 'standard',
           index: true,
           store: false,
-          fielddata: true
-        }
+          fielddata: true,
+        },
       },
       dynamic: 'strict',
       dateDetection: true,
-      numericDetection: true
+      numericDetection: true,
     };
   }
 
@@ -640,55 +640,55 @@ export class MetadataManagementSearch {
           standard: {
             type: 'standard',
             tokenizer: 'standard',
-            filter: ['lowercase', 'stop']
+            filter: ['lowercase', 'stop'],
           },
           keyword: {
             type: 'custom',
             tokenizer: 'keyword',
-            filter: []
+            filter: [],
           },
           text_analyzer: {
             type: 'custom',
             tokenizer: 'standard',
-            filter: ['lowercase', 'stop', 'snowball']
+            filter: ['lowercase', 'stop', 'snowball'],
           },
           name_analyzer: {
             type: 'custom',
             tokenizer: 'keyword',
-            filter: ['lowercase', 'asciifolding']
+            filter: ['lowercase', 'asciifolding'],
           },
           tag_analyzer: {
             type: 'custom',
             tokenizer: 'keyword',
-            filter: ['lowercase']
-          }
+            filter: ['lowercase'],
+          },
         },
         tokenizer: {
           standard: {
-            type: 'standard'
+            type: 'standard',
           },
           keyword: {
-            type: 'keyword'
-          }
+            type: 'keyword',
+          },
         },
         filter: {
           lowercase: {
-            type: 'lowercase'
+            type: 'lowercase',
           },
           stop: {
             type: 'stop',
-            stopwords: '_english_'
+            stopwords: '_english_',
           },
           snowball: {
             type: 'snowball',
-            language: 'English'
+            language: 'English',
           },
           asciifolding: {
-            type: 'asciifolding'
-          }
+            type: 'asciifolding',
+          },
         },
-        char_filter: {}
-      }
+        char_filter: {},
+      },
     };
   }
 
@@ -704,7 +704,7 @@ export class MetadataManagementSearch {
         aggregatable: true,
         sortable: true,
         multiValued: false,
-        ignoreAbove: 256
+        ignoreAbove: 256,
       },
       {
         id: 'description_field',
@@ -715,7 +715,7 @@ export class MetadataManagementSearch {
         searchable: true,
         aggregatable: false,
         sortable: false,
-        multiValued: false
+        multiValued: false,
       },
       {
         id: 'tags_field',
@@ -726,7 +726,7 @@ export class MetadataManagementSearch {
         searchable: true,
         aggregatable: true,
         sortable: false,
-        multiValued: true
+        multiValued: true,
       },
       {
         id: 'privacy_level',
@@ -737,7 +737,7 @@ export class MetadataManagementSearch {
         searchable: true,
         aggregatable: true,
         sortable: true,
-        multiValued: false
+        multiValued: false,
       },
       {
         id: 'quality_score',
@@ -748,7 +748,7 @@ export class MetadataManagementSearch {
         searchable: false,
         aggregatable: true,
         sortable: true,
-        multiValued: false
+        multiValued: false,
       },
       {
         id: 'usage_queries',
@@ -759,11 +759,11 @@ export class MetadataManagementSearch {
         searchable: false,
         aggregatable: true,
         sortable: true,
-        multiValued: false
-      }
+        multiValued: false,
+      },
     ];
 
-    rules.forEach(rule => {
+    rules.forEach((rule) => {
       this.indexingRules.set(rule.id, rule);
     });
   }
@@ -771,9 +771,12 @@ export class MetadataManagementSearch {
   private startPeriodicIndexing(): void {
     if (!this.indexConfig.indexingEnabled) return;
 
-    setInterval(() => {
-      this.performIncrementalIndexing();
-    }, this.indexConfig.updateFrequency * 60 * 1000);
+    setInterval(
+      () => {
+        this.performIncrementalIndexing();
+      },
+      this.indexConfig.updateFrequency * 60 * 1000
+    );
   }
 
   // Metadata management
@@ -967,7 +970,7 @@ export class MetadataManagementSearch {
       processed: 0,
       total: 0,
       errors: [],
-      progress: 0
+      progress: 0,
     };
 
     this.indexingJobs.set(job.id, job);
@@ -983,7 +986,7 @@ export class MetadataManagementSearch {
       // Process in batches
       for (let i = 0; i < datasets.length; i += this.indexConfig.batchSize) {
         const batch = datasets.slice(i, i + this.indexConfig.batchSize);
-        
+
         for (const dataset of batch) {
           try {
             await this.indexMetadata(dataset);
@@ -993,13 +996,13 @@ export class MetadataManagementSearch {
               documentId: dataset.id,
               error: error.toString(),
               timestamp: Date.now(),
-              resolved: false
+              resolved: false,
             });
           }
         }
 
         job.progress = (job.processed / job.total) * 100;
-        
+
         // Update job status
         this.indexingJobs.set(job.id, { ...job });
       }
@@ -1007,7 +1010,6 @@ export class MetadataManagementSearch {
       job.status = 'completed';
       job.completedAt = Date.now();
       job.progress = 100;
-
     } catch (error) {
       job.status = 'failed';
       job.completedAt = Date.now();
@@ -1026,7 +1028,7 @@ export class MetadataManagementSearch {
       processed: 0,
       total: 0,
       errors: [],
-      progress: 0
+      progress: 0,
     };
 
     this.indexingJobs.set(job.id, job);
@@ -1056,7 +1058,7 @@ export class MetadataManagementSearch {
             documentId: dataset.id,
             error: error.toString(),
             timestamp: Date.now(),
-            resolved: false
+            resolved: false,
           });
         }
       }
@@ -1064,7 +1066,6 @@ export class MetadataManagementSearch {
       job.status = 'completed';
       job.completedAt = Date.now();
       job.progress = 100;
-
     } catch (error) {
       job.status = 'failed';
       job.completedAt = Date.now();
@@ -1124,12 +1125,12 @@ export class MetadataManagementSearch {
     return {
       metadataCache: {
         size: this.metadataCache.size,
-        keys: Array.from(this.metadataCache.keys())
+        keys: Array.from(this.metadataCache.keys()),
       },
       searchCache: {
         size: this.searchCache.size,
-        keys: Array.from(this.searchCache.keys())
-      }
+        keys: Array.from(this.searchCache.keys()),
+      },
     };
   }
 
@@ -1148,7 +1149,7 @@ export class MetadataManagementSearch {
   } {
     return {
       indexConfig: { ...this.indexConfig },
-      searchConfig: { ...this.searchConfig }
+      searchConfig: { ...this.searchConfig },
     };
   }
 
@@ -1164,7 +1165,7 @@ export class MetadataManagementSearch {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -1183,7 +1184,7 @@ export class MetadataManagementSearch {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -1220,7 +1221,9 @@ export class MetadataManagementSearch {
       from: request.pagination.from,
       size: request.pagination.size,
       highlight: this.searchConfig.highlightEnabled ? this.buildHighlight() : undefined,
-      aggs: this.searchConfig.aggregationEnabled ? this.buildAggregations(request.facets) : undefined
+      aggs: this.searchConfig.aggregationEnabled
+        ? this.buildAggregations(request.facets)
+        : undefined,
     };
   }
 
@@ -1235,13 +1238,13 @@ export class MetadataManagementSearch {
           query: request.query,
           fields: ['name^3', 'description^2', 'tags^2', '_searchable_text'],
           type: 'best_fields',
-          fuzziness: 'AUTO'
-        }
+          fuzziness: 'AUTO',
+        },
       });
     }
 
     // Add filters
-    request.filters.forEach(filter => {
+    request.filters.forEach((filter) => {
       const esFilter = this.convertFilterToElasticsearch(filter);
       if (esFilter) filter.push(esFilter);
     });
@@ -1249,8 +1252,8 @@ export class MetadataManagementSearch {
     return {
       bool: {
         must,
-        filter
-      }
+        filter,
+      },
     };
   }
 
@@ -1267,9 +1270,19 @@ export class MetadataManagementSearch {
       case 'ends_with':
         return { wildcard: { [filter.field]: `*${filter.value}` } };
       case 'in':
-        return { terms: { [filter.field]: Array.isArray(filter.value) ? filter.value : [filter.value] } };
+        return {
+          terms: { [filter.field]: Array.isArray(filter.value) ? filter.value : [filter.value] },
+        };
       case 'not_in':
-        return { bool: { must_not: { terms: { [filter.field]: Array.isArray(filter.value) ? filter.value : [filter.value] } } } };
+        return {
+          bool: {
+            must_not: {
+              terms: {
+                [filter.field]: Array.isArray(filter.value) ? filter.value : [filter.value],
+              },
+            },
+          },
+        };
       case 'greater_than':
         return { range: { [filter.field]: { gt: filter.value } } };
       case 'less_than':
@@ -1286,11 +1299,11 @@ export class MetadataManagementSearch {
   }
 
   private buildSort(sort: SearchSort[]): any {
-    return sort.map(s => ({
+    return sort.map((s) => ({
       [s.field]: {
         order: s.order,
-        mode: s.mode || 'min'
-      }
+        mode: s.mode || 'min',
+      },
     }));
   }
 
@@ -1300,22 +1313,22 @@ export class MetadataManagementSearch {
         name: {},
         description: {},
         'schema.fields.name': {},
-        'schema.fields.description': {}
+        'schema.fields.description': {},
       },
       pre_tags: ['<mark>'],
-      post_tags: ['</mark>']
+      post_tags: ['</mark>'],
     };
   }
 
   private buildAggregations(facets: string[]): any {
     const aggs: any = {};
 
-    facets.forEach(field => {
+    facets.forEach((field) => {
       aggs[field] = {
         terms: {
           field,
-          size: 10
-        }
+          size: 10,
+        },
       };
     });
 
@@ -1329,11 +1342,11 @@ export class MetadataManagementSearch {
       hits: {
         total: { value: 0 },
         hits: [],
-        max_score: 0
+        max_score: 0,
       },
       took: 5,
       timed_out: false,
-      aggregations: {}
+      aggregations: {},
     };
   }
 
@@ -1348,8 +1361,8 @@ export class MetadataManagementSearch {
         maskedFields: [],
         anonymizedFields: [],
         accessRequired: true,
-        consentRequired: false
-      }
+        consentRequired: false,
+      },
     }));
 
     const facets = this.extractFacets(result.aggregations);
@@ -1368,8 +1381,8 @@ export class MetadataManagementSearch {
         maskedFields: [],
         anonymizedResults: 0,
         consentRequired: 0,
-        accessDenied: 0
-      }
+        accessDenied: 0,
+      },
     };
   }
 
@@ -1377,7 +1390,7 @@ export class MetadataManagementSearch {
     return {
       value: score,
       description: 'Relevance score based on query matching',
-      details: {}
+      details: {},
     };
   }
 
@@ -1391,9 +1404,9 @@ export class MetadataManagementSearch {
           values: agg.buckets.map((bucket: any) => ({
             value: bucket.key,
             count: bucket.doc_count,
-            selected: false
+            selected: false,
           })),
-          total: agg.buckets.reduce((sum: number, bucket: any) => sum + bucket.doc_count, 0)
+          total: agg.buckets.reduce((sum: number, bucket: any) => sum + bucket.doc_count, 0),
         });
       }
     });
@@ -1409,14 +1422,16 @@ export class MetadataManagementSearch {
         name,
         type: this.determineAggregationType(agg),
         buckets: agg.buckets || [],
-        value: agg.value
+        value: agg.value,
       });
     });
 
     return result;
   }
 
-  private determineAggregationType(agg: any): 'terms' | 'date_histogram' | 'range' | 'stats' | 'cardinality' {
+  private determineAggregationType(
+    agg: any
+  ): 'terms' | 'date_histogram' | 'range' | 'stats' | 'cardinality' {
     if (agg.buckets) return 'terms';
     if (agg.value) return 'stats';
     if (agg.buckets && agg.interval) return 'date_histogram';
@@ -1429,7 +1444,7 @@ export class MetadataManagementSearch {
       filters: request.filters,
       sort: request.sort,
       pagination: request.pagination,
-      facets: request.facets
+      facets: request.facets,
     });
     return Buffer.from(key).toString('base64');
   }
@@ -1438,14 +1453,14 @@ export class MetadataManagementSearch {
     // Clear cached search results that might contain this dataset
     // Simplified implementation - in production, would be more sophisticated
     const keysToDelete: string[] = [];
-    
+
     this.searchCache.forEach((result, key) => {
-      if (result.datasets.some(d => d.dataset.id === datasetId)) {
+      if (result.datasets.some((d) => d.dataset.id === datasetId)) {
         keysToDelete.push(key);
       }
     });
 
-    keysToDelete.forEach(key => this.searchCache.delete(key));
+    keysToDelete.forEach((key) => this.searchCache.delete(key));
   }
 
   private async getAllDatasetsForIndexing(): Promise<DatasetMetadata[]> {
@@ -1474,10 +1489,10 @@ export class MetadataManagementSearch {
         [field]: {
           terms: {
             field,
-            size: 100
-          }
-        }
-      }
+            size: 100,
+          },
+        },
+      },
     };
   }
 
@@ -1486,7 +1501,7 @@ export class MetadataManagementSearch {
     return {
       field,
       values: [],
-      total: 0
+      total: 0,
     };
   }
 
@@ -1494,7 +1509,7 @@ export class MetadataManagementSearch {
     // This would build an aggregation query
     return {
       size: 0,
-      aggs: {}
+      aggs: {},
     };
   }
 

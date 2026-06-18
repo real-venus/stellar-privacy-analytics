@@ -37,7 +37,10 @@ export function KeyboardShortcutsHelp({ shortcuts, onClose }: KeyboardShortcutsH
         </div>
         <ul className="space-y-2">
           {shortcuts.map((shortcut, i) => (
-            <li key={i} className="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
+            <li
+              key={i}
+              className="flex items-center justify-between py-1 border-b border-gray-100 last:border-0"
+            >
               <span className="text-sm text-gray-700">{shortcut.description}</span>
               <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 border border-gray-300 rounded text-gray-800">
                 {formatShortcut(shortcut)}

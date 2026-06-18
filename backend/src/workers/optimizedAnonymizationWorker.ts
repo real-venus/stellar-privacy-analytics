@@ -1,19 +1,19 @@
-import { Queue, Worker, Job, QueueScheduler, QueueEvents } from 'bullmq';
-import { createClient, RedisClientType } from 'redis';
-import { logger } from '../utils/logger';
-import { PIIMasker } from './piMasker';
-import { NERProcessor } from './nerProcessor';
-import { SandboxManager } from './sandboxManager';
-import { MetadataRepository } from '../repositories/metadataRepository';
-import { DeadLetterQueue } from './deadLetterQueue';
-import { WorkerMetrics } from './workerMetrics';
-import { ConnectionPool } from '../utils/connectionPool';
+import { Queue, Worker, Job, QueueScheduler, QueueEvents } from "bullmq";
+import { createClient, RedisClientType } from "redis";
+import { logger } from "../utils/logger";
+import { PIIMasker } from "./piMasker";
+import { NERProcessor } from "./nerProcessor";
+import { SandboxManager } from "./sandboxManager";
+import { MetadataRepository } from "../repositories/metadataRepository";
+import { DeadLetterQueue } from "./deadLetterQueue";
+import { WorkerMetrics } from "./workerMetrics";
+import { ConnectionPool } from "../utils/connectionPool";
 
 export interface AnonymizationJob {
   id: string;
   datasetId: string;
   metadata: Record<string, any>;
-  priority: 'critical' | 'high' | 'normal' | 'low';
+  priority: "critical" | "high" | "normal" | "low";
   createdAt: Date;
   retryCount?: number;
   maxRetries?: number;
@@ -34,7 +34,15 @@ export interface AnonymizationResult {
 }
 
 export interface PIIDetection {
-  type: 'email' | 'phone' | 'ssn' | 'credit_card' | 'name' | 'address' | 'date' | 'custom';
+  type:
+    | "email"
+    | "phone"
+    | "ssn"
+    | "credit_card"
+    | "name"
+    | "address"
+    | "date"
+    | "custom";
   value: string;
   maskedValue: string;
   position: {
@@ -42,7 +50,7 @@ export interface PIIDetection {
     end: number;
   };
   confidence: number;
-  method: 'regex' | 'ner' | 'custom';
+  method: "regex" | "ner" | "custom";
 }
 
 export interface WorkerConfig {
@@ -113,7 +121,7 @@ export class OptimizedAnonymizationWorker {
   constructor(config: WorkerConfig) {
     this.config = config;
     this.currentConcurrency = config.worker.concurrency;
-    
+
     this.initializeConnectionPool();
     this.initializeQueues();
     this.initializeComponents(config);
@@ -121,8 +129,8 @@ export class OptimizedAnonymizationWorker {
     this.initializeMetrics();
     this.setupDynamicScaling();
     this.setupGracefulShutdown();
-    
-    logger.info('Optimized Anonymization Worker initialized', {
+
+    logger.info("Optimized Anonymization Worker initialized", {
       concurrency: this.currentConcurrency,
       dynamicScaling: config.worker.enableDynamicScaling,
       batchProcessing: config.worker.enableBatchProcessing,
@@ -141,7 +149,7 @@ export class OptimizedAnonymizationWorker {
       minConnections: this.config.redis.minConnections || 5,
     });
 
-    logger.info('Redis connection pool initialized', {
+    logger.info("Redis connection pool initialized", {
       maxConnections: this.config.redis.maxConnections || 20,
       minConnections: this.config.redis.minConnections || 5,
     });
@@ -158,31 +166,31 @@ export class OptimizedAnonymizationWorker {
     };
 
     // Main anonymization queue
-    this.queue = new Queue('anonymization', {
+    this.queue = new Queue("anonymization", {
       connection: redisConnection,
       defaultJobOptions: {
         removeOnComplete: 1000,
         removeOnFail: 500,
         attempts: 3,
         backoff: {
-          type: 'exponential',
+          type: "exponential",
           delay: 2000,
         },
       },
     });
 
     // Priority queues for different priority levels
-    const priorities = ['critical', 'high', 'normal', 'low'];
-    priorities.forEach(priority => {
+    const priorities = ["critical", "high", "normal", "low"];
+    priorities.forEach((priority) => {
       const priorityQueue = new Queue(`anonymization-${priority}`, {
         connection: redisConnection,
         defaultJobOptions: {
           removeOnComplete: 1000,
           removeOnFail: 500,
-          attempts: priority === 'critical' ? 5 : 3,
+          attempts: priority === "critical" ? 5 : 3,
           backoff: {
-            type: 'exponential',
-            delay: priority === 'critical' ? 1000 : 2000,
+            type: "exponential",
+            delay: priority === "critical" ? 1000 : 2000,
           },
         },
       });
@@ -190,32 +198,32 @@ export class OptimizedAnonymizationWorker {
     });
 
     // Queue scheduler for delayed jobs
-    this.scheduler = new QueueScheduler('anonymization', {
+    this.scheduler = new QueueScheduler("anonymization", {
       connection: redisConnection,
     });
 
     // Queue events for monitoring
-    this.queueEvents = new QueueEvents('anonymization', {
+    this.queueEvents = new QueueEvents("anonymization", {
       connection: redisConnection,
     });
 
     // Dead letter queue for failed jobs
-    this.deadLetterQueue = new DeadLetterQueue('anonymization-dead-letter', {
+    this.deadLetterQueue = new DeadLetterQueue("anonymization-dead-letter", {
       maxRetries: 5,
       retryDelay: 10000,
       backoffMultiplier: 2,
       maxRetryDelay: 600000,
       retryableErrors: [
-        'TIMEOUT',
-        'MEMORY_ERROR',
-        'NETWORK_ERROR',
-        'TEMPORARY_FAILURE',
-        'RATE_LIMIT_EXCEEDED',
-        'CONNECTION_ERROR',
+        "TIMEOUT",
+        "MEMORY_ERROR",
+        "NETWORK_ERROR",
+        "TEMPORARY_FAILURE",
+        "RATE_LIMIT_EXCEEDED",
+        "CONNECTION_ERROR",
       ],
     });
 
-    logger.info('BullMQ queues initialized with priority support');
+    logger.info("BullMQ queues initialized with priority support");
   }
 
   private initializeComponents(config: WorkerConfig): void {
@@ -228,8 +236,8 @@ export class OptimizedAnonymizationWorker {
 
     // NER Processor
     this.nerProcessor = new NERProcessor({
-      modelsPath: process.env.NER_MODELS_PATH || './models/ner',
-      languages: ['en'],
+      modelsPath: process.env.NER_MODELS_PATH || "./models/ner",
+      languages: ["en"],
       confidenceThreshold: 0.8,
     });
 
@@ -241,9 +249,11 @@ export class OptimizedAnonymizationWorker {
     });
 
     // Metadata Repository with connection pooling
-    this.metadataRepository = new MetadataRepository(config.postgres.readReplica);
+    this.metadataRepository = new MetadataRepository(
+      config.postgres.readReplica,
+    );
 
-    logger.info('Worker components initialized');
+    logger.info("Worker components initialized");
   }
 
   /**
@@ -251,7 +261,7 @@ export class OptimizedAnonymizationWorker {
    */
   private initializeWorker(workerConfig: any): void {
     this.worker = new Worker(
-      'anonymization',
+      "anonymization",
       async (job: Job<AnonymizationJob>) => {
         // Check if batch processing is enabled
         if (workerConfig.enableBatchProcessing && job.data.batchId) {
@@ -270,11 +280,11 @@ export class OptimizedAnonymizationWorker {
           max: 1000,
           duration: 60000, // 1000 jobs per minute max
         },
-      }
+      },
     );
 
     this.setupWorkerEvents();
-    logger.info('Optimized anonymization worker started', {
+    logger.info("Optimized anonymization worker started", {
       concurrency: this.currentConcurrency,
     });
   }
@@ -283,10 +293,10 @@ export class OptimizedAnonymizationWorker {
    * Setup worker event handlers with enhanced monitoring
    */
   private setupWorkerEvents(): void {
-    this.worker.on('completed', (job: Job, result: AnonymizationResult) => {
+    this.worker.on("completed", (job: Job, result: AnonymizationResult) => {
       this.metrics.recordJobCompleted(result.processingTime);
-      
-      logger.info('Job completed', {
+
+      logger.info("Job completed", {
         jobId: job.id,
         datasetId: result.datasetId,
         processingTime: result.processingTime,
@@ -295,10 +305,10 @@ export class OptimizedAnonymizationWorker {
       });
     });
 
-    this.worker.on('failed', (job: Job, err: Error) => {
+    this.worker.on("failed", (job: Job, err: Error) => {
       this.metrics.recordJobFailed();
-      
-      logger.error('Job failed', {
+
+      logger.error("Job failed", {
         jobId: job.id,
         datasetId: job.data?.datasetId,
         error: err.message,
@@ -323,18 +333,18 @@ export class OptimizedAnonymizationWorker {
       }
     });
 
-    this.worker.on('error', (err: Error) => {
-      logger.error('Worker error:', err);
+    this.worker.on("error", (err: Error) => {
+      logger.error("Worker error:", err);
       this.metrics.recordWorkerError();
     });
 
-    this.worker.on('stalled', (jobId: string) => {
-      logger.warn('Job stalled', { jobId });
+    this.worker.on("stalled", (jobId: string) => {
+      logger.warn("Job stalled", { jobId });
       this.metrics.recordJobStalled();
     });
 
-    this.worker.on('progress', (job: Job, progress: number) => {
-      logger.debug('Job progress', {
+    this.worker.on("progress", (job: Job, progress: number) => {
+      logger.debug("Job progress", {
         jobId: job.id,
         progress,
         datasetId: job.data?.datasetId,
@@ -342,11 +352,11 @@ export class OptimizedAnonymizationWorker {
     });
 
     // Queue events monitoring
-    this.queueEvents.on('waiting', ({ jobId }) => {
+    this.queueEvents.on("waiting", ({ jobId }) => {
       this.metrics.recordJobWaiting();
     });
 
-    this.queueEvents.on('active', ({ jobId }) => {
+    this.queueEvents.on("active", ({ jobId }) => {
       this.metrics.recordJobActive();
     });
   }
@@ -354,12 +364,14 @@ export class OptimizedAnonymizationWorker {
   /**
    * Process individual job with timeout handling
    */
-  private async processJob(job: Job<AnonymizationJob>): Promise<AnonymizationResult> {
+  private async processJob(
+    job: Job<AnonymizationJob>,
+  ): Promise<AnonymizationResult> {
     const startTime = Date.now();
     const { id: jobId, datasetId, metadata, timeout } = job.data;
 
     try {
-      logger.info('Processing anonymization job', {
+      logger.info("Processing anonymization job", {
         jobId,
         datasetId,
         metadataKeys: Object.keys(metadata),
@@ -372,7 +384,7 @@ export class OptimizedAnonymizationWorker {
       // Set job timeout
       const jobTimeout = timeout || this.config.sandbox.timeoutMs;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('TIMEOUT')), jobTimeout);
+        setTimeout(() => reject(new Error("TIMEOUT")), jobTimeout);
       });
 
       // Process with timeout
@@ -382,14 +394,17 @@ export class OptimizedAnonymizationWorker {
       ]);
 
       // Store sanitized metadata
-      await this.metadataRepository.storeSanitizedMetadata(datasetId, result.sanitizedMetadata);
+      await this.metadataRepository.storeSanitizedMetadata(
+        datasetId,
+        result.sanitizedMetadata,
+      );
 
       // Update job progress
       await job.updateProgress(100);
 
       const processingTime = Date.now() - startTime;
 
-      logger.info('Anonymization job completed successfully', {
+      logger.info("Anonymization job completed successfully", {
         jobId,
         datasetId,
         processingTime,
@@ -401,10 +416,9 @@ export class OptimizedAnonymizationWorker {
         processingTime,
         processedAt: new Date(),
       };
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      logger.error('Anonymization job failed', {
+      logger.error("Anonymization job failed", {
         jobId,
         datasetId,
         error: error.message,
@@ -418,9 +432,11 @@ export class OptimizedAnonymizationWorker {
   /**
    * Process batch of jobs for improved throughput
    */
-  private async processBatchJob(job: Job<AnonymizationJob>): Promise<AnonymizationResult> {
+  private async processBatchJob(
+    job: Job<AnonymizationJob>,
+  ): Promise<AnonymizationResult> {
     const batchId = job.data.batchId!;
-    
+
     // Add job to batch buffer
     if (!this.batchBuffer.has(batchId)) {
       this.batchBuffer.set(batchId, []);
@@ -452,7 +468,7 @@ export class OptimizedAnonymizationWorker {
     const batchJobs = this.batchBuffer.get(batchId) || [];
     if (batchJobs.length === 0) return null as any;
 
-    logger.info('Processing batch', {
+    logger.info("Processing batch", {
       batchId,
       jobCount: batchJobs.length,
     });
@@ -467,34 +483,37 @@ export class OptimizedAnonymizationWorker {
 
     // Process all jobs in batch
     const results = await Promise.allSettled(
-      batchJobs.map(job => this.processJob(job))
+      batchJobs.map((job) => this.processJob(job)),
     );
 
     // Log batch results
-    const successful = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
+    const successful = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
 
-    logger.info('Batch processing completed', {
+    logger.info("Batch processing completed", {
       batchId,
       total: batchJobs.length,
       successful,
       failed,
     });
 
-    return results[0].status === 'fulfilled' ? results[0].value : null as any;
+    return results[0].status === "fulfilled" ? results[0].value : (null as any);
   }
 
   private validateJobData(jobData: AnonymizationJob): void {
     if (!jobData.id || !jobData.datasetId || !jobData.metadata) {
-      throw new Error('Invalid job data: missing required fields');
+      throw new Error("Invalid job data: missing required fields");
     }
 
-    if (typeof jobData.metadata !== 'object' || Array.isArray(jobData.metadata)) {
-      throw new Error('Invalid job data: metadata must be an object');
+    if (
+      typeof jobData.metadata !== "object" ||
+      Array.isArray(jobData.metadata)
+    ) {
+      throw new Error("Invalid job data: metadata must be an object");
     }
 
     if (Object.keys(jobData.metadata).length === 0) {
-      throw new Error('Invalid job data: metadata cannot be empty');
+      throw new Error("Invalid job data: metadata cannot be empty");
     }
   }
 
@@ -502,8 +521,8 @@ export class OptimizedAnonymizationWorker {
     jobId: string,
     datasetId: string,
     metadata: Record<string, any>,
-    job: Job<AnonymizationJob>
-  ): Promise<Omit<AnonymizationResult, 'processingTime' | 'processedAt'>> {
+    job: Job<AnonymizationJob>,
+  ): Promise<Omit<AnonymizationResult, "processingTime" | "processedAt">> {
     const piiDetections: PIIDetection[] = [];
     const sanitizedMetadata = JSON.parse(JSON.stringify(metadata));
 
@@ -511,11 +530,11 @@ export class OptimizedAnonymizationWorker {
     const totalFields = Object.keys(metadata).length;
 
     for (const [key, value] of Object.entries(metadata)) {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         const fieldResult = await this.anonymizeField(key, value);
         sanitizedMetadata[key] = fieldResult.sanitizedValue;
         piiDetections.push(...fieldResult.detections);
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         const nestedResult = await this.anonymizeObject(value);
         sanitizedMetadata[key] = nestedResult.sanitizedObject;
         piiDetections.push(...nestedResult.detections);
@@ -539,7 +558,7 @@ export class OptimizedAnonymizationWorker {
 
   private async anonymizeField(
     fieldName: string,
-    fieldValue: string
+    fieldValue: string,
   ): Promise<{ sanitizedValue: string; detections: PIIDetection[] }> {
     const detections: PIIDetection[] = [];
     let sanitizedValue = fieldValue;
@@ -560,17 +579,20 @@ export class OptimizedAnonymizationWorker {
   }
 
   private async anonymizeObject(
-    obj: Record<string, any>
-  ): Promise<{ sanitizedObject: Record<string, any>; detections: PIIDetection[] }> {
+    obj: Record<string, any>,
+  ): Promise<{
+    sanitizedObject: Record<string, any>;
+    detections: PIIDetection[];
+  }> {
     const detections: PIIDetection[] = [];
     const sanitizedObject: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(obj)) {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         const fieldResult = await this.anonymizeField(key, value);
         sanitizedObject[key] = fieldResult.sanitizedValue;
         detections.push(...fieldResult.detections);
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         const nestedResult = await this.anonymizeObject(value);
         sanitizedObject[key] = nestedResult.sanitizedObject;
         detections.push(...nestedResult.detections);
@@ -585,7 +607,9 @@ export class OptimizedAnonymizationWorker {
   /**
    * Add job to appropriate priority queue
    */
-  async addJob(jobData: Omit<AnonymizationJob, 'id' | 'createdAt'>): Promise<string> {
+  async addJob(
+    jobData: Omit<AnonymizationJob, "id" | "createdAt">,
+  ): Promise<string> {
     const job: AnonymizationJob = {
       ...jobData,
       id: this.generateJobId(),
@@ -593,25 +617,21 @@ export class OptimizedAnonymizationWorker {
     };
 
     const priorityQueue = this.priorityQueues.get(job.priority) || this.queue;
-    
-    const bullJob = await priorityQueue.add(
-      'anonymize-metadata',
-      job,
-      {
-        priority: this.getPriorityValue(job.priority),
-        delay: 0,
-        attempts: job.maxRetries || (job.priority === 'critical' ? 5 : 3),
-        backoff: {
-          type: 'exponential',
-          delay: job.priority === 'critical' ? 1000 : 2000,
-        },
-        timeout: job.timeout || this.config.sandbox.timeoutMs,
-      }
-    );
+
+    const bullJob = await priorityQueue.add("anonymize-metadata", job, {
+      priority: this.getPriorityValue(job.priority),
+      delay: 0,
+      attempts: job.maxRetries || (job.priority === "critical" ? 5 : 3),
+      backoff: {
+        type: "exponential",
+        delay: job.priority === "critical" ? 1000 : 2000,
+      },
+      timeout: job.timeout || this.config.sandbox.timeoutMs,
+    });
 
     this.metrics.recordJobAdded(job.priority);
 
-    logger.info('Anonymization job added to priority queue', {
+    logger.info("Anonymization job added to priority queue", {
       jobId: job.id,
       datasetId: job.datasetId,
       priority: job.priority,
@@ -649,7 +669,7 @@ export class OptimizedAnonymizationWorker {
         // Continue searching in other queues
       }
     }
-    
+
     // Also check main queue
     try {
       const job = await this.queue.getJob(jobId);
@@ -670,7 +690,7 @@ export class OptimizedAnonymizationWorker {
     } catch (error) {
       // Job not found
     }
-    
+
     throw new Error(`Job ${jobId} not found in any queue`);
   }
 
@@ -696,13 +716,16 @@ export class OptimizedAnonymizationWorker {
           // High load - scale up
           targetConcurrency = Math.min(
             this.currentConcurrency + 2,
-            this.config.worker.maxConcurrency
+            this.config.worker.maxConcurrency,
           );
-        } else if (queueDepth < threshold / 2 && this.currentConcurrency > this.config.worker.minConcurrency) {
+        } else if (
+          queueDepth < threshold / 2 &&
+          this.currentConcurrency > this.config.worker.minConcurrency
+        ) {
           // Low load - scale down
           targetConcurrency = Math.max(
             this.currentConcurrency - 1,
-            this.config.worker.minConcurrency
+            this.config.worker.minConcurrency,
           );
         }
 
@@ -710,7 +733,7 @@ export class OptimizedAnonymizationWorker {
           await this.scaleConcurrency(targetConcurrency);
         }
       } catch (error) {
-        logger.error('Dynamic scaling error:', error);
+        logger.error("Dynamic scaling error:", error);
       }
     }, 30000); // Check every 30 seconds
   }
@@ -719,7 +742,7 @@ export class OptimizedAnonymizationWorker {
    * Scale worker concurrency dynamically
    */
   private async scaleConcurrency(newConcurrency: number): Promise<void> {
-    logger.info('Scaling worker concurrency', {
+    logger.info("Scaling worker concurrency", {
       from: this.currentConcurrency,
       to: newConcurrency,
     });
@@ -730,8 +753,10 @@ export class OptimizedAnonymizationWorker {
     this.currentConcurrency = newConcurrency;
 
     this.metrics.recordConcurrencyChange(newConcurrency);
-    
-    logger.warn('Concurrency change recorded but requires worker restart to take effect');
+
+    logger.warn(
+      "Concurrency change recorded but requires worker restart to take effect",
+    );
   }
 
   /**
@@ -742,7 +767,7 @@ export class OptimizedAnonymizationWorker {
 
     this.metrics = new WorkerMetrics({
       interval: this.config.monitoring.metricsInterval,
-      workerName: 'anonymization',
+      workerName: "anonymization",
     });
 
     this.metrics.start();
@@ -796,7 +821,7 @@ export class OptimizedAnonymizationWorker {
    */
   async pause(): Promise<void> {
     await this.worker.pause();
-    logger.info('Optimized anonymization worker paused');
+    logger.info("Optimized anonymization worker paused");
   }
 
   /**
@@ -804,7 +829,7 @@ export class OptimizedAnonymizationWorker {
    */
   async resume(): Promise<void> {
     await this.worker.resume();
-    logger.info('Optimized anonymization worker resumed');
+    logger.info("Optimized anonymization worker resumed");
   }
 
   /**
@@ -813,16 +838,18 @@ export class OptimizedAnonymizationWorker {
   private setupGracefulShutdown(): void {
     const shutdown = async (signal: string) => {
       if (this.isShuttingDown) return;
-      
+
       this.isShuttingDown = true;
       logger.info(`Received ${signal}, shutting down gracefully...`);
 
       try {
         await this.worker.close();
-        
+
         const activeJobs = await this.queue.getActive();
         if (activeJobs.length > 0) {
-          logger.info(`Waiting for ${activeJobs.length} active jobs to complete...`);
+          logger.info(
+            `Waiting for ${activeJobs.length} active jobs to complete...`,
+          );
           await this.waitUntilEmpty(60000);
         }
 
@@ -834,46 +861,53 @@ export class OptimizedAnonymizationWorker {
         await this.queueEvents.close();
         await this.deadLetterQueue.close();
         await this.connectionPool.close();
-        
+
         if (this.metrics) {
           this.metrics.stop();
         }
 
-        logger.info('Graceful shutdown completed');
+        logger.info("Graceful shutdown completed");
         process.exit(0);
       } catch (error) {
-        logger.error('Error during shutdown:', error);
+        logger.error("Error during shutdown:", error);
         process.exit(1);
       }
     };
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   }
 
   private async waitUntilEmpty(timeout: number): Promise<void> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeout) {
       const active = await this.queue.getActive();
       if (active.length === 0) return;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    
-    logger.warn('Timeout waiting for queue to empty');
+
+    logger.warn("Timeout waiting for queue to empty");
   }
 
   private generateJobId(): string {
     return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
   }
 
-  private getPriorityValue(priority: 'critical' | 'high' | 'normal' | 'low'): number {
+  private getPriorityValue(
+    priority: "critical" | "high" | "normal" | "low",
+  ): number {
     switch (priority) {
-      case 'critical': return 20;
-      case 'high': return 10;
-      case 'normal': return 5;
-      case 'low': return 1;
-      default: return 5;
+      case "critical":
+        return 20;
+      case "high":
+        return 10;
+      case "normal":
+        return 5;
+      case "low":
+        return 1;
+      default:
+        return 5;
     }
   }
 
@@ -883,7 +917,7 @@ export class OptimizedAnonymizationWorker {
   async healthCheck(): Promise<any> {
     try {
       const queueStats = await this.getQueueStats();
-      
+
       const components = {
         redis: await this.connectionPool.healthCheck(),
         postgres: await this.metadataRepository.healthCheck(),
@@ -892,22 +926,24 @@ export class OptimizedAnonymizationWorker {
         sandbox: this.sandboxManager.isHealthy(),
       };
 
-      const allComponentsHealthy = Object.values(components).every(status => status);
+      const allComponentsHealthy = Object.values(components).every(
+        (status) => status,
+      );
       const highFailureRate = queueStats.failed > queueStats.completed * 0.1;
 
-      let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-      
+      let status: "healthy" | "degraded" | "unhealthy" = "healthy";
+
       if (!allComponentsHealthy || highFailureRate) {
-        status = 'unhealthy';
+        status = "unhealthy";
       } else if (queueStats.active > 0) {
-        status = 'degraded';
+        status = "degraded";
       }
 
       return {
         status,
         timestamp: new Date(),
         worker: {
-          status: this.isShuttingDown ? 'shutting_down' : 'running',
+          status: this.isShuttingDown ? "shutting_down" : "running",
           concurrency: this.currentConcurrency,
           activeJobs: queueStats.active,
           processedJobs: queueStats.completed,
@@ -917,9 +953,9 @@ export class OptimizedAnonymizationWorker {
         components,
       };
     } catch (error) {
-      logger.error('Health check failed:', error);
+      logger.error("Health check failed:", error);
       return {
-        status: 'unhealthy',
+        status: "unhealthy",
         timestamp: new Date(),
         error: error.message,
       };

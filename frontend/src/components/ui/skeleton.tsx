@@ -7,10 +7,7 @@ import { cn } from '@/lib/utils';
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        'animate-pulse rounded-md bg-slate-200 dark:bg-obsidian-700',
-        className
-      )}
+      className={cn('animate-pulse rounded-md bg-slate-200 dark:bg-obsidian-700', className)}
       {...props}
     />
   );
@@ -19,7 +16,12 @@ function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
 /** A full card-shaped skeleton matching the project's Card component */
 function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-lg border bg-white dark:bg-obsidian-900 shadow-sm p-6 space-y-3', className)}>
+    <div
+      className={cn(
+        'rounded-lg border bg-white dark:bg-obsidian-900 shadow-sm p-6 space-y-3',
+        className
+      )}
+    >
       <Skeleton className="h-4 w-2/5" />
       <Skeleton className="h-3 w-3/5" />
       <Skeleton className="h-8 w-1/3 mt-2" />

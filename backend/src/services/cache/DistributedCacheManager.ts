@@ -1,8 +1,8 @@
-import { EventEmitter } from 'events';
-import { RedisClientType, createClient } from 'redis';
-import { logger } from '../../utils/logger';
-import { LRUCache } from 'lru-cache';
-import crypto from 'crypto';
+import { EventEmitter } from "events";
+import { RedisClientType, createClient } from "redis";
+import { logger } from "../../utils/logger";
+import { LRUCache } from "lru-cache";
+import crypto from "crypto";
 
 export interface CacheEntry<T = any> {
   key: string;
@@ -15,7 +15,7 @@ export interface CacheEntry<T = any> {
 }
 
 export interface CacheInvalidationEvent {
-  type: 'invalidate' | 'update' | 'delete' | 'clear';
+  type: "invalidate" | "update" | "delete" | "clear";
   keys?: string[];
   pattern?: string;
   tags?: string[];
@@ -71,31 +71,35 @@ export class DistributedCacheManager extends EventEmitter {
 
     // Validate configuration
     if (config.localCacheSize !== undefined && config.localCacheSize < 1) {
-      throw new Error('localCacheSize must be at least 1');
+      throw new Error("localCacheSize must be at least 1");
     }
 
     if (config.defaultTTL !== undefined && config.defaultTTL < 1000) {
-      throw new Error('defaultTTL must be at least 1000ms (1 second)');
+      throw new Error("defaultTTL must be at least 1000ms (1 second)");
     }
 
-    if (config.healthCheckInterval !== undefined && config.healthCheckInterval < 1000) {
-      throw new Error('healthCheckInterval must be at least 1000ms (1 second)');
+    if (
+      config.healthCheckInterval !== undefined &&
+      config.healthCheckInterval < 1000
+    ) {
+      throw new Error("healthCheckInterval must be at least 1000ms (1 second)");
     }
 
     if (config.maxRetries !== undefined && config.maxRetries < 0) {
-      throw new Error('maxRetries must be non-negative');
+      throw new Error("maxRetries must be non-negative");
     }
 
     this.config = {
       nodeId: config.nodeId || this.generateNodeId(),
-      redisUrl: config.redisUrl || process.env.REDIS_URL || 'redis://localhost:6379',
+      redisUrl:
+        config.redisUrl || process.env.REDIS_URL || "redis://localhost:6379",
       localCacheSize: config.localCacheSize || 10000,
       defaultTTL: config.defaultTTL || 3600000, // 1 hour
       enableLocalCache: config.enableLocalCache !== false,
       enableDistributedCache: config.enableDistributedCache !== false,
-      invalidationChannel: config.invalidationChannel || 'cache:invalidation',
+      invalidationChannel: config.invalidationChannel || "cache:invalidation",
       healthCheckInterval: config.healthCheckInterval || 30000, // 30 seconds
-      maxRetries: config.maxRetries || 3
+      maxRetries: config.maxRetries || 3,
     };
 
     // Initialize local cache
@@ -106,8 +110,8 @@ export class DistributedCacheManager extends EventEmitter {
       dispose: (value, key) => {
         this.metrics.evictions++;
         this.versionMap.delete(key); // Clean up version map
-        this.emit('eviction', { key, value });
-      }
+        this.emit("eviction", { key, value });
+      },
     });
 
     // Initialize metrics
@@ -123,7 +127,7 @@ export class DistributedCacheManager extends EventEmitter {
       hitRate: 0,
       averageLatency: 0,
       lastHealthCheck: new Date(),
-      isHealthy: false
+      isHealthy: false,
     };
 
     // Initialize Redis clients
@@ -138,7 +142,7 @@ export class DistributedCacheManager extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      logger.warn('Cache manager already initialized');
+      logger.warn("Cache manager already initialized");
       return;
     }
 
@@ -146,13 +150,13 @@ export class DistributedCacheManager extends EventEmitter {
       // Connect Redis clients
       await Promise.all([
         this.redisClient.connect(),
-        this.subscriberClient.connect()
+        this.subscriberClient.connect(),
       ]);
 
       // Subscribe to invalidation channel
       await this.subscriberClient.subscribe(
         this.config.invalidationChannel,
-        this.handleInvalidationEvent.bind(this)
+        this.handleInvalidationEvent.bind(this),
       );
 
       // Start health checks
@@ -161,15 +165,15 @@ export class DistributedCacheManager extends EventEmitter {
       this.isInitialized = true;
       this.metrics.isHealthy = true;
 
-      logger.info('Distributed Cache Manager initialized', {
+      logger.info("Distributed Cache Manager initialized", {
         nodeId: this.config.nodeId,
         localCacheSize: this.config.localCacheSize,
-        defaultTTL: this.config.defaultTTL
+        defaultTTL: this.config.defaultTTL,
       });
 
-      this.emit('initialized');
+      this.emit("initialized");
     } catch (error) {
-      logger.error('Failed to initialize cache manager:', error);
+      logger.error("Failed to initialize cache manager:", error);
       throw error;
     }
   }
@@ -184,20 +188,20 @@ export class DistributedCacheManager extends EventEmitter {
       }
 
       await this.subscriberClient.unsubscribe(this.config.invalidationChannel);
-      
+
       await Promise.all([
         this.redisClient.quit(),
-        this.subscriberClient.quit()
+        this.subscriberClient.quit(),
       ]);
 
       this.localCache.clear();
       this.isInitialized = false;
       this.metrics.isHealthy = false;
 
-      logger.info('Distributed Cache Manager shutdown completed');
-      this.emit('shutdown');
+      logger.info("Distributed Cache Manager shutdown completed");
+      this.emit("shutdown");
     } catch (error) {
-      logger.error('Error during cache manager shutdown:', error);
+      logger.error("Error during cache manager shutdown:", error);
       throw error;
     }
   }
@@ -208,7 +212,7 @@ export class DistributedCacheManager extends EventEmitter {
   async get<T = any>(
     key: string,
     fallback?: () => Promise<T>,
-    options?: { ttl?: number; tags?: string[] }
+    options?: { ttl?: number; tags?: string[] },
   ): Promise<T | null> {
     const startTime = Date.now();
     this.metrics.totalRequests++;
@@ -231,12 +235,12 @@ export class DistributedCacheManager extends EventEmitter {
         const distributedEntry = await this.getFromDistributed<T>(key);
         if (distributedEntry) {
           this.metrics.distributedHits++;
-          
+
           // Update local cache
           if (this.config.enableLocalCache) {
             this.localCache.set(key, distributedEntry);
           }
-          
+
           this.updateHitRate();
           this.recordLatency(Date.now() - startTime);
           return distributedEntry.value;
@@ -257,16 +261,16 @@ export class DistributedCacheManager extends EventEmitter {
     } catch (error) {
       this.metrics.errors++;
       logger.error(`Cache get error for key ${key}:`, error);
-      
+
       // Return fallback on error
       if (fallback) {
         try {
           return await fallback();
         } catch (fallbackError) {
-          logger.error('Fallback function failed:', fallbackError);
+          logger.error("Fallback function failed:", fallbackError);
         }
       }
-      
+
       return null;
     }
   }
@@ -277,12 +281,12 @@ export class DistributedCacheManager extends EventEmitter {
   async set<T = any>(
     key: string,
     value: T,
-    options?: { ttl?: number; tags?: string[] }
+    options?: { ttl?: number; tags?: string[] },
   ): Promise<void> {
     try {
       const ttl = options?.ttl || this.config.defaultTTL;
       const version = this.incrementVersion(key);
-      
+
       const entry: CacheEntry<T> = {
         key,
         value,
@@ -290,7 +294,7 @@ export class DistributedCacheManager extends EventEmitter {
         ttl,
         version,
         nodeId: this.config.nodeId,
-        tags: options?.tags
+        tags: options?.tags,
       };
 
       // Set in local cache
@@ -303,7 +307,7 @@ export class DistributedCacheManager extends EventEmitter {
         await this.setInDistributed(key, entry, ttl);
       }
 
-      this.emit('set', { key, value, ttl });
+      this.emit("set", { key, value, ttl });
     } catch (error) {
       this.metrics.errors++;
       logger.error(`Cache set error for key ${key}:`, error);
@@ -329,14 +333,14 @@ export class DistributedCacheManager extends EventEmitter {
       // Propagate invalidation
       if (propagate) {
         await this.publishInvalidation({
-          type: 'delete',
+          type: "delete",
           keys: [key],
           nodeId: this.config.nodeId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
-      this.emit('delete', { key });
+      this.emit("delete", { key });
     } catch (error) {
       this.metrics.errors++;
       logger.error(`Cache delete error for key ${key}:`, error);
@@ -355,14 +359,14 @@ export class DistributedCacheManager extends EventEmitter {
       if (this.config.enableLocalCache) {
         const regex = this.patternToRegex(pattern);
         const keysToDelete: string[] = [];
-        
+
         for (const key of this.localCache.keys()) {
           if (regex.test(key)) {
             keysToDelete.push(key);
           }
         }
 
-        keysToDelete.forEach(key => this.localCache.delete(key));
+        keysToDelete.forEach((key) => this.localCache.delete(key));
         invalidatedCount += keysToDelete.length;
       }
 
@@ -382,14 +386,14 @@ export class DistributedCacheManager extends EventEmitter {
 
       // Propagate invalidation
       await this.publishInvalidation({
-        type: 'invalidate',
+        type: "invalidate",
         pattern,
         nodeId: this.config.nodeId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       this.metrics.invalidations += invalidatedCount;
-      this.emit('invalidatePattern', { pattern, count: invalidatedCount });
+      this.emit("invalidatePattern", { pattern, count: invalidatedCount });
 
       return invalidatedCount;
     } catch (error) {
@@ -409,14 +413,14 @@ export class DistributedCacheManager extends EventEmitter {
       // Invalidate local cache
       if (this.config.enableLocalCache) {
         const keysToDelete: string[] = [];
-        
+
         for (const [key, entry] of this.localCache.entries()) {
-          if (entry.tags && entry.tags.some(tag => tags.includes(tag))) {
+          if (entry.tags && entry.tags.some((tag) => tags.includes(tag))) {
             keysToDelete.push(key);
           }
         }
 
-        keysToDelete.forEach(key => this.localCache.delete(key));
+        keysToDelete.forEach((key) => this.localCache.delete(key));
         invalidatedCount += keysToDelete.length;
       }
 
@@ -425,7 +429,7 @@ export class DistributedCacheManager extends EventEmitter {
         for (const tag of tags) {
           const tagKey = `cache:tag:${tag}`;
           const keys = await this.redisClient.sMembers(tagKey);
-          
+
           if (keys.length > 0) {
             await this.redisClient.del(keys);
             await this.redisClient.del(tagKey);
@@ -436,14 +440,14 @@ export class DistributedCacheManager extends EventEmitter {
 
       // Propagate invalidation
       await this.publishInvalidation({
-        type: 'invalidate',
+        type: "invalidate",
         tags,
         nodeId: this.config.nodeId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       this.metrics.invalidations += invalidatedCount;
-      this.emit('invalidateByTags', { tags, count: invalidatedCount });
+      this.emit("invalidateByTags", { tags, count: invalidatedCount });
 
       return invalidatedCount;
     } catch (error) {
@@ -465,7 +469,7 @@ export class DistributedCacheManager extends EventEmitter {
 
       // Clear distributed cache using SCAN instead of KEYS
       if (this.config.enableDistributedCache) {
-        const keys = await this.scanKeys(this.getCacheKey('*'));
+        const keys = await this.scanKeys(this.getCacheKey("*"));
         if (keys.length > 0) {
           // Delete in batches
           const batchSize = 100;
@@ -479,17 +483,17 @@ export class DistributedCacheManager extends EventEmitter {
       // Propagate invalidation
       if (propagate) {
         await this.publishInvalidation({
-          type: 'clear',
+          type: "clear",
           nodeId: this.config.nodeId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
       this.versionMap.clear();
-      this.emit('clear');
+      this.emit("clear");
     } catch (error) {
       this.metrics.errors++;
-      logger.error('Cache clear error:', error);
+      logger.error("Cache clear error:", error);
       throw error;
     }
   }
@@ -497,20 +501,22 @@ export class DistributedCacheManager extends EventEmitter {
   /**
    * Warm cache with data
    */
-  async warmCache(entries: Array<{ key: string; value: any; ttl?: number; tags?: string[] }>): Promise<void> {
+  async warmCache(
+    entries: Array<{ key: string; value: any; ttl?: number; tags?: string[] }>,
+  ): Promise<void> {
     try {
       logger.info(`Warming cache with ${entries.length} entries`);
 
-      const promises = entries.map(entry =>
-        this.set(entry.key, entry.value, { ttl: entry.ttl, tags: entry.tags })
+      const promises = entries.map((entry) =>
+        this.set(entry.key, entry.value, { ttl: entry.ttl, tags: entry.tags }),
       );
 
       await Promise.all(promises);
 
-      logger.info('Cache warming completed');
-      this.emit('cacheWarmed', { count: entries.length });
+      logger.info("Cache warming completed");
+      this.emit("cacheWarmed", { count: entries.length });
     } catch (error) {
-      logger.error('Cache warming error:', error);
+      logger.error("Cache warming error:", error);
       throw error;
     }
   }
@@ -538,7 +544,7 @@ export class DistributedCacheManager extends EventEmitter {
       hitRate: 0,
       averageLatency: 0,
       lastHealthCheck: this.metrics.lastHealthCheck,
-      isHealthy: this.metrics.isHealthy
+      isHealthy: this.metrics.isHealthy,
     };
   }
 
@@ -548,23 +554,23 @@ export class DistributedCacheManager extends EventEmitter {
   async getStatistics(): Promise<any> {
     const localSize = this.localCache.size;
     const localMaxSize = this.localCache.max;
-    
+
     let distributedSize = 0;
     let distributedMemory = 0;
 
     if (this.config.enableDistributedCache) {
       try {
-        const info = await this.redisClient.info('memory');
+        const info = await this.redisClient.info("memory");
         const memoryMatch = info.match(/used_memory:(\d+)/);
         if (memoryMatch) {
           distributedMemory = parseInt(memoryMatch[1]);
         }
 
         // Use SCAN instead of KEYS
-        const keys = await this.scanKeys(this.getCacheKey('*'));
+        const keys = await this.scanKeys(this.getCacheKey("*"));
         distributedSize = keys.length;
       } catch (error) {
-        logger.error('Error getting distributed cache stats:', error);
+        logger.error("Error getting distributed cache stats:", error);
       }
     }
 
@@ -573,18 +579,18 @@ export class DistributedCacheManager extends EventEmitter {
       local: {
         size: localSize,
         maxSize: localMaxSize,
-        utilizationPercent: (localSize / localMaxSize) * 100
+        utilizationPercent: (localSize / localMaxSize) * 100,
       },
       distributed: {
         size: distributedSize,
         memoryBytes: distributedMemory,
-        memoryMB: (distributedMemory / 1024 / 1024).toFixed(2)
+        memoryMB: (distributedMemory / 1024 / 1024).toFixed(2),
       },
       metrics: this.metrics,
       health: {
         isHealthy: this.metrics.isHealthy,
-        lastCheck: this.metrics.lastHealthCheck
-      }
+        lastCheck: this.metrics.lastHealthCheck,
+      },
     };
   }
 
@@ -601,20 +607,22 @@ export class DistributedCacheManager extends EventEmitter {
       do {
         const result = await this.redisClient.scan(cursor, {
           MATCH: pattern,
-          COUNT: 100
+          COUNT: 100,
         });
-        
+
         cursor = result.cursor;
         keys.push(...result.keys);
       } while (cursor !== 0);
     } catch (error) {
-      logger.error('Error scanning keys:', error);
+      logger.error("Error scanning keys:", error);
     }
 
     return keys;
   }
 
-  private async getFromDistributed<T>(key: string): Promise<CacheEntry<T> | null> {
+  private async getFromDistributed<T>(
+    key: string,
+  ): Promise<CacheEntry<T> | null> {
     try {
       const data = await this.redisClient.get(this.getCacheKey(key));
       if (!data) {
@@ -622,7 +630,7 @@ export class DistributedCacheManager extends EventEmitter {
       }
 
       const entry: CacheEntry<T> = JSON.parse(data);
-      
+
       // Check if entry is still valid
       if (!this.isEntryValid(entry)) {
         await this.redisClient.del(this.getCacheKey(key));
@@ -636,11 +644,15 @@ export class DistributedCacheManager extends EventEmitter {
     }
   }
 
-  private async setInDistributed<T>(key: string, entry: CacheEntry<T>, ttl: number): Promise<void> {
+  private async setInDistributed<T>(
+    key: string,
+    entry: CacheEntry<T>,
+    ttl: number,
+  ): Promise<void> {
     try {
       const cacheKey = this.getCacheKey(key);
       const data = JSON.stringify(entry);
-      
+
       await this.redisClient.setEx(cacheKey, Math.ceil(ttl / 1000), data);
 
       // Store tags for tag-based invalidation
@@ -655,16 +667,18 @@ export class DistributedCacheManager extends EventEmitter {
     }
   }
 
-  private async publishInvalidation(event: CacheInvalidationEvent): Promise<void> {
+  private async publishInvalidation(
+    event: CacheInvalidationEvent,
+  ): Promise<void> {
     try {
       await this.redisClient.publish(
         this.config.invalidationChannel,
-        JSON.stringify(event)
+        JSON.stringify(event),
       );
 
-      logger.debug('Published invalidation event', event);
+      logger.debug("Published invalidation event", event);
     } catch (error) {
-      logger.error('Error publishing invalidation event:', error);
+      logger.error("Error publishing invalidation event:", error);
     }
   }
 
@@ -677,37 +691,40 @@ export class DistributedCacheManager extends EventEmitter {
         return;
       }
 
-      logger.debug('Received invalidation event', event);
+      logger.debug("Received invalidation event", event);
 
       try {
         switch (event.type) {
-          case 'invalidate':
+          case "invalidate":
             if (event.pattern) {
               // Invalidate local cache only - don't propagate to avoid infinite loop
               if (this.config.enableLocalCache) {
                 const regex = this.patternToRegex(event.pattern);
                 const keysToDelete: string[] = [];
-                
+
                 for (const key of this.localCache.keys()) {
                   if (regex.test(key)) {
                     keysToDelete.push(key);
                   }
                 }
 
-                keysToDelete.forEach(key => this.localCache.delete(key));
+                keysToDelete.forEach((key) => this.localCache.delete(key));
               }
             } else if (event.tags) {
               // Invalidate local cache only - don't propagate to avoid infinite loop
               if (this.config.enableLocalCache) {
                 const keysToDelete: string[] = [];
-                
+
                 for (const [key, entry] of this.localCache.entries()) {
-                  if (entry.tags && entry.tags.some(tag => event.tags!.includes(tag))) {
+                  if (
+                    entry.tags &&
+                    entry.tags.some((tag) => event.tags!.includes(tag))
+                  ) {
                     keysToDelete.push(key);
                   }
                 }
 
-                keysToDelete.forEach(key => this.localCache.delete(key));
+                keysToDelete.forEach((key) => this.localCache.delete(key));
               }
             } else if (event.keys) {
               for (const key of event.keys) {
@@ -716,7 +733,7 @@ export class DistributedCacheManager extends EventEmitter {
             }
             break;
 
-          case 'delete':
+          case "delete":
             if (event.keys) {
               for (const key of event.keys) {
                 await this.delete(key, false);
@@ -724,11 +741,11 @@ export class DistributedCacheManager extends EventEmitter {
             }
             break;
 
-          case 'clear':
+          case "clear":
             await this.clear(false);
             break;
 
-          case 'update':
+          case "update":
             if (event.keys) {
               for (const key of event.keys) {
                 this.localCache.delete(key);
@@ -738,21 +755,24 @@ export class DistributedCacheManager extends EventEmitter {
         }
 
         this.metrics.invalidations++;
-        this.emit('invalidationReceived', event);
+        this.emit("invalidationReceived", event);
       } catch (operationError) {
-        logger.error('Error processing invalidation operation:', operationError);
+        logger.error(
+          "Error processing invalidation operation:",
+          operationError,
+        );
         this.metrics.errors++;
         // Don't throw - continue processing other events
       }
     } catch (error) {
-      logger.error('Error handling invalidation event:', error);
+      logger.error("Error handling invalidation event:", error);
       this.metrics.errors++;
     }
   }
 
   private isEntryValid(entry: CacheEntry): boolean {
     const now = Date.now();
-    return (now - entry.timestamp) < entry.ttl;
+    return now - entry.timestamp < entry.ttl;
   }
 
   private getCacheKey(key: string): string {
@@ -760,8 +780,8 @@ export class DistributedCacheManager extends EventEmitter {
   }
 
   private patternToRegex(pattern: string): RegExp {
-    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regexPattern = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
+    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regexPattern = escaped.replace(/\\\*/g, ".*").replace(/\\\?/g, ".");
     return new RegExp(`^${regexPattern}$`);
   }
 
@@ -771,7 +791,7 @@ export class DistributedCacheManager extends EventEmitter {
     const current = this.versionMap.get(key) || 0;
     const next = current + 1;
     this.versionMap.set(key, next);
-    
+
     // Limit version map size to prevent memory issues
     if (this.versionMap.size > this.config.localCacheSize * 2) {
       // Remove oldest entries (simple cleanup)
@@ -779,23 +799,24 @@ export class DistributedCacheManager extends EventEmitter {
       const toRemove = entries.slice(0, this.config.localCacheSize);
       toRemove.forEach(([k]) => this.versionMap.delete(k));
     }
-    
+
     return next;
   }
 
   private updateHitRate(): void {
     const totalHits = this.metrics.localHits + this.metrics.distributedHits;
-    const totalMisses = this.metrics.localMisses + this.metrics.distributedMisses;
+    const totalMisses =
+      this.metrics.localMisses + this.metrics.distributedMisses;
     const total = totalHits + totalMisses;
-    
+
     this.metrics.hitRate = total > 0 ? totalHits / total : 0;
   }
 
   private recordLatency(latency: number): void {
     const currentAvg = this.metrics.averageLatency;
     const count = this.metrics.totalRequests;
-    
-    this.metrics.averageLatency = ((currentAvg * (count - 1)) + latency) / count;
+
+    this.metrics.averageLatency = (currentAvg * (count - 1) + latency) / count;
   }
 
   private startHealthChecks(): void {
@@ -813,32 +834,32 @@ export class DistributedCacheManager extends EventEmitter {
 
       this.metrics.isHealthy = true;
       this.metrics.lastHealthCheck = new Date();
-      
-      this.emit('healthCheck', { healthy: true });
+
+      this.emit("healthCheck", { healthy: true });
     } catch (error) {
       this.metrics.isHealthy = false;
       this.metrics.errors++;
-      
-      logger.error('Health check failed:', error);
-      this.emit('healthCheck', { healthy: false, error });
+
+      logger.error("Health check failed:", error);
+      this.emit("healthCheck", { healthy: false, error });
     }
   }
 
   private generateNodeId(): string {
-    return `node-${crypto.randomBytes(8).toString('hex')}`;
+    return `node-${crypto.randomBytes(8).toString("hex")}`;
   }
 
   private setupErrorHandlers(): void {
-    this.redisClient.on('error', (error) => {
+    this.redisClient.on("error", (error) => {
       this.metrics.errors++;
-      logger.error('Redis client error:', error);
-      this.emit('error', { source: 'redis', error });
+      logger.error("Redis client error:", error);
+      this.emit("error", { source: "redis", error });
     });
 
-    this.subscriberClient.on('error', (error) => {
+    this.subscriberClient.on("error", (error) => {
       this.metrics.errors++;
-      logger.error('Redis subscriber error:', error);
-      this.emit('error', { source: 'subscriber', error });
+      logger.error("Redis subscriber error:", error);
+      this.emit("error", { source: "subscriber", error });
     });
   }
 }

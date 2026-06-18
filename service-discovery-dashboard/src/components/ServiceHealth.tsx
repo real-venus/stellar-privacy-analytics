@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
+import React, { useState, useEffect } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   Clock,
   RefreshCw,
-  Activity
-} from 'lucide-react';
+  Activity,
+} from "lucide-react";
 
 interface ServiceInstance {
   id: string;
   name: string;
   host: string;
   port: number;
-  health: 'healthy' | 'unhealthy' | 'unknown';
+  health: "healthy" | "unhealthy" | "unknown";
   lastHealthCheck: string;
   version: string;
   tags: string[];
@@ -33,11 +33,11 @@ const ServiceHealth: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch('/api/v1/service-discovery/services');
+      const response = await fetch("/api/v1/service-discovery/services");
       const data = await response.json();
       setServices(data.services || []);
     } catch (error) {
-      console.error('Failed to fetch services:', error);
+      console.error("Failed to fetch services:", error);
     } finally {
       setLoading(false);
     }
@@ -45,9 +45,9 @@ const ServiceHealth: React.FC = () => {
 
   const getHealthIcon = (health: string) => {
     switch (health) {
-      case 'healthy':
+      case "healthy":
         return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case 'unhealthy':
+      case "unhealthy":
         return <XCircle className="h-5 w-5 text-red-600" />;
       default:
         return <AlertCircle className="h-5 w-5 text-yellow-600" />;
@@ -56,19 +56,25 @@ const ServiceHealth: React.FC = () => {
 
   const getHealthColor = (health: string) => {
     switch (health) {
-      case 'healthy': return 'status-healthy';
-      case 'unhealthy': return 'status-unhealthy';
-      default: return 'status-unknown';
+      case "healthy":
+        return "status-healthy";
+      case "unhealthy":
+        return "status-unhealthy";
+      default:
+        return "status-unknown";
     }
   };
 
-  const groupedServices = services.reduce((acc, service) => {
-    if (!acc[service.name]) {
-      acc[service.name] = [];
-    }
-    acc[service.name].push(service);
-    return acc;
-  }, {} as Record<string, ServiceInstance[]>);
+  const groupedServices = services.reduce(
+    (acc, service) => {
+      if (!acc[service.name]) {
+        acc[service.name] = [];
+      }
+      acc[service.name].push(service);
+      return acc;
+    },
+    {} as Record<string, ServiceInstance[]>,
+  );
 
   if (loading) {
     return (
@@ -83,7 +89,7 @@ const ServiceHealth: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Service Health</h2>
-        <button 
+        <button
           onClick={fetchServices}
           className="btn-secondary flex items-center"
         >
@@ -99,16 +105,22 @@ const ServiceHealth: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <Activity className="h-6 w-6 text-blue-600 mr-3" />
-                <h3 className="text-lg font-semibold text-gray-900">{serviceName}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {serviceName}
+                </h3>
                 <span className="ml-3 text-sm text-gray-500">
-                  {instances.length} instance{instances.length !== 1 ? 's' : ''}
+                  {instances.length} instance{instances.length !== 1 ? "s" : ""}
                 </span>
               </div>
               <button
-                onClick={() => setSelectedService(selectedService === serviceName ? null : serviceName)}
+                onClick={() =>
+                  setSelectedService(
+                    selectedService === serviceName ? null : serviceName,
+                  )
+                }
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                {selectedService === serviceName ? 'Hide' : 'Show'} Details
+                {selectedService === serviceName ? "Hide" : "Show"} Details
               </button>
             </div>
 
@@ -137,7 +149,10 @@ const ServiceHealth: React.FC = () => {
               <div className="border-t border-gray-200 pt-4">
                 <div className="space-y-3">
                   {instances.map((instance) => (
-                    <div key={instance.id} className="bg-gray-50 rounded-lg p-4">
+                    <div
+                      key={instance.id}
+                      className="bg-gray-50 rounded-lg p-4"
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           {getHealthIcon(instance.health)}
@@ -151,15 +166,20 @@ const ServiceHealth: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getHealthColor(instance.health)}`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getHealthColor(instance.health)}`}
+                          >
                             {instance.health}
                           </span>
                           <p className="text-xs text-gray-500 mt-1">
-                            Last check: {new Date(instance.lastHealthCheck).toLocaleTimeString()}
+                            Last check:{" "}
+                            {new Date(
+                              instance.lastHealthCheck,
+                            ).toLocaleTimeString()}
                           </p>
                         </div>
                       </div>
-                      
+
                       {instance.tags.length > 0 && (
                         <div className="mt-3 flex items-center space-x-2">
                           <span className="text-sm text-gray-500">Tags:</span>
@@ -187,9 +207,12 @@ const ServiceHealth: React.FC = () => {
       {services.length === 0 && (
         <div className="metric-card text-center py-12">
           <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Services Found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Services Found
+          </h3>
           <p className="text-gray-500">
-            No services are currently registered in the service discovery system.
+            No services are currently registered in the service discovery
+            system.
           </p>
         </div>
       )}

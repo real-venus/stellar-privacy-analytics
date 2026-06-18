@@ -1,8 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
-@Entity('compliance_violations')
+@Entity("compliance_violations")
 export class Violation {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -18,16 +24,16 @@ export class Violation {
   ruleName: string;
 
   @Column()
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: "critical" | "high" | "medium" | "low";
 
-  @Column('text')
+  @Column("text")
   description: string;
 
-  @Column('jsonb', { nullable: true })
+  @Column("jsonb", { nullable: true })
   affectedResources: string[];
 
   @Column()
-  status: 'open' | 'acknowledged' | 'resolved' | 'false_positive';
+  status: "open" | "acknowledged" | "resolved" | "false_positive";
 
   @CreateDateColumn()
   detectedAt: Date;
@@ -41,6 +47,6 @@ export class Violation {
   @Column({ nullable: true })
   resolvedBy: string;
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   resolutionNotes: string;
 }

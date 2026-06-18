@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { 
-  Activity, 
-  Server, 
-  AlertTriangle, 
-  Settings, 
-  BarChart3, 
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import {
+  Activity,
+  Server,
+  AlertTriangle,
+  Settings,
+  BarChart3,
   Shield,
   Zap,
-  Globe
-} from 'lucide-react';
-import ServiceOverview from './components/ServiceOverview';
-import ServiceHealth from './components/ServiceHealth';
-import FailoverManagement from './components/FailoverManagement';
-import MetricsDashboard from './components/MetricsDashboard';
-import ServiceRegistry from './components/ServiceRegistry';
-import './App.css';
+  Globe,
+} from "lucide-react";
+import ServiceOverview from "./components/ServiceOverview";
+import ServiceHealth from "./components/ServiceHealth";
+import FailoverManagement from "./components/FailoverManagement";
+import MetricsDashboard from "./components/MetricsDashboard";
+import ServiceRegistry from "./components/ServiceRegistry";
+import "./App.css";
 
 function App() {
   const [activeServices, setActiveServices] = useState(0);
@@ -31,23 +31,23 @@ function App() {
 
   const fetchMetrics = async () => {
     try {
-      const response = await fetch('/api/v1/service-discovery/health');
+      const response = await fetch("/api/v1/service-discovery/health");
       const data = await response.json();
       setActiveServices(data.total || 0);
       setHealthyServices(data.healthy || 0);
       setActiveAlerts(data.alerts?.length || 0);
     } catch (error) {
-      console.error('Failed to fetch metrics:', error);
+      console.error("Failed to fetch metrics:", error);
     }
   };
 
   const navigation = [
-    { name: 'Overview', href: '/', icon: Activity },
-    { name: 'Services', href: '/services', icon: Server },
-    { name: 'Health', href: '/health', icon: Shield },
-    { name: 'Registry', href: '/registry', icon: Globe },
-    { name: 'Failover', href: '/failover', icon: Zap },
-    { name: 'Metrics', href: '/metrics', icon: BarChart3 },
+    { name: "Overview", href: "/", icon: Activity },
+    { name: "Services", href: "/services", icon: Server },
+    { name: "Health", href: "/health", icon: Shield },
+    { name: "Registry", href: "/registry", icon: Globe },
+    { name: "Failover", href: "/failover", icon: Zap },
+    { name: "Metrics", href: "/metrics", icon: BarChart3 },
   ];
 
   return (
@@ -72,7 +72,9 @@ function App() {
                 </div>
                 <div className="text-sm">
                   <span className="text-gray-500">Alerts:</span>
-                  <span className={`ml-2 font-semibold ${activeAlerts > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <span
+                    className={`ml-2 font-semibold ${activeAlerts > 0 ? "text-red-600" : "text-green-600"}`}
+                  >
                     {activeAlerts}
                   </span>
                 </div>

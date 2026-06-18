@@ -1,45 +1,53 @@
 /**
  * Cache System Integration
- * 
+ *
  * This file demonstrates how to integrate the distributed cache system
  * into the main application.
  */
 
-import { Express } from 'express';
-import { initializeCacheSystem, shutdownCacheSystem } from '../services/cache';
-import { initializeCacheRoutes } from '../routes/cache';
-import { logger } from '../utils/logger';
+import { Express } from "express";
+import { initializeCacheSystem, shutdownCacheSystem } from "../services/cache";
+import { initializeCacheRoutes } from "../routes/cache";
+import { logger } from "../utils/logger";
 
 // Global cache system instance
-let cacheSystem: Awaited<ReturnType<typeof initializeCacheSystem>> | null = null;
+let cacheSystem: Awaited<ReturnType<typeof initializeCacheSystem>> | null =
+  null;
 
 /**
  * Initialize and integrate cache system into the application
  */
 export async function integrateCacheSystem(app: Express): Promise<void> {
   try {
-    logger.info('Integrating distributed cache system');
+    logger.info("Integrating distributed cache system");
 
     // Initialize cache system with configuration from environment
     cacheSystem = await initializeCacheSystem({
       cache: {
         nodeId: process.env.CACHE_NODE_ID || `node-${process.pid}`,
-        redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
-        localCacheSize: parseInt(process.env.CACHE_LOCAL_SIZE || '10000'),
-        defaultTTL: parseInt(process.env.CACHE_DEFAULT_TTL || '3600000'),
-        enableLocalCache: process.env.CACHE_ENABLE_LOCAL !== 'false',
-        enableDistributedCache: process.env.CACHE_ENABLE_DISTRIBUTED !== 'false'
+        redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
+        localCacheSize: parseInt(process.env.CACHE_LOCAL_SIZE || "10000"),
+        defaultTTL: parseInt(process.env.CACHE_DEFAULT_TTL || "3600000"),
+        enableLocalCache: process.env.CACHE_ENABLE_LOCAL !== "false",
+        enableDistributedCache:
+          process.env.CACHE_ENABLE_DISTRIBUTED !== "false",
       },
       monitor: {
-        checkInterval: parseInt(process.env.CACHE_MONITOR_INTERVAL || '60000'),
-        hitRateThreshold: parseFloat(process.env.CACHE_HIT_RATE_THRESHOLD || '0.7'),
-        latencyThreshold: parseInt(process.env.CACHE_LATENCY_THRESHOLD || '100'),
-        errorRateThreshold: parseFloat(process.env.CACHE_ERROR_RATE_THRESHOLD || '0.05')
+        checkInterval: parseInt(process.env.CACHE_MONITOR_INTERVAL || "60000"),
+        hitRateThreshold: parseFloat(
+          process.env.CACHE_HIT_RATE_THRESHOLD || "0.7",
+        ),
+        latencyThreshold: parseInt(
+          process.env.CACHE_LATENCY_THRESHOLD || "100",
+        ),
+        errorRateThreshold: parseFloat(
+          process.env.CACHE_ERROR_RATE_THRESHOLD || "0.05",
+        ),
       },
       warming: {
-        batchSize: parseInt(process.env.CACHE_WARMING_BATCH_SIZE || '100'),
-        concurrency: parseInt(process.env.CACHE_WARMING_CONCURRENCY || '5')
-      }
+        batchSize: parseInt(process.env.CACHE_WARMING_BATCH_SIZE || "100"),
+        concurrency: parseInt(process.env.CACHE_WARMING_CONCURRENCY || "5"),
+      },
     });
 
     // Register cache routes
@@ -47,10 +55,10 @@ export async function integrateCacheSystem(app: Express): Promise<void> {
       cacheSystem.cacheManager,
       cacheSystem.monitor,
       cacheSystem.warmingStrategy,
-      cacheSystem.performanceTester
+      cacheSystem.performanceTester,
     );
 
-    app.use('/api/cache', cacheRoutes);
+    app.use("/api/cache", cacheRoutes);
 
     // Setup event listeners
     setupEventListeners();
@@ -58,9 +66,9 @@ export async function integrateCacheSystem(app: Express): Promise<void> {
     // Warm critical cache on startup
     await warmCriticalCache();
 
-    logger.info('Cache system integrated successfully');
+    logger.info("Cache system integrated successfully");
   } catch (error) {
-    logger.error('Failed to integrate cache system:', error);
+    logger.error("Failed to integrate cache system:", error);
     throw error;
   }
 }
@@ -80,7 +88,7 @@ export async function shutdownCache(): Promise<void> {
  */
 export function getCacheSystem() {
   if (!cacheSystem) {
-    throw new Error('Cache system not initialized');
+    throw new Error("Cache system not initialized");
   }
   return cacheSystem;
 }
@@ -94,60 +102,60 @@ function setupEventListeners(): void {
   const { cacheManager, monitor, warmingStrategy } = cacheSystem;
 
   // Cache manager events
-  cacheManager.on('error', (error) => {
-    logger.error('Cache manager error:', error);
+  cacheManager.on("error", (error) => {
+    logger.error("Cache manager error:", error);
   });
 
-  cacheManager.on('invalidationReceived', (event) => {
-    logger.debug('Cache invalidation received:', {
+  cacheManager.on("invalidationReceived", (event) => {
+    logger.debug("Cache invalidation received:", {
       type: event.type,
       nodeId: event.nodeId,
       keys: event.keys?.length,
       pattern: event.pattern,
-      tags: event.tags
+      tags: event.tags,
     });
   });
 
-  cacheManager.on('eviction', ({ key }) => {
-    logger.debug('Cache entry evicted:', { key });
+  cacheManager.on("eviction", ({ key }) => {
+    logger.debug("Cache entry evicted:", { key });
   });
 
-  cacheManager.on('cacheWarmed', ({ count }) => {
-    logger.info('Cache warmed:', { count });
+  cacheManager.on("cacheWarmed", ({ count }) => {
+    logger.info("Cache warmed:", { count });
   });
 
   // Monitor events
-  monitor.on('alert', (alert) => {
-    logger.warn('Cache alert:', {
+  monitor.on("alert", (alert) => {
+    logger.warn("Cache alert:", {
       severity: alert.severity,
       type: alert.type,
-      message: alert.message
+      message: alert.message,
     });
 
     // Send to external monitoring system if needed
     // sendToMonitoring(alert);
   });
 
-  monitor.on('healthCheck', ({ healthy }) => {
+  monitor.on("healthCheck", ({ healthy }) => {
     if (!healthy) {
-      logger.error('Cache health check failed');
+      logger.error("Cache health check failed");
     }
   });
 
   // Warming strategy events
-  warmingStrategy.on('strategyCompleted', ({ task, strategy }) => {
-    logger.info('Cache warming completed:', {
+  warmingStrategy.on("strategyCompleted", ({ task, strategy }) => {
+    logger.info("Cache warming completed:", {
       strategy: strategy.name,
       itemsWarmed: task.itemsWarmed,
       duration: task.duration,
-      errors: task.errors
+      errors: task.errors,
     });
   });
 
-  warmingStrategy.on('strategyFailed', ({ task, strategy, error }) => {
-    logger.error('Cache warming failed:', {
+  warmingStrategy.on("strategyFailed", ({ task, strategy, error }) => {
+    logger.error("Cache warming failed:", {
       strategy: strategy.name,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   });
 }
@@ -159,14 +167,14 @@ async function warmCriticalCache(): Promise<void> {
   if (!cacheSystem) return;
 
   try {
-    logger.info('Warming critical cache on startup');
+    logger.info("Warming critical cache on startup");
 
     // Execute critical-data warming strategy
-    await cacheSystem.warmingStrategy.executeStrategy('critical-data');
+    await cacheSystem.warmingStrategy.executeStrategy("critical-data");
 
-    logger.info('Critical cache warmed successfully');
+    logger.info("Critical cache warmed successfully");
   } catch (error) {
-    logger.error('Failed to warm critical cache:', error);
+    logger.error("Failed to warm critical cache:", error);
     // Don't throw - application should continue even if warming fails
   }
 }
@@ -175,7 +183,7 @@ async function warmCriticalCache(): Promise<void> {
  * Helper function to create cache key
  */
 export function createCacheKey(...parts: (string | number)[]): string {
-  return parts.join(':');
+  return parts.join(":");
 }
 
 /**
@@ -187,7 +195,7 @@ export async function cacheQuery<T>(
   options?: {
     ttl?: number;
     tags?: string[];
-  }
+  },
 ): Promise<T> {
   const { cacheManager } = getCacheSystem();
 
@@ -199,7 +207,7 @@ export async function cacheQuery<T>(
  */
 export async function invalidateEntity(
   entityType: string,
-  entityId?: string | number
+  entityId?: string | number,
 ): Promise<void> {
   const { cacheManager } = getCacheSystem();
 
@@ -233,7 +241,7 @@ export function cacheMiddleware(options: {
       const cached = await cacheManager.get(cacheKey);
 
       if (cached !== null) {
-        logger.debug('Cache hit for API request:', { key: cacheKey });
+        logger.debug("Cache hit for API request:", { key: cacheKey });
         return res.json(cached);
       }
 
@@ -243,7 +251,7 @@ export function cacheMiddleware(options: {
         // Cache the response
         await cacheManager.set(cacheKey, data, {
           ttl: options.ttl,
-          tags: options.tags
+          tags: options.tags,
         });
 
         return originalJson(data);
@@ -251,7 +259,7 @@ export function cacheMiddleware(options: {
 
       next();
     } catch (error) {
-      logger.error('Cache middleware error:', error);
+      logger.error("Cache middleware error:", error);
       next(); // Continue without caching on error
     }
   };
@@ -262,16 +270,16 @@ export function cacheMiddleware(options: {
  */
 export async function getCachedUser(userId: string): Promise<any> {
   return await cacheQuery(
-    createCacheKey('user', userId),
+    createCacheKey("user", userId),
     async () => {
       // Load from database
       // return await db.users.findById(userId);
-      return { id: userId, name: 'Example User' };
+      return { id: userId, name: "Example User" };
     },
     {
       ttl: 1800000, // 30 minutes
-      tags: ['user']
-    }
+      tags: ["user"],
+    },
   );
 }
 
@@ -279,26 +287,26 @@ export async function getCachedUser(userId: string): Promise<any> {
  * Example: Invalidate user cache
  */
 export async function invalidateUserCache(userId: string): Promise<void> {
-  await invalidateEntity('user', userId);
+  await invalidateEntity("user", userId);
 }
 
 /**
  * Example: Cache analytics data
  */
 export async function getCachedAnalytics(filters: any): Promise<any> {
-  const cacheKey = createCacheKey('analytics', JSON.stringify(filters));
+  const cacheKey = createCacheKey("analytics", JSON.stringify(filters));
 
   return await cacheQuery(
     cacheKey,
     async () => {
       // Load from database
       // return await db.analytics.query(filters);
-      return { data: 'analytics data' };
+      return { data: "analytics data" };
     },
     {
       ttl: 300000, // 5 minutes
-      tags: ['analytics']
-    }
+      tags: ["analytics"],
+    },
   );
 }
 
@@ -306,7 +314,7 @@ export async function getCachedAnalytics(filters: any): Promise<any> {
  * Example: Invalidate analytics cache
  */
 export async function invalidateAnalyticsCache(): Promise<void> {
-  await invalidateEntity('analytics');
+  await invalidateEntity("analytics");
 }
 
 /**
@@ -314,16 +322,16 @@ export async function invalidateAnalyticsCache(): Promise<void> {
  */
 export async function getCachedConfig(configKey: string): Promise<any> {
   return await cacheQuery(
-    createCacheKey('config', configKey),
+    createCacheKey("config", configKey),
     async () => {
       // Load from database
       // return await db.config.get(configKey);
-      return { key: configKey, value: 'config value' };
+      return { key: configKey, value: "config value" };
     },
     {
       ttl: 86400000, // 24 hours
-      tags: ['config']
-    }
+      tags: ["config"],
+    },
   );
 }
 
@@ -332,7 +340,7 @@ export async function getCachedConfig(configKey: string): Promise<any> {
  */
 export async function warmFrequentlyAccessedData(): Promise<void> {
   const { warmingStrategy } = getCacheSystem();
-  await warmingStrategy.executeStrategy('frequently-accessed');
+  await warmingStrategy.executeStrategy("frequently-accessed");
 }
 
 /**
@@ -366,5 +374,5 @@ export default {
   getCachedConfig,
   warmFrequentlyAccessedData,
   getCacheHealth,
-  getCacheMetrics
+  getCacheMetrics,
 };

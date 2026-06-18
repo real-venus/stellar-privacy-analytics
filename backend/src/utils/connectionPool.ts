@@ -1,6 +1,6 @@
-import { createClient, RedisClientType } from 'redis';
-import { logger } from './logger';
-import { EventEmitter } from 'events';
+import { createClient, RedisClientType } from "redis";
+import { logger } from "./logger";
+import { EventEmitter } from "events";
 
 export interface ConnectionPoolConfig {
   host: string;
@@ -42,7 +42,7 @@ export class ConnectionPool extends EventEmitter {
         await this.createConnection();
       }
 
-      logger.info('Redis connection pool initialized', {
+      logger.info("Redis connection pool initialized", {
         minConnections: this.config.minConnections,
         maxConnections: this.config.maxConnections,
       });
@@ -50,14 +50,14 @@ export class ConnectionPool extends EventEmitter {
       // Setup idle connection cleanup
       this.setupIdleCleanup();
     } catch (error) {
-      logger.error('Failed to initialize connection pool:', error);
+      logger.error("Failed to initialize connection pool:", error);
       throw error;
     }
   }
 
   private async createConnection(): Promise<RedisClientType> {
     if (this.connectionCount >= this.config.maxConnections) {
-      throw new Error('Maximum connection limit reached');
+      throw new Error("Maximum connection limit reached");
     }
 
     const client = createClient({
@@ -68,13 +68,13 @@ export class ConnectionPool extends EventEmitter {
       password: this.config.password,
     });
 
-    client.on('error', (err) => {
-      logger.error('Redis connection error:', err);
+    client.on("error", (err) => {
+      logger.error("Redis connection error:", err);
       this.handleConnectionError(client);
     });
 
-    client.on('end', () => {
-      logger.debug('Redis connection ended');
+    client.on("end", () => {
+      logger.debug("Redis connection ended");
       this.removeConnection(client);
     });
 
@@ -82,7 +82,7 @@ export class ConnectionPool extends EventEmitter {
     this.connectionCount++;
     this.availableConnections.push(client);
 
-    logger.debug('New Redis connection created', {
+    logger.debug("New Redis connection created", {
       totalConnections: this.connectionCount,
       availableConnections: this.availableConnections.length,
     });
@@ -92,15 +92,15 @@ export class ConnectionPool extends EventEmitter {
 
   async acquire(): Promise<RedisClientType> {
     if (this.isClosing) {
-      throw new Error('Connection pool is closing');
+      throw new Error("Connection pool is closing");
     }
 
     // Check if there's an available connection
     if (this.availableConnections.length > 0) {
       const client = this.availableConnections.pop()!;
       this.activeConnections.add(client);
-      
-      logger.debug('Connection acquired from pool', {
+
+      logger.debug("Connection acquired from pool", {
         availableConnections: this.availableConnections.length,
         activeConnections: this.activeConnections.size,
       });
@@ -116,7 +116,7 @@ export class ConnectionPool extends EventEmitter {
         this.activeConnections.add(client);
         return client;
       } catch (error) {
-        logger.error('Failed to create new connection:', error);
+        logger.error("Failed to create new connection:", error);
       }
     }
 
@@ -124,12 +124,12 @@ export class ConnectionPool extends EventEmitter {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         const index = this.waitingQueue.findIndex(
-          item => item.resolve === resolve
+          (item) => item.resolve === resolve,
         );
         if (index !== -1) {
           this.waitingQueue.splice(index, 1);
         }
-        reject(new Error('Connection acquire timeout'));
+        reject(new Error("Connection acquire timeout"));
       }, this.config.acquireTimeout);
 
       this.waitingQueue.push({
@@ -144,7 +144,7 @@ export class ConnectionPool extends EventEmitter {
         timestamp: Date.now(),
       });
 
-      logger.debug('Connection request queued', {
+      logger.debug("Connection request queued", {
         queueLength: this.waitingQueue.length,
       });
     });
@@ -152,7 +152,7 @@ export class ConnectionPool extends EventEmitter {
 
   release(client: RedisClientType): void {
     if (!this.activeConnections.has(client)) {
-      logger.warn('Attempting to release connection not in active pool');
+      logger.warn("Attempting to release connection not in active pool");
       return;
     }
 
@@ -164,25 +164,23 @@ export class ConnectionPool extends EventEmitter {
       this.activeConnections.add(client);
       waiter.resolve(client);
 
-      logger.debug('Connection assigned to waiting request', {
+      logger.debug("Connection assigned to waiting request", {
         queueLength: this.waitingQueue.length,
       });
     } else {
       // Return to available pool
       this.availableConnections.push(client);
 
-      logger.debug('Connection released to pool', {
+      logger.debug("Connection released to pool", {
         availableConnections: this.availableConnections.length,
         activeConnections: this.activeConnections.size,
       });
     }
   }
 
-  async execute<T>(
-    fn: (client: RedisClientType) => Promise<T>
-  ): Promise<T> {
+  async execute<T>(fn: (client: RedisClientType) => Promise<T>): Promise<T> {
     const client = await this.acquire();
-    
+
     try {
       const result = await fn(client);
       this.release(client);
@@ -205,8 +203,8 @@ export class ConnectionPool extends EventEmitter {
 
     // Try to create a replacement connection
     if (!this.isClosing && this.connectionCount < this.config.minConnections) {
-      this.createConnection().catch(err => {
-        logger.error('Failed to create replacement connection:', err);
+      this.createConnection().catch((err) => {
+        logger.error("Failed to create replacement connection:", err);
       });
     }
   }
@@ -224,18 +222,19 @@ export class ConnectionPool extends EventEmitter {
     setInterval(() => {
       if (this.isClosing) return;
 
-      const excessConnections = this.availableConnections.length - this.config.minConnections;
-      
+      const excessConnections =
+        this.availableConnections.length - this.config.minConnections;
+
       if (excessConnections > 0) {
-        logger.debug('Cleaning up idle connections', {
+        logger.debug("Cleaning up idle connections", {
           excessConnections,
         });
 
         for (let i = 0; i < excessConnections; i++) {
           const client = this.availableConnections.pop();
           if (client) {
-            client.quit().catch(err => {
-              logger.error('Error closing idle connection:', err);
+            client.quit().catch((err) => {
+              logger.error("Error closing idle connection:", err);
             });
             this.connectionCount--;
           }
@@ -248,11 +247,11 @@ export class ConnectionPool extends EventEmitter {
     if (this.isClosing) return;
 
     this.isClosing = true;
-    logger.info('Closing connection pool...');
+    logger.info("Closing connection pool...");
 
     // Reject all waiting requests
-    this.waitingQueue.forEach(waiter => {
-      waiter.reject(new Error('Connection pool is closing'));
+    this.waitingQueue.forEach((waiter) => {
+      waiter.reject(new Error("Connection pool is closing"));
     });
     this.waitingQueue = [];
 
@@ -263,18 +262,18 @@ export class ConnectionPool extends EventEmitter {
     ];
 
     await Promise.all(
-      allConnections.map(client =>
-        client.quit().catch(err => {
-          logger.error('Error closing connection:', err);
-        })
-      )
+      allConnections.map((client) =>
+        client.quit().catch((err) => {
+          logger.error("Error closing connection:", err);
+        }),
+      ),
     );
 
     this.availableConnections = [];
     this.activeConnections.clear();
     this.connectionCount = 0;
 
-    logger.info('Connection pool closed');
+    logger.info("Connection pool closed");
   }
 
   async healthCheck(): Promise<boolean> {
@@ -284,7 +283,7 @@ export class ConnectionPool extends EventEmitter {
       this.release(client);
       return true;
     } catch (error) {
-      logger.error('Connection pool health check failed:', error);
+      logger.error("Connection pool health check failed:", error);
       return false;
     }
   }

@@ -1,20 +1,20 @@
-import { Router, Request, Response } from 'express';
-import { asyncHandler } from '../middleware/errorHandler';
-import { logger } from '../utils/logger';
+import { Router, Request, Response } from "express";
+import { asyncHandler } from "../middleware/errorHandler";
+import { logger } from "../utils/logger";
 
 const router = Router();
 
 // Help documentation data
 const helpCategories = [
   {
-    id: 'getting-started',
-    title: 'Getting Started',
-    description: 'Learn the basics of Stellar Privacy Analytics',
-    icon: '🚀',
+    id: "getting-started",
+    title: "Getting Started",
+    description: "Learn the basics of Stellar Privacy Analytics",
+    icon: "🚀",
     articles: [
       {
-        id: 'overview',
-        title: 'Platform Overview',
+        id: "overview",
+        title: "Platform Overview",
         content: `
 # Stellar Privacy Analytics Overview
 
@@ -45,13 +45,13 @@ Each query consumes privacy budget measured in epsilon (ε). Think of it as a pr
 
 Your account has a daily privacy budget limit based on your subscription tier.
         `,
-        category: 'getting-started',
-        difficulty: 'beginner',
-        readTime: '5 min'
+        category: "getting-started",
+        difficulty: "beginner",
+        readTime: "5 min",
       },
       {
-        id: 'first-query',
-        title: 'Your First Query',
+        id: "first-query",
+        title: "Your First Query",
         content: `
 # Creating Your First Privacy Query
 
@@ -232,21 +232,21 @@ Example response:
 4. **Save Favorites**: Save frequently used queries for easy access
 5. **Monitor Budget**: Keep track of your daily privacy budget usage
         `,
-        category: 'getting-started',
-        difficulty: 'beginner',
-        readTime: '8 min'
-      }
-    ]
+        category: "getting-started",
+        difficulty: "beginner",
+        readTime: "8 min",
+      },
+    ],
   },
   {
-    id: 'privacy-concepts',
-    title: 'Privacy Concepts',
-    description: 'Understanding differential privacy and privacy budget',
-    icon: '🔒',
+    id: "privacy-concepts",
+    title: "Privacy Concepts",
+    description: "Understanding differential privacy and privacy budget",
+    icon: "🔒",
     articles: [
       {
-        id: 'differential-privacy',
-        title: 'Differential Privacy Explained',
+        id: "differential-privacy",
+        title: "Differential Privacy Explained",
         content: `
 # Differential Privacy Explained
 
@@ -309,13 +309,13 @@ With differential privacy (ε = 1.0):
 3. **Early Filtering**: Apply filters before aggregations
 4. **Monitor Usage**: Track your privacy budget consumption
         `,
-        category: 'privacy-concepts',
-        difficulty: 'intermediate',
-        readTime: '10 min'
+        category: "privacy-concepts",
+        difficulty: "intermediate",
+        readTime: "10 min",
       },
       {
-        id: 'privacy-budget',
-        title: 'Managing Your Privacy Budget',
+        id: "privacy-budget",
+        title: "Managing Your Privacy Budget",
         content: `
 # Privacy Budget Management
 
@@ -429,21 +429,21 @@ For enterprise accounts, emergency budget resets are available:
 - **Limit**: Once per month
 - **Contact**: support@stellar-privacy.com
         `,
-        category: 'privacy-concepts',
-        difficulty: 'intermediate',
-        readTime: '12 min'
-      }
-    ]
+        category: "privacy-concepts",
+        difficulty: "intermediate",
+        readTime: "12 min",
+      },
+    ],
   },
   {
-    id: 'api-reference',
-    title: 'API Reference',
-    description: 'Complete API documentation and examples',
-    icon: '📚',
+    id: "api-reference",
+    title: "API Reference",
+    description: "Complete API documentation and examples",
+    icon: "📚",
     articles: [
       {
-        id: 'authentication',
-        title: 'Authentication & Authorization',
+        id: "authentication",
+        title: "Authentication & Authorization",
         content: `
 # Authentication & Authorization
 
@@ -623,21 +623,21 @@ curl -H "X-API-Key: stellar_api_v1_abc123def456..." \\
 }
 \`\`\`
         `,
-        category: 'api-reference',
-        difficulty: 'intermediate',
-        readTime: '15 min'
-      }
-    ]
+        category: "api-reference",
+        difficulty: "intermediate",
+        readTime: "15 min",
+      },
+    ],
   },
   {
-    id: 'troubleshooting',
-    title: 'Troubleshooting',
-    description: 'Common issues and solutions',
-    icon: '🔧',
+    id: "troubleshooting",
+    title: "Troubleshooting",
+    description: "Common issues and solutions",
+    icon: "🔧",
     articles: [
       {
-        id: 'common-errors',
-        title: 'Common Errors and Solutions',
+        id: "common-errors",
+        title: "Common Errors and Solutions",
         content: `
 # Common Errors and Solutions
 
@@ -835,291 +835,326 @@ When contacting support, include:
 - Steps to reproduce
 - Expected vs actual behavior
         `,
-        category: 'troubleshooting',
-        difficulty: 'beginner',
-        readTime: '10 min'
-      }
-    ]
-  }
+        category: "troubleshooting",
+        difficulty: "beginner",
+        readTime: "10 min",
+      },
+    ],
+  },
 ];
 
 // Get all help categories
-router.get('/', asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Help categories requested', {
-    type: 'help_access',
-    category: 'categories',
-    userAgent: req.headers['user-agent']
-  });
+router.get(
+  "/",
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info("Help categories requested", {
+      type: "help_access",
+      category: "categories",
+      userAgent: req.headers["user-agent"],
+    });
 
-  res.json({
-    categories: helpCategories.map(cat => ({
-      id: cat.id,
-      title: cat.title,
-      description: cat.description,
-      icon: cat.icon,
-      articleCount: cat.articles.length
-    })),
-    message: 'Help categories retrieved successfully'
-  });
-}));
+    res.json({
+      categories: helpCategories.map((cat) => ({
+        id: cat.id,
+        title: cat.title,
+        description: cat.description,
+        icon: cat.icon,
+        articleCount: cat.articles.length,
+      })),
+      message: "Help categories retrieved successfully",
+    });
+  }),
+);
 
 // Get category details
-router.get('/category/:categoryId', asyncHandler(async (req: Request, res: Response) => {
-  const { categoryId } = req.params;
-  
-  logger.info('Help category requested', {
-    type: 'help_access',
-    category: categoryId,
-    userAgent: req.headers['user-agent']
-  });
+router.get(
+  "/category/:categoryId",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { categoryId } = req.params;
 
-  const category = helpCategories.find(cat => cat.id === categoryId);
-  
-  if (!category) {
-    return res.status(404).json({
-      error: {
-        code: 'NOT_FOUND',
-        message: 'Help category not found'
-      }
+    logger.info("Help category requested", {
+      type: "help_access",
+      category: categoryId,
+      userAgent: req.headers["user-agent"],
     });
-  }
 
-  res.json({
-    category: {
-      id: category.id,
-      title: category.title,
-      description: category.description,
-      icon: category.icon,
-      articles: category.articles.map(article => ({
-        id: article.id,
-        title: article.title,
-        description: article.content.substring(0, 200) + '...',
-        difficulty: article.difficulty,
-        readTime: article.readTime
-      }))
-    },
-    message: 'Help category retrieved successfully'
-  });
-}));
+    const category = helpCategories.find((cat) => cat.id === categoryId);
 
-// Get specific article
-router.get('/article/:categoryId/:articleId', asyncHandler(async (req: Request, res: Response) => {
-  const { categoryId, articleId } = req.params;
-  
-  logger.info('Help article requested', {
-    type: 'help_access',
-    category: categoryId,
-    article: articleId,
-    userAgent: req.headers['user-agent']
-  });
+    if (!category) {
+      return res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Help category not found",
+        },
+      });
+    }
 
-  const category = helpCategories.find(cat => cat.id === categoryId);
-  
-  if (!category) {
-    return res.status(404).json({
-      error: {
-        code: 'NOT_FOUND',
-        message: 'Help category not found'
-      }
-    });
-  }
-
-  const article = category.articles.find(art => art.id === articleId);
-  
-  if (!article) {
-    return res.status(404).json({
-      error: {
-        code: 'NOT_FOUND',
-        message: 'Help article not found'
-      }
-    });
-  }
-
-  res.json({
-    article: {
-      id: article.id,
-      title: article.title,
-      content: article.content,
-      category: article.category,
-      difficulty: article.difficulty,
-      readTime: article.readTime,
-      relatedArticles: category.articles
-        .filter(art => art.id !== articleId)
-        .slice(0, 3)
-        .map(art => ({
-          id: art.id,
-          title: art.title,
-          difficulty: art.difficulty
-        }))
-    },
-    message: 'Help article retrieved successfully'
-  });
-}));
-
-// Search help content
-router.get('/search', asyncHandler(async (req: Request, res: Response) => {
-  const { q: query, difficulty, category } = req.query;
-  
-  logger.info('Help search performed', {
-    type: 'help_search',
-    query,
-    difficulty,
-    category,
-    userAgent: req.headers['user-agent']
-  });
-
-  if (!query) {
-    return res.status(400).json({
-      error: {
-        code: 'BAD_REQUEST',
-        message: 'Search query is required'
-      }
-    });
-  }
-
-  const searchTerm = (query as string).toLowerCase();
-  const results: any[] = [];
-
-  helpCategories.forEach(cat => {
-    cat.articles.forEach(article => {
-      const matchesSearch = article.title.toLowerCase().includes(searchTerm) ||
-                          article.content.toLowerCase().includes(searchTerm);
-      
-      const matchesCategory = !category || cat.id === category;
-      const matchesDifficulty = !difficulty || article.difficulty === difficulty;
-
-      if (matchesSearch && matchesCategory && matchesDifficulty) {
-        results.push({
+    res.json({
+      category: {
+        id: category.id,
+        title: category.title,
+        description: category.description,
+        icon: category.icon,
+        articles: category.articles.map((article) => ({
           id: article.id,
           title: article.title,
-          category: {
-            id: cat.id,
-            title: cat.title,
-            icon: cat.icon
-          },
-          description: article.content.substring(0, 200) + '...',
+          description: article.content.substring(0, 200) + "...",
           difficulty: article.difficulty,
           readTime: article.readTime,
-          relevance: calculateRelevance(searchTerm, article.title, article.content)
-        });
-      }
+        })),
+      },
+      message: "Help category retrieved successfully",
     });
-  });
+  }),
+);
 
-  // Sort by relevance
-  results.sort((a, b) => b.relevance - a.relevance);
+// Get specific article
+router.get(
+  "/article/:categoryId/:articleId",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { categoryId, articleId } = req.params;
 
-  res.json({
-    results: results.slice(0, 20), // Limit to 20 results
-    query,
-    total: results.length,
-    message: 'Help search completed successfully'
-  });
-}));
+    logger.info("Help article requested", {
+      type: "help_access",
+      category: categoryId,
+      article: articleId,
+      userAgent: req.headers["user-agent"],
+    });
+
+    const category = helpCategories.find((cat) => cat.id === categoryId);
+
+    if (!category) {
+      return res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Help category not found",
+        },
+      });
+    }
+
+    const article = category.articles.find((art) => art.id === articleId);
+
+    if (!article) {
+      return res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Help article not found",
+        },
+      });
+    }
+
+    res.json({
+      article: {
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        category: article.category,
+        difficulty: article.difficulty,
+        readTime: article.readTime,
+        relatedArticles: category.articles
+          .filter((art) => art.id !== articleId)
+          .slice(0, 3)
+          .map((art) => ({
+            id: art.id,
+            title: art.title,
+            difficulty: art.difficulty,
+          })),
+      },
+      message: "Help article retrieved successfully",
+    });
+  }),
+);
+
+// Search help content
+router.get(
+  "/search",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { q: query, difficulty, category } = req.query;
+
+    logger.info("Help search performed", {
+      type: "help_search",
+      query,
+      difficulty,
+      category,
+      userAgent: req.headers["user-agent"],
+    });
+
+    if (!query) {
+      return res.status(400).json({
+        error: {
+          code: "BAD_REQUEST",
+          message: "Search query is required",
+        },
+      });
+    }
+
+    const searchTerm = (query as string).toLowerCase();
+    const results: any[] = [];
+
+    helpCategories.forEach((cat) => {
+      cat.articles.forEach((article) => {
+        const matchesSearch =
+          article.title.toLowerCase().includes(searchTerm) ||
+          article.content.toLowerCase().includes(searchTerm);
+
+        const matchesCategory = !category || cat.id === category;
+        const matchesDifficulty =
+          !difficulty || article.difficulty === difficulty;
+
+        if (matchesSearch && matchesCategory && matchesDifficulty) {
+          results.push({
+            id: article.id,
+            title: article.title,
+            category: {
+              id: cat.id,
+              title: cat.title,
+              icon: cat.icon,
+            },
+            description: article.content.substring(0, 200) + "...",
+            difficulty: article.difficulty,
+            readTime: article.readTime,
+            relevance: calculateRelevance(
+              searchTerm,
+              article.title,
+              article.content,
+            ),
+          });
+        }
+      });
+    });
+
+    // Sort by relevance
+    results.sort((a, b) => b.relevance - a.relevance);
+
+    res.json({
+      results: results.slice(0, 20), // Limit to 20 results
+      query,
+      total: results.length,
+      message: "Help search completed successfully",
+    });
+  }),
+);
 
 // Calculate relevance score for search results
-function calculateRelevance(searchTerm: string, title: string, content: string): number {
+function calculateRelevance(
+  searchTerm: string,
+  title: string,
+  content: string,
+): number {
   const titleLower = title.toLowerCase();
   const contentLower = content.toLowerCase();
-  
+
   let score = 0;
-  
+
   // Exact title match
   if (titleLower === searchTerm) score += 100;
   // Title contains search term
   else if (titleLower.includes(searchTerm)) score += 50;
-  
+
   // Count occurrences in content
-  const contentMatches = (contentLower.match(new RegExp(searchTerm, 'g')) || []).length;
+  const contentMatches = (contentLower.match(new RegExp(searchTerm, "g")) || [])
+    .length;
   score += contentMatches * 5;
-  
+
   // Prefer shorter content (more focused)
   score += Math.max(0, 50 - content.length / 100);
-  
+
   return score;
 }
 
 // Get quick start guide
-router.get('/quickstart', asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Quick start guide requested', {
-    type: 'help_access',
-    guide: 'quickstart',
-    userAgent: req.headers['user-agent']
-  });
+router.get(
+  "/quickstart",
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info("Quick start guide requested", {
+      type: "help_access",
+      guide: "quickstart",
+      userAgent: req.headers["user-agent"],
+    });
 
-  const quickStartGuide = {
-    title: 'Quick Start Guide',
-    description: 'Get up and running with Stellar Privacy Analytics in 5 minutes',
-    steps: [
-      {
-        step: 1,
-        title: 'Create Account',
-        description: 'Register for a free account to get started',
-        action: 'POST /auth/register',
-        example: {
-          email: 'user@example.com',
-          password: 'SecurePass123!',
-          confirmPassword: 'SecurePass123!'
-        }
-      },
-      {
-        step: 2,
-        title: 'Get Authentication Token',
-        description: 'Login to receive your JWT token',
-        action: 'POST /auth/login',
-        example: {
-          email: 'user@example.com',
-          password: 'SecurePass123!'
-        }
-      },
-      {
-        step: 3,
-        title: 'Explore Data Schema',
-        description: 'See what data fields are available',
-        action: 'GET /query/schema',
-        example: 'curl -H "Authorization: Bearer TOKEN" /api/v1/query/schema'
-      },
-      {
-        step: 4,
-        title: 'Build Your First Query',
-        description: 'Create a simple privacy-preserving query',
-        action: 'POST /query/validate',
-        example: {
-          query: {
-            steps: [
-              { type: 'select', field: 'transaction_amount' },
-              { type: 'aggregate', field: 'transaction_amount', aggregation: 'average' }
-            ]
-          }
-        }
-      },
-      {
-        step: 5,
-        title: 'Execute Query',
-        description: 'Run your query and get results',
-        action: 'POST /query/execute',
-        example: {
-          query: {
-            steps: [
-              { type: 'select', field: 'transaction_amount' },
-              { type: 'aggregate', field: 'transaction_amount', aggregation: 'average' }
-            ]
-          }
-        }
-      }
-    ],
-    nextSteps: [
-      'Read the full documentation at /api/v1/docs',
-      'Try advanced queries with filters and grouping',
-      'Save frequently used queries as favorites',
-      'Monitor your privacy budget usage'
-    ]
-  };
+    const quickStartGuide = {
+      title: "Quick Start Guide",
+      description:
+        "Get up and running with Stellar Privacy Analytics in 5 minutes",
+      steps: [
+        {
+          step: 1,
+          title: "Create Account",
+          description: "Register for a free account to get started",
+          action: "POST /auth/register",
+          example: {
+            email: "user@example.com",
+            password: "SecurePass123!",
+            confirmPassword: "SecurePass123!",
+          },
+        },
+        {
+          step: 2,
+          title: "Get Authentication Token",
+          description: "Login to receive your JWT token",
+          action: "POST /auth/login",
+          example: {
+            email: "user@example.com",
+            password: "SecurePass123!",
+          },
+        },
+        {
+          step: 3,
+          title: "Explore Data Schema",
+          description: "See what data fields are available",
+          action: "GET /query/schema",
+          example: 'curl -H "Authorization: Bearer TOKEN" /api/v1/query/schema',
+        },
+        {
+          step: 4,
+          title: "Build Your First Query",
+          description: "Create a simple privacy-preserving query",
+          action: "POST /query/validate",
+          example: {
+            query: {
+              steps: [
+                { type: "select", field: "transaction_amount" },
+                {
+                  type: "aggregate",
+                  field: "transaction_amount",
+                  aggregation: "average",
+                },
+              ],
+            },
+          },
+        },
+        {
+          step: 5,
+          title: "Execute Query",
+          description: "Run your query and get results",
+          action: "POST /query/execute",
+          example: {
+            query: {
+              steps: [
+                { type: "select", field: "transaction_amount" },
+                {
+                  type: "aggregate",
+                  field: "transaction_amount",
+                  aggregation: "average",
+                },
+              ],
+            },
+          },
+        },
+      ],
+      nextSteps: [
+        "Read the full documentation at /api/v1/docs",
+        "Try advanced queries with filters and grouping",
+        "Save frequently used queries as favorites",
+        "Monitor your privacy budget usage",
+      ],
+    };
 
-  res.json({
-    guide: quickStartGuide,
-    message: 'Quick start guide retrieved successfully'
-  });
-}));
+    res.json({
+      guide: quickStartGuide,
+      message: "Quick start guide retrieved successfully",
+    });
+  }),
+);
 
 export { router as helpRoutes };

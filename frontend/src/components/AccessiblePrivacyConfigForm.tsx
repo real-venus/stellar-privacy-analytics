@@ -10,10 +10,22 @@ interface PrivacyConfig {
 }
 
 const PRIVACY_LEVELS = [
-  { value: 'minimal', label: 'Minimal', description: 'Basic privacy protection with data encryption.' },
-  { value: 'standard', label: 'Standard', description: 'Recommended for most use cases. Includes audit logging.' },
+  {
+    value: 'minimal',
+    label: 'Minimal',
+    description: 'Basic privacy protection with data encryption.',
+  },
+  {
+    value: 'standard',
+    label: 'Standard',
+    description: 'Recommended for most use cases. Includes audit logging.',
+  },
   { value: 'high', label: 'High', description: 'Enhanced protection with differential privacy.' },
-  { value: 'maximum', label: 'Maximum', description: 'Highest protection with zero-knowledge proofs.' },
+  {
+    value: 'maximum',
+    label: 'Maximum',
+    description: 'Highest protection with zero-knowledge proofs.',
+  },
 ] as const;
 
 const RETENTION_OPTIONS = [
@@ -40,7 +52,9 @@ const Toggle: React.FC<ToggleProps> = ({ id, checked, onChange, label, descripti
         <label htmlFor={id} className="font-medium text-gray-900 cursor-pointer">
           {label}
         </label>
-        <p id={descId} className="text-sm text-gray-600">{description}</p>
+        <p id={descId} className="text-sm text-gray-600">
+          {description}
+        </p>
       </div>
       <button
         id={id}
@@ -140,9 +154,7 @@ export const AccessiblePrivacyConfigForm: React.FC = () => {
 
         {/* Privacy Level */}
         <fieldset className="bg-white rounded-lg shadow p-6">
-          <legend className="text-lg font-semibold text-gray-900 mb-1">
-            Privacy Level
-          </legend>
+          <legend className="text-lg font-semibold text-gray-900 mb-1">Privacy Level</legend>
           <p className="text-sm text-gray-600 mb-4" id={`${formId}-level-hint`}>
             Select the level of privacy protection for your data.
           </p>
@@ -151,7 +163,7 @@ export const AccessiblePrivacyConfigForm: React.FC = () => {
             role="radiogroup"
             aria-describedby={`${formId}-level-hint`}
           >
-            {PRIVACY_LEVELS.map(level => {
+            {PRIVACY_LEVELS.map((level) => {
               const inputId = `${formId}-level-${level.value}`;
               const isSelected = config.privacyLevel === level.value;
               return (
@@ -170,7 +182,7 @@ export const AccessiblePrivacyConfigForm: React.FC = () => {
                     name={`${formId}-privacy-level`}
                     value={level.value}
                     checked={isSelected}
-                    onChange={() => setConfig(c => ({ ...c, privacyLevel: level.value }))}
+                    onChange={() => setConfig((c) => ({ ...c, privacyLevel: level.value }))}
                     className="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
                   <div>
@@ -207,10 +219,10 @@ export const AccessiblePrivacyConfigForm: React.FC = () => {
               id={retentionId}
               aria-describedby={retentionDescId}
               value={config.dataRetention}
-              onChange={e => setConfig(c => ({ ...c, dataRetention: e.target.value }))}
+              onChange={(e) => setConfig((c) => ({ ...c, dataRetention: e.target.value }))}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
             >
-              {RETENTION_OPTIONS.map(opt => (
+              {RETENTION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -222,21 +234,21 @@ export const AccessiblePrivacyConfigForm: React.FC = () => {
             <Toggle
               id={`${formId}-export`}
               checked={config.allowDataExport}
-              onChange={v => setConfig(c => ({ ...c, allowDataExport: v }))}
+              onChange={(v) => setConfig((c) => ({ ...c, allowDataExport: v }))}
               label="Allow Data Export"
               description="Permit users to export analysis results."
             />
             <Toggle
               id={`${formId}-sharing`}
               checked={config.allowSharing}
-              onChange={v => setConfig(c => ({ ...c, allowSharing: v }))}
+              onChange={(v) => setConfig((c) => ({ ...c, allowSharing: v }))}
               label="Allow Data Sharing"
               description="Share anonymized insights with partners."
             />
             <Toggle
               id={`${formId}-contrast`}
               checked={config.highContrastMode}
-              onChange={v => setConfig(c => ({ ...c, highContrastMode: v }))}
+              onChange={(v) => setConfig((c) => ({ ...c, highContrastMode: v }))}
               label="High Contrast Mode"
               description="Increase color contrast for better visibility."
             />

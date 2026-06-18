@@ -6,7 +6,16 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Switch } from './ui/Switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
-import { Loader2, Play, Settings, Database, Network, CreditCard, AlertTriangle, CheckCircle } from 'lucide-react';
+import {
+  Loader2,
+  Play,
+  Settings,
+  Database,
+  Network,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle,
+} from 'lucide-react';
 
 interface SandboxConfig {
   enabled: boolean;
@@ -54,7 +63,7 @@ export const SandboxDashboard: React.FC = () => {
     amount: '10.00',
     currency: 'USD',
     shouldFail: false,
-    failureType: 'insufficient_funds'
+    failureType: 'insufficient_funds',
   });
 
   useEffect(() => {
@@ -91,7 +100,7 @@ export const SandboxDashboard: React.FC = () => {
       const response = await fetch('/api/v1/sandbox/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled })
+        body: JSON.stringify({ enabled }),
       });
       if (!response.ok) throw new Error('Failed to toggle sandbox');
       await fetchSandboxConfig();
@@ -105,7 +114,7 @@ export const SandboxDashboard: React.FC = () => {
       const response = await fetch('/api/v1/sandbox/environment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ environment })
+        body: JSON.stringify({ environment }),
       });
       if (!response.ok) throw new Error('Failed to switch environment');
       await fetchSandboxConfig();
@@ -119,7 +128,7 @@ export const SandboxDashboard: React.FC = () => {
       const response = await fetch('/api/v1/sandbox/mock-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentForm)
+        body: JSON.stringify(paymentForm),
       });
       if (!response.ok) throw new Error('Failed to create mock payment');
       await fetchMockPayments();
@@ -128,7 +137,7 @@ export const SandboxDashboard: React.FC = () => {
         amount: '10.00',
         currency: 'USD',
         shouldFail: false,
-        failureType: 'insufficient_funds'
+        failureType: 'insufficient_funds',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -189,13 +198,8 @@ export const SandboxDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={config.enabled}
-                    onCheckedChange={toggleSandbox}
-                  />
-                  <span className="text-sm">
-                    {config.enabled ? 'Enabled' : 'Disabled'}
-                  </span>
+                  <Switch checked={config.enabled} onCheckedChange={toggleSandbox} />
+                  <span className="text-sm">{config.enabled ? 'Enabled' : 'Disabled'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -240,11 +244,15 @@ export const SandboxDashboard: React.FC = () => {
               <CardContent>
                 <div className="text-sm space-y-1">
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className={`h-3 w-3 ${config.features.mockPayments ? 'text-green-500' : 'text-gray-300'}`} />
+                    <CheckCircle
+                      className={`h-3 w-3 ${config.features.mockPayments ? 'text-green-500' : 'text-gray-300'}`}
+                    />
                     <span>Mock Payments</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className={`h-3 w-3 ${config.features.failureSimulation ? 'text-green-500' : 'text-gray-300'}`} />
+                    <CheckCircle
+                      className={`h-3 w-3 ${config.features.failureSimulation ? 'text-green-500' : 'text-gray-300'}`}
+                    />
                     <span>Failure Simulation</span>
                   </div>
                 </div>
@@ -260,11 +268,15 @@ export const SandboxDashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium">RPC URL</label>
-                  <div className="text-sm text-muted-foreground mt-1">{config.stellarNetwork.rpcUrl}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {config.stellarNetwork.rpcUrl}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">Horizon URL</label>
-                  <div className="text-sm text-muted-foreground mt-1">{config.stellarNetwork.horizonUrl}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {config.stellarNetwork.horizonUrl}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">Network</label>
@@ -288,7 +300,9 @@ export const SandboxDashboard: React.FC = () => {
                     type="text"
                     className="w-full mt-1 px-3 py-2 border rounded-md"
                     value={paymentForm.subscriptionId}
-                    onChange={(e) => setPaymentForm({...paymentForm, subscriptionId: e.target.value})}
+                    onChange={(e) =>
+                      setPaymentForm({ ...paymentForm, subscriptionId: e.target.value })
+                    }
                     placeholder="Enter subscription UUID"
                   />
                 </div>
@@ -299,12 +313,15 @@ export const SandboxDashboard: React.FC = () => {
                     step="0.01"
                     className="w-full mt-1 px-3 py-2 border rounded-md"
                     value={paymentForm.amount}
-                    onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value})}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Currency</label>
-                  <Select value={paymentForm.currency} onValueChange={(value) => setPaymentForm({...paymentForm, currency: value})}>
+                  <Select
+                    value={paymentForm.currency}
+                    onValueChange={(value) => setPaymentForm({ ...paymentForm, currency: value })}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -320,7 +337,9 @@ export const SandboxDashboard: React.FC = () => {
                   <div className="flex items-center space-x-2 mt-1">
                     <Switch
                       checked={paymentForm.shouldFail}
-                      onCheckedChange={(checked) => setPaymentForm({...paymentForm, shouldFail: checked})}
+                      onCheckedChange={(checked) =>
+                        setPaymentForm({ ...paymentForm, shouldFail: checked })
+                      }
                     />
                     <span className="text-sm">Enable failure simulation</span>
                   </div>
@@ -328,7 +347,12 @@ export const SandboxDashboard: React.FC = () => {
                 {paymentForm.shouldFail && (
                   <div>
                     <label className="text-sm font-medium">Failure Type</label>
-                    <Select value={paymentForm.failureType} onValueChange={(value) => setPaymentForm({...paymentForm, failureType: value})}>
+                    <Select
+                      value={paymentForm.failureType}
+                      onValueChange={(value) =>
+                        setPaymentForm({ ...paymentForm, failureType: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -356,14 +380,26 @@ export const SandboxDashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-2">
                 {mockPayments.map((payment) => (
-                  <div key={payment.paymentId} className="flex items-center justify-between p-3 border rounded">
+                  <div
+                    key={payment.paymentId}
+                    className="flex items-center justify-between p-3 border rounded"
+                  >
                     <div>
                       <div className="font-medium">{payment.paymentId}</div>
                       <div className="text-sm text-muted-foreground">
-                        {payment.amount} {payment.currency} • {new Date(payment.timestamp).toLocaleString()}
+                        {payment.amount} {payment.currency} •{' '}
+                        {new Date(payment.timestamp).toLocaleString()}
                       </div>
                     </div>
-                    <Badge variant={payment.status === 'success' ? 'default' : payment.status === 'failed' ? 'destructive' : 'secondary'}>
+                    <Badge
+                      variant={
+                        payment.status === 'success'
+                          ? 'default'
+                          : payment.status === 'failed'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                    >
                       {payment.status}
                       {payment.failureType && ` (${payment.failureType})`}
                     </Badge>
@@ -386,15 +422,9 @@ export const SandboxDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button variant="outline">
-                  Simulate Subscription Billed
-                </Button>
-                <Button variant="outline">
-                  Simulate Grace Period
-                </Button>
-                <Button variant="outline">
-                  Simulate Dunning Process
-                </Button>
+                <Button variant="outline">Simulate Subscription Billed</Button>
+                <Button variant="outline">Simulate Grace Period</Button>
+                <Button variant="outline">Simulate Dunning Process</Button>
               </div>
             </CardContent>
           </Card>
@@ -408,7 +438,9 @@ export const SandboxDashboard: React.FC = () => {
             <CardContent className="space-y-4">
               {Object.entries(config.features).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  <span className="text-sm font-medium capitalize">
+                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
                   <Switch checked={value} disabled />
                 </div>
               ))}

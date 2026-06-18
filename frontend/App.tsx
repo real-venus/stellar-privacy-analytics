@@ -106,7 +106,10 @@ function App() {
           <Router>
             <div className="min-h-screen bg-gray-50">
               <Routes>
-                <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />} />
+                <Route
+                  path="/login"
+                  element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" replace />}
+                />
                 <Route
                   element={
                     <ProtectedRoute isAuthenticated={isAuthenticated}>

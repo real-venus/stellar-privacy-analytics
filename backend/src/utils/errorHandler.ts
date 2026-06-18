@@ -10,13 +10,13 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
-  if (error && typeof error === 'object' && 'message' in error) {
+  if (error && typeof error === "object" && "message" in error) {
     return String((error as any).message);
   }
-  return 'Unknown error occurred';
+  return "Unknown error occurred";
 }
 
 /**
@@ -32,18 +32,22 @@ export function getErrorStack(error: unknown): string | undefined {
 /**
  * Create a standardized error with context
  */
-export function createError(message: string, originalError?: unknown, context?: Record<string, any>): Error {
+export function createError(
+  message: string,
+  originalError?: unknown,
+  context?: Record<string, any>,
+): Error {
   const error = new Error(message);
-  
+
   if (originalError) {
     (error as any).originalError = originalError;
     (error as any).originalMessage = getErrorMessage(originalError);
   }
-  
+
   if (context) {
     (error as any).context = context;
   }
-  
+
   return error;
 }
 
@@ -51,30 +55,45 @@ export function createError(message: string, originalError?: unknown, context?: 
  * Validate input parameters
  */
 export class ValidationError extends Error {
-  constructor(message: string, public field?: string, public value?: any) {
+  constructor(
+    message: string,
+    public field?: string,
+    public value?: any,
+  ) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
   }
 }
 
 /**
  * Validate threshold cryptography parameters
  */
-export function validateThresholdParams(threshold: number, totalShares: number): void {
+export function validateThresholdParams(
+  threshold: number,
+  totalShares: number,
+): void {
   if (!Number.isInteger(threshold) || threshold < 2) {
-    throw new ValidationError('Threshold must be an integer >= 2', 'threshold', threshold);
+    throw new ValidationError(
+      "Threshold must be an integer >= 2",
+      "threshold",
+      threshold,
+    );
   }
-  
+
   if (!Number.isInteger(totalShares) || totalShares < threshold) {
     throw new ValidationError(
       `Total shares (${totalShares}) must be >= threshold (${threshold})`,
-      'totalShares',
-      totalShares
+      "totalShares",
+      totalShares,
     );
   }
-  
+
   if (totalShares > 100) {
-    throw new ValidationError('Total shares cannot exceed 100', 'totalShares', totalShares);
+    throw new ValidationError(
+      "Total shares cannot exceed 100",
+      "totalShares",
+      totalShares,
+    );
   }
 }
 
@@ -83,7 +102,11 @@ export function validateThresholdParams(threshold: number, totalShares: number):
  */
 export function validateKeySize(keySize: number): void {
   if (!Number.isInteger(keySize) || keySize < 16 || keySize > 64) {
-    throw new ValidationError('Key size must be between 16 and 64 bytes', 'keySize', keySize);
+    throw new ValidationError(
+      "Key size must be between 16 and 64 bytes",
+      "keySize",
+      keySize,
+    );
   }
 }
 
@@ -92,11 +115,11 @@ export function validateKeySize(keySize: number): void {
  */
 export function validateTTL(ttl: number): void {
   if (!Number.isInteger(ttl) || ttl < 60) {
-    throw new ValidationError('TTL must be at least 60 seconds', 'ttl', ttl);
+    throw new ValidationError("TTL must be at least 60 seconds", "ttl", ttl);
   }
-  
+
   if (ttl > 365 * 24 * 60 * 60) {
-    throw new ValidationError('TTL cannot exceed 1 year', 'ttl', ttl);
+    throw new ValidationError("TTL cannot exceed 1 year", "ttl", ttl);
   }
 }
 
@@ -105,7 +128,11 @@ export function validateTTL(ttl: number): void {
  */
 export function validateNonEmptyArray<T>(arr: T[], fieldName: string): void {
   if (!Array.isArray(arr) || arr.length === 0) {
-    throw new ValidationError(`${fieldName} must be a non-empty array`, fieldName, arr);
+    throw new ValidationError(
+      `${fieldName} must be a non-empty array`,
+      fieldName,
+      arr,
+    );
   }
 }
 
@@ -113,8 +140,12 @@ export function validateNonEmptyArray<T>(arr: T[], fieldName: string): void {
  * Validate string is not empty
  */
 export function validateNonEmptyString(str: string, fieldName: string): void {
-  if (typeof str !== 'string' || str.trim().length === 0) {
-    throw new ValidationError(`${fieldName} must be a non-empty string`, fieldName, str);
+  if (typeof str !== "string" || str.trim().length === 0) {
+    throw new ValidationError(
+      `${fieldName} must be a non-empty string`,
+      fieldName,
+      str,
+    );
   }
 }
 
@@ -160,5 +191,5 @@ export default {
   validateTTL,
   validateNonEmptyArray,
   validateNonEmptyString,
-  AsyncLock
+  AsyncLock,
 };

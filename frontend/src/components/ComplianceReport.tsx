@@ -1,16 +1,10 @@
-import React, { useState } from "react";
-import { format } from "date-fns";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState } from 'react';
+import { format } from 'date-fns';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Shield,
   CheckCircle,
@@ -22,12 +16,8 @@ import {
   Scale,
   Globe,
   Heart,
-} from "lucide-react";
-import {
-  downloadJsonFile,
-  downloadTextFile,
-  openPrintableReport,
-} from "../utils/exportHelpers";
+} from 'lucide-react';
+import { downloadJsonFile, downloadTextFile, openPrintableReport } from '../utils/exportHelpers';
 
 interface ComplianceRequirement {
   article: string;
@@ -52,7 +42,7 @@ interface ComplianceFramework {
 interface ComplianceReportProps {
   frameworks: ComplianceFramework[];
   organizationId?: string;
-  onExport?: (format: "pdf" | "json") => void;
+  onExport?: (format: 'pdf' | 'json') => void;
   className?: string;
 }
 
@@ -60,19 +50,17 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
   frameworks,
   organizationId,
   onExport,
-  className = "",
+  className = '',
 }) => {
-  const [selectedFramework, setSelectedFramework] = useState<string>(
-    frameworks[0]?.name || "",
-  );
+  const [selectedFramework, setSelectedFramework] = useState<string>(frameworks[0]?.name || '');
 
   const getFrameworkIcon = (framework: string) => {
     switch (framework.toLowerCase()) {
-      case "gdpr":
+      case 'gdpr':
         return <Globe className="h-5 w-5 text-blue-500" />;
-      case "ccpa":
+      case 'ccpa':
         return <Scale className="h-5 w-5 text-green-500" />;
-      case "hipaa":
+      case 'hipaa':
         return <Heart className="h-5 w-5 text-red-500" />;
       default:
         return <Shield className="h-5 w-5 text-gray-500" />;
@@ -80,17 +68,17 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
   };
 
   const getComplianceColor = (score: number) => {
-    if (score >= 0.9) return "text-green-600";
-    if (score >= 0.7) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 0.9) return 'text-green-600';
+    if (score >= 0.7) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   const getComplianceBadgeVariant = (
-    score: number,
-  ): "default" | "secondary" | "destructive" | "outline" => {
-    if (score >= 0.9) return "default";
-    if (score >= 0.7) return "secondary";
-    return "destructive";
+    score: number
+  ): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    if (score >= 0.9) return 'default';
+    if (score >= 0.7) return 'secondary';
+    return 'destructive';
   };
 
   const getRequirementIcon = (requirement: ComplianceRequirement) => {
@@ -105,26 +93,19 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
 
   const calculateOverallCompliance = () => {
     if (frameworks.length === 0) return 0;
-    const totalScore = frameworks.reduce(
-      (sum, fw) => sum + fw.complianceScore,
-      0,
-    );
+    const totalScore = frameworks.reduce((sum, fw) => sum + fw.complianceScore, 0);
     return totalScore / frameworks.length;
   };
 
   const getHighRiskGaps = () => {
     return frameworks.flatMap((fw) =>
       fw.requirements
-        .filter(
-          (req) => !req.satisfied && req.mandatory && req.riskImpact > 0.7,
-        )
-        .map((req) => ({ framework: fw.name, ...req })),
+        .filter((req) => !req.satisfied && req.mandatory && req.riskImpact > 0.7)
+        .map((req) => ({ framework: fw.name, ...req }))
     );
   };
 
-  const selectedFrameworkData = frameworks.find(
-    (fw) => fw.name === selectedFramework,
-  );
+  const selectedFrameworkData = frameworks.find((fw) => fw.name === selectedFramework);
 
   const overallCompliance = calculateOverallCompliance();
   const highRiskGaps = getHighRiskGaps();
@@ -140,11 +121,11 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
 
   const escapeHtml = (value: string) =>
     value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
 
   const buildPrintableHtml = () => {
     const frameworkRows = frameworks
@@ -157,9 +138,9 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
         <td>${framework.gaps.length}</td>
         <td>${escapeHtml(new Date(framework.lastAssessed).toLocaleDateString())}</td>
       </tr>
-    `,
+    `
       )
-      .join("");
+      .join('');
 
     const highRiskRows = highRiskGaps
       .map(
@@ -170,13 +151,13 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
         <td>${escapeHtml(gap.title)}</td>
         <td>${(gap.riskImpact * 100).toFixed(0)}%</td>
       </tr>
-    `,
+    `
       )
-      .join("");
+      .join('');
 
     return `
       <h1>Compliance Executive Summary</h1>
-      <p class="muted">Organization: ${escapeHtml(organizationId || "All frameworks")}</p>
+      <p class="muted">Organization: ${escapeHtml(organizationId || 'All frameworks')}</p>
       <p><strong>Overall Compliance:</strong> ${(overallCompliance * 100).toFixed(1)}%</p>
       <p><strong>High-Risk Gaps:</strong> ${highRiskGaps.length}</p>
       <h2>Framework Overview</h2>
@@ -211,30 +192,24 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
     `;
   };
 
-  const handleExport = (requestedFormat: "pdf" | "json") => {
+  const handleExport = (requestedFormat: 'pdf' | 'json') => {
     if (onExport) {
       onExport(requestedFormat);
       return;
     }
 
-    if (requestedFormat === "json") {
-      downloadJsonFile(
-        reportData,
-        `compliance-report-${format(new Date(), "yyyy-MM-dd")}.json`,
-      );
+    if (requestedFormat === 'json') {
+      downloadJsonFile(reportData, `compliance-report-${format(new Date(), 'yyyy-MM-dd')}.json`);
       return;
     }
 
     const printableHtml = buildPrintableHtml();
-    const opened = openPrintableReport(
-      "Compliance Executive Summary",
-      printableHtml,
-    );
+    const opened = openPrintableReport('Compliance Executive Summary', printableHtml);
     if (!opened) {
       downloadTextFile(
         printableHtml,
-        `compliance-report-${format(new Date(), "yyyy-MM-dd")}.html`,
-        "text/html;charset=utf-8",
+        `compliance-report-${format(new Date(), 'yyyy-MM-dd')}.html`,
+        'text/html;charset=utf-8'
       );
     }
   };
@@ -250,42 +225,30 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
               <span>Compliance Executive Summary</span>
             </div>
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport("json")}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
                 <Download className="h-4 w-4 mr-2" />
                 Export JSON
               </Button>
-              <Button size="sm" onClick={() => handleExport("pdf")}>
+              <Button size="sm" onClick={() => handleExport('pdf')}>
                 <FileText className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
             </div>
           </CardTitle>
-          <CardDescription>
-            Overall compliance status across all frameworks
-          </CardDescription>
+          <CardDescription>Overall compliance status across all frameworks</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 md:grid-cols-3">
             <div className="text-center">
-              <div
-                className={`text-3xl font-bold ${getComplianceColor(overallCompliance)}`}
-              >
+              <div className={`text-3xl font-bold ${getComplianceColor(overallCompliance)}`}>
                 {(overallCompliance * 100).toFixed(1)}%
               </div>
-              <p className="text-sm text-muted-foreground">
-                Overall Compliance
-              </p>
+              <p className="text-sm text-muted-foreground">Overall Compliance</p>
               <Progress value={overallCompliance * 100} className="mt-2" />
             </div>
 
             <div className="text-center">
-              <div className="text-3xl font-bold text-red-600">
-                {highRiskGaps.length}
-              </div>
+              <div className="text-3xl font-bold text-red-600">{highRiskGaps.length}</div>
               <p className="text-sm text-muted-foreground">High-Risk Gaps</p>
               <Badge variant="destructive" className="mt-2">
                 Immediate Action Required
@@ -293,12 +256,8 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
             </div>
 
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">
-                {frameworks.length}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Frameworks Covered
-              </p>
+              <div className="text-3xl font-bold text-blue-600">{frameworks.length}</div>
+              <p className="text-sm text-muted-foreground">Frameworks Covered</p>
               <div className="flex justify-center space-x-1 mt-2">
                 {frameworks.map((fw) => getFrameworkIcon(fw.name))}
               </div>
@@ -313,7 +272,7 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
           <Card
             key={framework.name}
             className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedFramework === framework.name ? "ring-2 ring-blue-500" : ""
+              selectedFramework === framework.name ? 'ring-2 ring-blue-500' : ''
             }`}
             onClick={() => setSelectedFramework(framework.name)}
           >
@@ -323,15 +282,12 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
                   {getFrameworkIcon(framework.name)}
                   <CardTitle className="text-lg">{framework.name}</CardTitle>
                 </div>
-                <Badge
-                  variant={getComplianceBadgeVariant(framework.complianceScore)}
-                >
+                <Badge variant={getComplianceBadgeVariant(framework.complianceScore)}>
                   {(framework.complianceScore * 100).toFixed(1)}%
                 </Badge>
               </div>
               <CardDescription>
-                Version {framework.version} • {framework.requirements.length}{" "}
-                requirements
+                Version {framework.version} • {framework.requirements.length} requirements
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -347,15 +303,12 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
                   </div>
                   <div>
                     <span className="text-muted-foreground">Gaps:</span>
-                    <span className="ml-1 font-medium text-red-600">
-                      {framework.gaps.length}
-                    </span>
+                    <span className="ml-1 font-medium text-red-600">{framework.gaps.length}</span>
                   </div>
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  Last assessed:{" "}
-                  {new Date(framework.lastAssessed).toLocaleDateString()}
+                  Last assessed: {new Date(framework.lastAssessed).toLocaleDateString()}
                 </div>
               </div>
             </CardContent>
@@ -372,8 +325,8 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
               <span>{selectedFrameworkData.name} - Detailed Analysis</span>
             </CardTitle>
             <CardDescription>
-              Compliance requirements and gaps for {selectedFrameworkData.name}{" "}
-              v{selectedFrameworkData.version}
+              Compliance requirements and gaps for {selectedFrameworkData.name} v
+              {selectedFrameworkData.version}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -386,53 +339,35 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
 
               <TabsContent value="requirements" className="space-y-4">
                 <div className="space-y-3">
-                  {selectedFrameworkData.requirements.map(
-                    (requirement, index) => (
-                      <Card
-                        key={index}
-                        className="border-l-4 border-l-gray-200"
-                      >
-                        <CardContent className="pt-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                {getRequirementIcon(requirement)}
-                                <h4 className="font-medium">
-                                  {requirement.article}
-                                </h4>
-                                {requirement.mandatory && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-xs"
-                                  >
-                                    Mandatory
-                                  </Badge>
-                                )}
-                              </div>
-                              <h5 className="text-sm font-medium mb-1">
-                                {requirement.title}
-                              </h5>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {requirement.description}
-                              </p>
-                              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                                <span>
-                                  Risk Impact:{" "}
-                                  {(requirement.riskImpact * 100).toFixed(0)}%
-                                </span>
-                                <span>
-                                  Status:{" "}
-                                  {requirement.satisfied
-                                    ? "Compliant"
-                                    : "Non-Compliant"}
-                                </span>
-                              </div>
+                  {selectedFrameworkData.requirements.map((requirement, index) => (
+                    <Card key={index} className="border-l-4 border-l-gray-200">
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              {getRequirementIcon(requirement)}
+                              <h4 className="font-medium">{requirement.article}</h4>
+                              {requirement.mandatory && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Mandatory
+                                </Badge>
+                              )}
+                            </div>
+                            <h5 className="text-sm font-medium mb-1">{requirement.title}</h5>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {requirement.description}
+                            </p>
+                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                              <span>Risk Impact: {(requirement.riskImpact * 100).toFixed(0)}%</span>
+                              <span>
+                                Status: {requirement.satisfied ? 'Compliant' : 'Non-Compliant'}
+                              </span>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ),
-                  )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </TabsContent>
 
@@ -445,12 +380,10 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
                           <div className="flex items-start space-x-2">
                             <XCircle className="h-4 w-4 text-red-500 mt-0.5" />
                             <div>
-                              <h4 className="font-medium text-red-700">
-                                {gap}
-                              </h4>
+                              <h4 className="font-medium text-red-700">{gap}</h4>
                               <p className="text-sm text-muted-foreground mt-1">
-                                This gap represents a compliance requirement
-                                that is not currently satisfied.
+                                This gap represents a compliance requirement that is not currently
+                                satisfied.
                               </p>
                             </div>
                           </div>
@@ -461,12 +394,9 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
                 ) : (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-green-700">
-                      No Compliance Gaps
-                    </h4>
+                    <h4 className="text-lg font-medium text-green-700">No Compliance Gaps</h4>
                     <p className="text-sm text-muted-foreground">
-                      All requirements for {selectedFrameworkData.name} are
-                      currently satisfied.
+                      All requirements for {selectedFrameworkData.name} are currently satisfied.
                     </p>
                   </div>
                 )}
@@ -512,13 +442,9 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
                   <div>
                     <h4 className="font-medium text-red-700">{gap.article}</h4>
                     <p className="text-sm text-red-600">{gap.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Framework: {gap.framework}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Framework: {gap.framework}</p>
                   </div>
-                  <Badge variant="destructive">
-                    Risk: {(gap.riskImpact * 100).toFixed(0)}%
-                  </Badge>
+                  <Badge variant="destructive">Risk: {(gap.riskImpact * 100).toFixed(0)}%</Badge>
                 </div>
               ))}
             </div>
@@ -538,15 +464,10 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-green-700">
-                  Immediate Actions
-                </h4>
+                <h4 className="text-sm font-medium text-green-700">Immediate Actions</h4>
                 <div className="space-y-2">
                   {highRiskGaps.slice(0, 3).map((gap, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-2 text-sm"
-                    >
+                    <div key={index} className="flex items-center space-x-2 text-sm">
                       <AlertTriangle className="h-3 w-3 text-red-500" />
                       <span>
                         Address {gap.article} - {gap.title}
@@ -557,9 +478,7 @@ const ComplianceReport: React.FC<ComplianceReportProps> = ({
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-blue-700">
-                  Long-term Improvements
-                </h4>
+                <h4 className="text-sm font-medium text-blue-700">Long-term Improvements</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="h-3 w-3 text-blue-500" />

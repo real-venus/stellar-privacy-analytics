@@ -1,7 +1,7 @@
-import { randomBytes, createHash, scrypt, timingSafeEqual } from 'crypto';
-import { HSMService, WrappedKey, KeyMetadata } from './hsmService';
-import { logger } from '../utils/logger';
-import { EventEmitter } from 'events';
+import { randomBytes, createHash, scrypt, timingSafeEqual } from "crypto";
+import { HSMService, WrappedKey, KeyMetadata } from "./hsmService";
+import { logger } from "../utils/logger";
+import { EventEmitter } from "events";
 
 export interface MasterKeyRecord {
   keyId: string;
@@ -9,7 +9,7 @@ export interface MasterKeyRecord {
   algorithm: string;
   createdAt: Date;
   lastUsed?: Date;
-  status: 'active' | 'deprecated' | 'revoked';
+  status: "active" | "deprecated" | "revoked";
   usageCount: number;
   maxUsage: number;
   wrappedDataKey?: WrappedKey;
@@ -47,12 +47,12 @@ export class MasterKeyManager extends EventEmitter {
     try {
       // Generate a new master key that never leaves the HSM
       const masterKeyBytes = randomBytes(32); // 256-bit key
-      
+
       // Wrap the master key in HSM
       const wrappedMasterKey = await this.hsmService.wrapKey(
         masterKeyBytes,
         undefined,
-        'aes-256-gcm'
+        "aes-256-gcm",
       );
 
       const masterKeyRecord: MasterKeyRecord = {
@@ -60,33 +60,33 @@ export class MasterKeyManager extends EventEmitter {
         version: wrappedMasterKey.version,
         algorithm: wrappedMasterKey.algorithm,
         createdAt: new Date(),
-        status: 'active',
+        status: "active",
         usageCount: 0,
         maxUsage: 1000000, // Limit usage to prevent key exhaustion
-        wrappedDataKey: wrappedMasterKey
+        wrappedDataKey: wrappedMasterKey,
       };
 
       this.masterKeys.set(wrappedMasterKey.keyId, masterKeyRecord);
       this.activeMasterKeyId = wrappedMasterKey.keyId;
 
-      logger.info('Master key initialized', { keyId: wrappedMasterKey.keyId });
-      this.emit('masterKeyInitialized', { keyId: wrappedMasterKey.keyId });
+      logger.info("Master key initialized", { keyId: wrappedMasterKey.keyId });
+      this.emit("masterKeyInitialized", { keyId: wrappedMasterKey.keyId });
 
       return wrappedMasterKey.keyId;
     } catch (error) {
-      logger.error('Failed to initialize master key:', error);
-      throw new Error('Master key initialization failed');
+      logger.error("Failed to initialize master key:", error);
+      throw new Error("Master key initialization failed");
     }
   }
 
   async generateDataKey(request: DataKeyRequest): Promise<DataKeyResponse> {
     if (!this.activeMasterKeyId) {
-      throw new Error('No active master key available');
+      throw new Error("No active master key available");
     }
 
     const masterKey = this.masterKeys.get(this.activeMasterKeyId);
-    if (!masterKey || masterKey.status !== 'active') {
-      throw new Error('Active master key is not available');
+    if (!masterKey || masterKey.status !== "active") {
+      throw new Error("Active master key is not available");
     }
 
     // Check usage limits
@@ -98,16 +98,16 @@ export class MasterKeyManager extends EventEmitter {
     try {
       // Generate data key
       const dataKeyBytes = randomBytes(32);
-      const plaintextKey = dataKeyBytes.toString('base64');
+      const plaintextKey = dataKeyBytes.toString("base64");
 
       // Create cache key
       const cacheKey = this.createCacheKey(request);
-      
+
       // Wrap data key with master key (via HSM)
       const wrappedDataKey = await this.hsmService.wrapKey(
         dataKeyBytes,
         this.activeMasterKeyId,
-        'aes-256-gcm'
+        "aes-256-gcm",
       );
 
       // Update usage count
@@ -116,36 +116,44 @@ export class MasterKeyManager extends EventEmitter {
       this.masterKeys.set(this.activeMasterKeyId, masterKey);
 
       // Cache the plaintext key temporarily for performance
-      const expiresAt = new Date(Date.now() + (request.ttl || this.dataKeyTtl) * 1000);
-      this.dataKeyCache.set(cacheKey, { key: plaintextKey, expires: expiresAt });
+      const expiresAt = new Date(
+        Date.now() + (request.ttl || this.dataKeyTtl) * 1000,
+      );
+      this.dataKeyCache.set(cacheKey, {
+        key: plaintextKey,
+        expires: expiresAt,
+      });
 
       const response: DataKeyResponse = {
         plaintextKey,
         wrappedKey: wrappedDataKey,
         keyId: this.activeMasterKeyId,
-        expiresAt: request.ttl ? expiresAt : undefined
+        expiresAt: request.ttl ? expiresAt : undefined,
       };
 
-      logger.debug('Data key generated', {
+      logger.debug("Data key generated", {
         keyId: this.activeMasterKeyId,
         purpose: request.purpose,
-        userId: request.userId
+        userId: request.userId,
       });
 
-      this.emit('dataKeyGenerated', {
+      this.emit("dataKeyGenerated", {
         masterKeyId: this.activeMasterKeyId,
         purpose: request.purpose,
-        userId: request.userId
+        userId: request.userId,
       });
 
       return response;
     } catch (error) {
-      logger.error('Failed to generate data key:', error);
-      throw new Error('Data key generation failed');
+      logger.error("Failed to generate data key:", error);
+      throw new Error("Data key generation failed");
     }
   }
 
-  async decryptDataKey(wrappedKey: WrappedKey, request: DataKeyRequest): Promise<string> {
+  async decryptDataKey(
+    wrappedKey: WrappedKey,
+    request: DataKeyRequest,
+  ): Promise<string> {
     // Check cache first
     const cacheKey = this.createCacheKey(request);
     const cached = this.dataKeyCache.get(cacheKey);
@@ -156,17 +164,22 @@ export class MasterKeyManager extends EventEmitter {
     try {
       // Unwrap data key using HSM
       const dataKeyBytes = await this.hsmService.unwrapKey(wrappedKey);
-      const plaintextKey = dataKeyBytes.toString('base64');
+      const plaintextKey = dataKeyBytes.toString("base64");
 
       // Cache for future use
-      const expiresAt = new Date(Date.now() + (request.ttl || this.dataKeyTtl) * 1000);
-      this.dataKeyCache.set(cacheKey, { key: plaintextKey, expires: expiresAt });
+      const expiresAt = new Date(
+        Date.now() + (request.ttl || this.dataKeyTtl) * 1000,
+      );
+      this.dataKeyCache.set(cacheKey, {
+        key: plaintextKey,
+        expires: expiresAt,
+      });
 
-      logger.debug('Data key decrypted', { keyId: wrappedKey.keyId });
+      logger.debug("Data key decrypted", { keyId: wrappedKey.keyId });
       return plaintextKey;
     } catch (error) {
-      logger.error('Failed to decrypt data key:', error);
-      throw new Error('Data key decryption failed');
+      logger.error("Failed to decrypt data key:", error);
+      throw new Error("Data key decryption failed");
     }
   }
 
@@ -177,12 +190,12 @@ export class MasterKeyManager extends EventEmitter {
 
     const currentMasterKey = this.masterKeys.get(this.activeMasterKeyId);
     if (!currentMasterKey) {
-      throw new Error('Current master key not found');
+      throw new Error("Current master key not found");
     }
 
     try {
       // Mark current key as deprecated
-      currentMasterKey.status = 'deprecated';
+      currentMasterKey.status = "deprecated";
       this.masterKeys.set(this.activeMasterKeyId, currentMasterKey);
 
       // Create new master key
@@ -191,26 +204,29 @@ export class MasterKeyManager extends EventEmitter {
       // Clear data key cache to force re-encryption with new master key
       this.dataKeyCache.clear();
 
-      logger.info('Master key rotated', {
+      logger.info("Master key rotated", {
         oldKeyId: this.activeMasterKeyId,
-        newKeyId
+        newKeyId,
       });
 
-      this.emit('masterKeyRotated', {
+      this.emit("masterKeyRotated", {
         oldKeyId: this.activeMasterKeyId,
-        newKeyId
+        newKeyId,
       });
 
       return newKeyId;
     } catch (error) {
       // Restore status on failure
-      currentMasterKey.status = 'active';
+      currentMasterKey.status = "active";
       this.masterKeys.set(this.activeMasterKeyId, currentMasterKey);
       throw error;
     }
   }
 
-  async revokeMasterKey(keyId: string, reason: string = 'Manual revocation'): Promise<void> {
+  async revokeMasterKey(
+    keyId: string,
+    reason: string = "Manual revocation",
+  ): Promise<void> {
     const masterKey = this.masterKeys.get(keyId);
     if (!masterKey) {
       throw new Error(`Master key ${keyId} not found`);
@@ -221,7 +237,7 @@ export class MasterKeyManager extends EventEmitter {
       await this.hsmService.revokeKey(keyId, reason);
 
       // Update local status
-      masterKey.status = 'revoked';
+      masterKey.status = "revoked";
       this.masterKeys.set(keyId, masterKey);
 
       // Clear cache if this was the active key
@@ -230,8 +246,8 @@ export class MasterKeyManager extends EventEmitter {
         this.dataKeyCache.clear();
       }
 
-      logger.warn('Master key revoked', { keyId, reason });
-      this.emit('masterKeyRevoked', { keyId, reason });
+      logger.warn("Master key revoked", { keyId, reason });
+      this.emit("masterKeyRevoked", { keyId, reason });
     } catch (error) {
       logger.error(`Failed to revoke master key ${keyId}:`, error);
       throw error;
@@ -241,40 +257,48 @@ export class MasterKeyManager extends EventEmitter {
   private createCacheKey(request: DataKeyRequest): string {
     const keyData = {
       purpose: request.purpose,
-      userId: request.userId || 'anonymous',
-      context: request.context || {}
+      userId: request.userId || "anonymous",
+      context: request.context || {},
     };
-    return createHash('sha256')
-      .update(JSON.stringify(keyData))
-      .digest('hex');
+    return createHash("sha256").update(JSON.stringify(keyData)).digest("hex");
   }
 
   private startCacheCleanup(): void {
-    setInterval(() => {
-      const now = new Date();
-      let cleanedCount = 0;
+    setInterval(
+      () => {
+        const now = new Date();
+        let cleanedCount = 0;
 
-      for (const [key, value] of this.dataKeyCache.entries()) {
-        if (value.expires <= now) {
-          this.dataKeyCache.delete(key);
-          cleanedCount++;
+        for (const [key, value] of this.dataKeyCache.entries()) {
+          if (value.expires <= now) {
+            this.dataKeyCache.delete(key);
+            cleanedCount++;
+          }
         }
-      }
 
-      // Enforce cache size limit
-      if (this.dataKeyCache.size > this.maxCacheSize) {
-        const entries = Array.from(this.dataKeyCache.entries())
-          .sort((a, b) => a[1].expires.getTime() - b[1].expires.getTime());
-        
-        const toDelete = entries.slice(0, this.dataKeyCache.size - this.maxCacheSize);
-        toDelete.forEach(([key]) => this.dataKeyCache.delete(key));
-        cleanedCount += toDelete.length;
-      }
+        // Enforce cache size limit
+        if (this.dataKeyCache.size > this.maxCacheSize) {
+          const entries = Array.from(this.dataKeyCache.entries()).sort(
+            (a, b) => a[1].expires.getTime() - b[1].expires.getTime(),
+          );
 
-      if (cleanedCount > 0) {
-        logger.debug('Cache cleanup completed', { cleanedCount, cacheSize: this.dataKeyCache.size });
-      }
-    }, 5 * 60 * 1000); // Run every 5 minutes
+          const toDelete = entries.slice(
+            0,
+            this.dataKeyCache.size - this.maxCacheSize,
+          );
+          toDelete.forEach(([key]) => this.dataKeyCache.delete(key));
+          cleanedCount += toDelete.length;
+        }
+
+        if (cleanedCount > 0) {
+          logger.debug("Cache cleanup completed", {
+            cleanedCount,
+            cacheSize: this.dataKeyCache.size,
+          });
+        }
+      },
+      5 * 60 * 1000,
+    ); // Run every 5 minutes
   }
 
   getMasterKeyStatus(): {
@@ -286,14 +310,14 @@ export class MasterKeyManager extends EventEmitter {
     cacheSize: number;
   } {
     const keys = Array.from(this.masterKeys.values());
-    
+
     return {
       activeKeyId: this.activeMasterKeyId,
       totalKeys: keys.length,
-      activeKeys: keys.filter(k => k.status === 'active').length,
-      deprecatedKeys: keys.filter(k => k.status === 'deprecated').length,
-      revokedKeys: keys.filter(k => k.status === 'revoked').length,
-      cacheSize: this.dataKeyCache.size
+      activeKeys: keys.filter((k) => k.status === "active").length,
+      deprecatedKeys: keys.filter((k) => k.status === "deprecated").length,
+      revokedKeys: keys.filter((k) => k.status === "revoked").length,
+      cacheSize: this.dataKeyCache.size,
     };
   }
 
@@ -307,13 +331,13 @@ export class MasterKeyManager extends EventEmitter {
 
   clearCache(): void {
     this.dataKeyCache.clear();
-    logger.info('Data key cache cleared');
+    logger.info("Data key cache cleared");
   }
 
   setCacheSettings(maxSize: number, ttl: number): void {
     this.maxCacheSize = maxSize;
     this.dataKeyTtl = ttl;
-    logger.info('Cache settings updated', { maxSize, ttl });
+    logger.info("Cache settings updated", { maxSize, ttl });
   }
 
   async healthCheck(): Promise<{
@@ -324,18 +348,18 @@ export class MasterKeyManager extends EventEmitter {
     issues: string[];
   }> {
     const issues: string[] = [];
-    
+
     if (!this.activeMasterKeyId) {
-      issues.push('No active master key');
+      issues.push("No active master key");
     }
 
     const hsmStatus = this.hsmService.getSystemStatus();
     if (!hsmStatus.connectionHealth) {
-      issues.push('HSM connection unhealthy');
+      issues.push("HSM connection unhealthy");
     }
 
     if (this.hsmService.isKillSwitchActive()) {
-      issues.push('HSM kill switch is active');
+      issues.push("HSM kill switch is active");
     }
 
     return {
@@ -343,7 +367,7 @@ export class MasterKeyManager extends EventEmitter {
       activeMasterKey: !!this.activeMasterKeyId,
       hsmConnection: hsmStatus.connectionHealth,
       cacheSize: this.dataKeyCache.size,
-      issues
+      issues,
     };
   }
 }

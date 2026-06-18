@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Trash2, 
-  Edit, 
-  CheckCircle, 
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Trash2,
+  Edit,
+  CheckCircle,
   XCircle,
-  RefreshCw
-} from 'lucide-react';
+  RefreshCw,
+} from "lucide-react";
 
 interface ServiceRegistration {
   name: string;
@@ -24,7 +24,7 @@ interface ServiceInstance {
   name: string;
   host: string;
   port: number;
-  health: 'healthy' | 'unhealthy' | 'unknown';
+  health: "healthy" | "unhealthy" | "unknown";
   lastHealthCheck: string;
   version: string;
   tags: string[];
@@ -36,13 +36,13 @@ const ServiceRegistry: React.FC = () => {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<ServiceRegistration>({
-    name: '',
-    host: '',
+    name: "",
+    host: "",
     port: 3000,
-    version: '1.0.0',
+    version: "1.0.0",
     weight: 1,
     tags: [],
-    healthCheckInterval: 30000
+    healthCheckInterval: 30000,
   });
 
   useEffect(() => {
@@ -53,11 +53,11 @@ const ServiceRegistry: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch('/api/v1/service-discovery/services');
+      const response = await fetch("/api/v1/service-discovery/services");
       const data = await response.json();
       setServices(data.services || []);
     } catch (error) {
-      console.error('Failed to fetch services:', error);
+      console.error("Failed to fetch services:", error);
     } finally {
       setLoading(false);
     }
@@ -66,55 +66,61 @@ const ServiceRegistry: React.FC = () => {
   const handleRegisterService = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/v1/service-discovery/services/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        "/api/v1/service-discovery/services/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
         },
-        body: JSON.stringify(formData),
-      });
+      );
 
       if (response.ok) {
         setShowRegisterForm(false);
         setFormData({
-          name: '',
-          host: '',
+          name: "",
+          host: "",
           port: 3000,
-          version: '1.0.0',
+          version: "1.0.0",
           weight: 1,
           tags: [],
-          healthCheckInterval: 30000
+          healthCheckInterval: 30000,
         });
         fetchServices();
       }
     } catch (error) {
-      console.error('Failed to register service:', error);
+      console.error("Failed to register service:", error);
     }
   };
 
   const handleDeregisterService = async (serviceId: string) => {
-    if (!confirm('Are you sure you want to deregister this service?')) {
+    if (!confirm("Are you sure you want to deregister this service?")) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/v1/service-discovery/services/${serviceId}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/v1/service-discovery/services/${serviceId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (response.ok) {
         fetchServices();
       }
     } catch (error) {
-      console.error('Failed to deregister service:', error);
+      console.error("Failed to deregister service:", error);
     }
   };
 
   const getHealthIcon = (health: string) => {
     switch (health) {
-      case 'healthy':
+      case "healthy":
         return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case 'unhealthy':
+      case "unhealthy":
         return <XCircle className="h-5 w-5 text-red-600" />;
       default:
         return <CheckCircle className="h-5 w-5 text-yellow-600" />;
@@ -135,14 +141,14 @@ const ServiceRegistry: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Service Registry</h2>
         <div className="flex space-x-3">
-          <button 
+          <button
             onClick={fetchServices}
             className="btn-secondary flex items-center"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </button>
-          <button 
+          <button
             onClick={() => setShowRegisterForm(true)}
             className="btn-primary flex items-center"
           >
@@ -157,65 +163,103 @@ const ServiceRegistry: React.FC = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Register New Service</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Register New Service
+              </h3>
               <form onSubmit={handleRegisterService} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Service Name</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Service Name
+                  </label>
                   <input
                     type="text"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Host</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Host
+                  </label>
                   <input
                     type="text"
                     required
                     value={formData.host}
-                    onChange={(e) => setFormData({...formData, host: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, host: e.target.value })
+                    }
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Port</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Port
+                  </label>
                   <input
                     type="number"
                     required
                     min="1"
                     max="65535"
                     value={formData.port}
-                    onChange={(e) => setFormData({...formData, port: parseInt(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        port: parseInt(e.target.value),
+                      })
+                    }
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Version</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Version
+                  </label>
                   <input
                     type="text"
                     value={formData.version}
-                    onChange={(e) => setFormData({...formData, version: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, version: e.target.value })
+                    }
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Weight</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Weight
+                  </label>
                   <input
                     type="number"
                     min="1"
                     value={formData.weight}
-                    onChange={(e) => setFormData({...formData, weight: parseInt(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        weight: parseInt(e.target.value),
+                      })
+                    }
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tags (comma-separated)
+                  </label>
                   <input
                     type="text"
-                    value={formData.tags?.join(', ')}
-                    onChange={(e) => setFormData({...formData, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)})}
+                    value={formData.tags?.join(", ")}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tags: e.target.value
+                          .split(",")
+                          .map((tag) => tag.trim())
+                          .filter(Boolean),
+                      })
+                    }
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   />
                 </div>
@@ -240,9 +284,12 @@ const ServiceRegistry: React.FC = () => {
       {/* Services List */}
       <div className="metric-card">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Registered Services</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Registered Services
+          </h3>
           <p className="text-sm text-gray-500">
-            {services.length} service{services.length !== 1 ? 's' : ''} registered
+            {services.length} service{services.length !== 1 ? "s" : ""}{" "}
+            registered
           </p>
         </div>
 
@@ -251,11 +298,13 @@ const ServiceRegistry: React.FC = () => {
             <div className="text-gray-400 mb-4">
               <Plus className="h-12 w-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Services Registered</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Services Registered
+            </h3>
             <p className="text-gray-500 mb-4">
               Get started by registering your first service.
             </p>
-            <button 
+            <button
               onClick={() => setShowRegisterForm(true)}
               className="btn-primary"
             >
@@ -309,11 +358,15 @@ const ServiceRegistry: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        service.health === 'healthy' ? 'status-healthy' :
-                        service.health === 'unhealthy' ? 'status-unhealthy' :
-                        'status-unknown'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          service.health === "healthy"
+                            ? "status-healthy"
+                            : service.health === "unhealthy"
+                              ? "status-unhealthy"
+                              : "status-unknown"
+                        }`}
+                      >
                         {service.health}
                       </span>
                     </td>

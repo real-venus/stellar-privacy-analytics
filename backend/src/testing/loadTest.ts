@@ -1,5 +1,8 @@
-import { OptimizedAnonymizationWorker, WorkerConfig } from '../workers/optimizedAnonymizationWorker';
-import { logger } from '../utils/logger';
+import {
+  OptimizedAnonymizationWorker,
+  WorkerConfig,
+} from "../workers/optimizedAnonymizationWorker";
+import { logger } from "../utils/logger";
 
 export interface LoadTestConfig {
   duration: number; // Test duration in milliseconds
@@ -53,7 +56,11 @@ export class LoadTester {
   private config: LoadTestConfig;
   private results: Partial<LoadTestResults> = {};
   private processingTimes: number[] = [];
-  private queueDepthSamples: Array<{ timestamp: Date; waiting: number; active: number }> = [];
+  private queueDepthSamples: Array<{
+    timestamp: Date;
+    waiting: number;
+    active: number;
+  }> = [];
   private isRunning: boolean = false;
   private jobsSubmitted: number = 0;
   private jobsCompleted: number = 0;
@@ -68,7 +75,7 @@ export class LoadTester {
    * Run load test
    */
   async run(): Promise<LoadTestResults> {
-    logger.info('Starting load test', {
+    logger.info("Starting load test", {
       duration: this.config.duration,
       jobsPerSecond: this.config.jobsPerSecond,
     });
@@ -100,7 +107,7 @@ export class LoadTester {
       // Calculate results
       return this.calculateResults(startTime, endTime);
     } catch (error) {
-      logger.error('Load test failed:', error);
+      logger.error("Load test failed:", error);
       throw error;
     } finally {
       this.isRunning = false;
@@ -111,7 +118,7 @@ export class LoadTester {
    * Ramp up phase - gradually increase load
    */
   private async rampUp(): Promise<void> {
-    logger.info('Load test: Ramp up phase');
+    logger.info("Load test: Ramp up phase");
 
     const steps = 10;
     const stepDuration = this.config.rampUpTime / steps;
@@ -127,9 +134,10 @@ export class LoadTester {
    * Sustained load phase - maintain target load
    */
   private async sustainedLoad(): Promise<void> {
-    logger.info('Load test: Sustained load phase');
+    logger.info("Load test: Sustained load phase");
 
-    const sustainedDuration = this.config.duration - this.config.rampUpTime - this.config.rampDownTime;
+    const sustainedDuration =
+      this.config.duration - this.config.rampUpTime - this.config.rampDownTime;
     await this.generateLoad(this.config.jobsPerSecond, sustainedDuration);
   }
 
@@ -137,7 +145,7 @@ export class LoadTester {
    * Ramp down phase - gradually decrease load
    */
   private async rampDown(): Promise<void> {
-    logger.info('Load test: Ramp down phase');
+    logger.info("Load test: Ramp down phase");
 
     const steps = 10;
     const stepDuration = this.config.rampDownTime / steps;
@@ -152,7 +160,10 @@ export class LoadTester {
   /**
    * Generate load at specified rate
    */
-  private async generateLoad(jobsPerSecond: number, duration: number): Promise<void> {
+  private async generateLoad(
+    jobsPerSecond: number,
+    duration: number,
+  ): Promise<void> {
     const interval = 1000 / jobsPerSecond;
     const endTime = Date.now() + duration;
 
@@ -182,7 +193,7 @@ export class LoadTester {
       // Track job completion
       this.trackJobCompletion(jobId);
     } catch (error) {
-      logger.error('Failed to submit job:', error);
+      logger.error("Failed to submit job:", error);
       this.jobsFailed++;
     }
   }
@@ -202,7 +213,7 @@ export class LoadTester {
       while (elapsed < maxWaitTime) {
         try {
           const status = await this.worker.getJobStatus(jobId);
-          
+
           if (status.finishedOn) {
             const processingTime = Date.now() - startTime;
             this.processingTimes.push(processingTime);
@@ -225,7 +236,7 @@ export class LoadTester {
       // Timeout
       this.jobsFailed++;
     } catch (error) {
-      logger.error('Error tracking job completion:', error);
+      logger.error("Error tracking job completion:", error);
       this.jobsFailed++;
     }
   }
@@ -243,7 +254,7 @@ export class LoadTester {
           active: stats.active,
         });
       } catch (error) {
-        logger.error('Error monitoring queue depth:', error);
+        logger.error("Error monitoring queue depth:", error);
       }
     }, 5000); // Sample every 5 seconds
   }
@@ -252,23 +263,23 @@ export class LoadTester {
    * Wait for all jobs to complete
    */
   private async waitForCompletion(): Promise<void> {
-    logger.info('Waiting for remaining jobs to complete...');
+    logger.info("Waiting for remaining jobs to complete...");
 
     const maxWaitTime = 600000; // 10 minutes
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxWaitTime) {
       const stats = await this.worker.getQueueStats();
-      
+
       if (stats.waiting === 0 && stats.active === 0) {
-        logger.info('All jobs completed');
+        logger.info("All jobs completed");
         return;
       }
 
       await this.sleep(5000);
     }
 
-    logger.warn('Timeout waiting for jobs to complete');
+    logger.warn("Timeout waiting for jobs to complete");
   }
 
   /**
@@ -303,7 +314,7 @@ export class LoadTester {
       recommendations: this.generateRecommendations(),
     };
 
-    logger.info('Load test completed', {
+    logger.info("Load test completed", {
       totalJobsSubmitted: results.totalJobsSubmitted,
       totalJobsCompleted: results.totalJobsCompleted,
       totalJobsFailed: results.totalJobsFailed,
@@ -324,25 +335,28 @@ export class LoadTester {
     const errorRate = (this.jobsFailed / this.jobsSubmitted) * 100;
     if (errorRate > 5) {
       recommendations.push(
-        `High error rate (${errorRate.toFixed(2)}%). Consider increasing worker concurrency or investigating failures.`
+        `High error rate (${errorRate.toFixed(2)}%). Consider increasing worker concurrency or investigating failures.`,
       );
     }
 
     // Check queue depth
     const avgQueueDepth = this.calculateAverage(
-      this.queueDepthSamples.map(s => s.waiting + s.active)
+      this.queueDepthSamples.map((s) => s.waiting + s.active),
     );
     if (avgQueueDepth > 1000) {
       recommendations.push(
-        `High average queue depth (${avgQueueDepth.toFixed(0)}). Consider horizontal scaling or increasing worker concurrency.`
+        `High average queue depth (${avgQueueDepth.toFixed(0)}). Consider horizontal scaling or increasing worker concurrency.`,
       );
     }
 
     // Check processing times
-    const p95Time = this.calculatePercentile(this.processingTimes.sort((a, b) => a - b), 95);
+    const p95Time = this.calculatePercentile(
+      this.processingTimes.sort((a, b) => a - b),
+      95,
+    );
     if (p95Time > 60000) {
       recommendations.push(
-        `High P95 processing time (${(p95Time / 1000).toFixed(2)}s). Consider optimizing job processing or adding more workers.`
+        `High P95 processing time (${(p95Time / 1000).toFixed(2)}s). Consider optimizing job processing or adding more workers.`,
       );
     }
 
@@ -351,37 +365,41 @@ export class LoadTester {
     const actualThroughput = this.jobsCompleted / (this.config.duration / 1000);
     if (actualThroughput < targetThroughput * 0.8) {
       recommendations.push(
-        `Throughput below target (${actualThroughput.toFixed(2)} vs ${targetThroughput} jobs/s). System may be under-provisioned.`
+        `Throughput below target (${actualThroughput.toFixed(2)} vs ${targetThroughput} jobs/s). System may be under-provisioned.`,
       );
     }
 
     if (recommendations.length === 0) {
-      recommendations.push('System performance is within acceptable parameters.');
+      recommendations.push(
+        "System performance is within acceptable parameters.",
+      );
     }
 
     return recommendations;
   }
 
-  private selectPriority(): 'critical' | 'high' | 'normal' | 'low' {
+  private selectPriority(): "critical" | "high" | "normal" | "low" {
     const rand = Math.random() * 100;
     const dist = this.config.priorityDistribution;
 
-    if (rand < dist.critical) return 'critical';
-    if (rand < dist.critical + dist.high) return 'high';
-    if (rand < dist.critical + dist.high + dist.normal) return 'normal';
-    return 'low';
+    if (rand < dist.critical) return "critical";
+    if (rand < dist.critical + dist.high) return "high";
+    if (rand < dist.critical + dist.high + dist.normal) return "normal";
+    return "low";
   }
 
-  private selectDatasetSize(): 'small' | 'medium' | 'large' {
+  private selectDatasetSize(): "small" | "medium" | "large" {
     const rand = Math.random() * 100;
     const sizes = this.config.datasetSizes;
 
-    if (rand < sizes.small) return 'small';
-    if (rand < sizes.small + sizes.medium) return 'medium';
-    return 'large';
+    if (rand < sizes.small) return "small";
+    if (rand < sizes.small + sizes.medium) return "medium";
+    return "large";
   }
 
-  private generateMetadata(size: 'small' | 'medium' | 'large'): Record<string, any> {
+  private generateMetadata(
+    size: "small" | "medium" | "large",
+  ): Record<string, any> {
     const fieldCounts = {
       small: 5,
       medium: 20,
@@ -399,17 +417,17 @@ export class LoadTester {
   }
 
   private generateRandomValue(): string {
-    const types = ['email', 'phone', 'name', 'address', 'text'];
+    const types = ["email", "phone", "name", "address", "text"];
     const type = types[Math.floor(Math.random() * types.length)];
 
     switch (type) {
-      case 'email':
+      case "email":
         return `user${Math.random().toString(36).substring(7)}@example.com`;
-      case 'phone':
+      case "phone":
         return `+1${Math.floor(Math.random() * 10000000000)}`;
-      case 'name':
+      case "name":
         return `John Doe ${Math.random().toString(36).substring(7)}`;
-      case 'address':
+      case "address":
         return `${Math.floor(Math.random() * 9999)} Main St, City, State`;
       default:
         return `Random text ${Math.random().toString(36).substring(7)}`;
@@ -421,14 +439,17 @@ export class LoadTester {
     return values.reduce((a, b) => a + b, 0) / values.length;
   }
 
-  private calculatePercentile(sortedValues: number[], percentile: number): number {
+  private calculatePercentile(
+    sortedValues: number[],
+    percentile: number,
+  ): number {
     if (sortedValues.length === 0) return 0;
     const index = Math.ceil((percentile / 100) * sortedValues.length) - 1;
     return sortedValues[index];
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -437,7 +458,7 @@ export class LoadTester {
  */
 export async function runLoadTestScenario(
   worker: OptimizedAnonymizationWorker,
-  scenario: 'light' | 'moderate' | 'heavy' | 'peak'
+  scenario: "light" | "moderate" | "heavy" | "peak",
 ): Promise<LoadTestResults> {
   const scenarios: Record<string, LoadTestConfig> = {
     light: {
@@ -476,6 +497,6 @@ export async function runLoadTestScenario(
 
   const config = scenarios[scenario];
   const tester = new LoadTester(worker, config);
-  
+
   return tester.run();
 }

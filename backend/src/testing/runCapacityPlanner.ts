@@ -4,11 +4,11 @@
  * Generate capacity recommendations based on load test results
  */
 
-import { CapacityPlanner, CapacityRequirements } from './capacityPlanner';
-import { LoadTestResults } from './loadTest';
-import { logger } from '../utils/logger';
-import * as fs from 'fs';
-import * as path from 'path';
+import { CapacityPlanner, CapacityRequirements } from "./capacityPlanner";
+import { LoadTestResults } from "./loadTest";
+import { logger } from "../utils/logger";
+import * as fs from "fs";
+import * as path from "path";
 
 interface CLIOptions {
   results?: string;
@@ -24,26 +24,26 @@ function parseArgs(): CLIOptions {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     switch (arg) {
-      case '--results':
-      case '-r':
+      case "--results":
+      case "-r":
         options.results = args[++i];
         break;
-      case '--expected-jobs':
-      case '-e':
+      case "--expected-jobs":
+      case "-e":
         options.expectedJobsPerSecond = parseInt(args[++i]);
         break;
-      case '--peak-jobs':
-      case '-p':
+      case "--peak-jobs":
+      case "-p":
         options.peakJobsPerSecond = parseInt(args[++i]);
         break;
-      case '--output':
-      case '-o':
+      case "--output":
+      case "-o":
         options.output = args[++i];
         break;
-      case '--help':
-      case '-h':
+      case "--help":
+      case "-h":
         options.help = true;
         break;
     }
@@ -80,7 +80,7 @@ Examples:
 
 async function generatePlan(options: CLIOptions): Promise<void> {
   try {
-    logger.info('Generating capacity plan...', options);
+    logger.info("Generating capacity plan...", options);
 
     let loadTestResults: LoadTestResults;
     let requirements: CapacityRequirements;
@@ -88,24 +88,26 @@ async function generatePlan(options: CLIOptions): Promise<void> {
     // Load test results if provided
     if (options.results) {
       const resultsPath = path.resolve(options.results);
-      
+
       if (!fs.existsSync(resultsPath)) {
         throw new Error(`Results file not found: ${resultsPath}`);
       }
 
-      const resultsData = fs.readFileSync(resultsPath, 'utf-8');
+      const resultsData = fs.readFileSync(resultsPath, "utf-8");
       loadTestResults = JSON.parse(resultsData);
 
-      logger.info('Loaded load test results', {
+      logger.info("Loaded load test results", {
         duration: loadTestResults.duration,
         throughput: loadTestResults.throughput,
       });
 
       // Extract requirements from load test
       requirements = {
-        expectedJobsPerSecond: options.expectedJobsPerSecond || loadTestResults.throughput,
-        peakJobsPerSecond: options.peakJobsPerSecond || loadTestResults.throughput * 1.5,
-        averageJobSize: 'medium',
+        expectedJobsPerSecond:
+          options.expectedJobsPerSecond || loadTestResults.throughput,
+        peakJobsPerSecond:
+          options.peakJobsPerSecond || loadTestResults.throughput * 1.5,
+        averageJobSize: "medium",
         priorityDistribution: {
           critical: 10,
           high: 20,
@@ -124,7 +126,7 @@ async function generatePlan(options: CLIOptions): Promise<void> {
       requirements = {
         expectedJobsPerSecond: options.expectedJobsPerSecond,
         peakJobsPerSecond: options.peakJobsPerSecond,
-        averageJobSize: 'medium',
+        averageJobSize: "medium",
         priorityDistribution: {
           critical: 10,
           high: 20,
@@ -172,20 +174,25 @@ async function generatePlan(options: CLIOptions): Promise<void> {
         recommendations: [],
       };
     } else {
-      logger.error('Either --results or both --expected-jobs and --peak-jobs must be specified');
+      logger.error(
+        "Either --results or both --expected-jobs and --peak-jobs must be specified",
+      );
       printHelp();
       process.exit(1);
     }
 
     // Generate capacity recommendations
-    logger.info('Analyzing requirements and generating recommendations...');
-    const recommendations = CapacityPlanner.analyzeLoadTest(loadTestResults, requirements);
+    logger.info("Analyzing requirements and generating recommendations...");
+    const recommendations = CapacityPlanner.analyzeLoadTest(
+      loadTestResults,
+      requirements,
+    );
 
     // Generate report
     const report = CapacityPlanner.generateReport(recommendations);
 
     // Print report
-    console.log('\n' + report);
+    console.log("\n" + report);
 
     // Save to file if specified
     if (options.output) {
@@ -194,17 +201,16 @@ async function generatePlan(options: CLIOptions): Promise<void> {
       logger.info(`Capacity plan saved to ${outputPath}`);
 
       // Also save JSON version
-      const jsonPath = outputPath.replace(/\\.txt$/, '.json');
+      const jsonPath = outputPath.replace(/\\.txt$/, ".json");
       fs.writeFileSync(jsonPath, JSON.stringify(recommendations, null, 2));
       logger.info(`JSON recommendations saved to ${jsonPath}`);
     }
 
-    logger.info('Capacity planning completed successfully');
+    logger.info("Capacity planning completed successfully");
     process.exit(0);
-
   } catch (error) {
-    logger.error('Capacity planning failed:', error);
-    console.error('\nError:', error.message);
+    logger.error("Capacity planning failed:", error);
+    console.error("\nError:", error.message);
     process.exit(1);
   }
 }

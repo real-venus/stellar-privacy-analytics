@@ -1,6 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from 'recharts';
 import {
   Sliders,
   Shield,
@@ -14,7 +25,7 @@ import {
   Settings,
   RefreshCw,
   Upload,
-  FileText
+  FileText,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -63,7 +74,7 @@ const PRESET_CONFIGS: PresetConfig[] = [
     delta: 1e-5,
     mechanism: 'gaussian',
     sensitivity: 1.0,
-    useCase: 'Sensitive personal data, medical records'
+    useCase: 'Sensitive personal data, medical records',
   },
   {
     id: 'balanced',
@@ -73,7 +84,7 @@ const PRESET_CONFIGS: PresetConfig[] = [
     delta: 1e-5,
     mechanism: 'laplace',
     sensitivity: 1.0,
-    useCase: 'General analytics, business intelligence'
+    useCase: 'General analytics, business intelligence',
   },
   {
     id: 'high-utility',
@@ -83,7 +94,7 @@ const PRESET_CONFIGS: PresetConfig[] = [
     delta: 1e-4,
     mechanism: 'laplace',
     sensitivity: 1.0,
-    useCase: 'Public datasets, aggregated statistics'
+    useCase: 'Public datasets, aggregated statistics',
   },
   {
     id: 'research',
@@ -93,15 +104,15 @@ const PRESET_CONFIGS: PresetConfig[] = [
     delta: 1e-5,
     mechanism: 'gaussian',
     sensitivity: 1.0,
-    useCase: 'Academic research, controlled studies'
-  }
+    useCase: 'Academic research, controlled studies',
+  },
 ];
 
 const DEFAULT_PARAMETERS: NoiseParameters = {
   epsilon: 1.0,
   delta: 1e-5,
   mechanism: 'laplace',
-  sensitivity: 1.0
+  sensitivity: 1.0,
 };
 
 const DifferentialPrivacyConfig: React.FC = () => {
@@ -120,14 +131,15 @@ const DifferentialPrivacyConfig: React.FC = () => {
       return params.sensitivity / params.epsilon;
     } else {
       // Gaussian mechanism
-      const sigma = (params.sensitivity * Math.sqrt(2 * Math.log(1.25 / params.delta))) / params.epsilon;
+      const sigma =
+        (params.sensitivity * Math.sqrt(2 * Math.log(1.25 / params.delta))) / params.epsilon;
       return sigma;
     }
   }, []);
 
   // Calculate utility score (inverse of noise scale)
   const calculateUtilityScore = useCallback((noiseScale: number): number => {
-    return Math.max(0, 100 - (noiseScale * 10));
+    return Math.max(0, 100 - noiseScale * 10);
   }, []);
 
   // Calculate privacy loss (higher epsilon = more privacy loss)
@@ -148,7 +160,7 @@ const DifferentialPrivacyConfig: React.FC = () => {
         epsilon,
         utilityScore,
         privacyLoss,
-        noiseScale
+        noiseScale,
       });
     }
     setTradeoffData(data);
@@ -174,73 +186,78 @@ const DifferentialPrivacyConfig: React.FC = () => {
   }, [parameters, calculateNoiseScale]);
 
   // Validate parameters
-  const validateParameters = useCallback((params: NoiseParameters): ValidationWarning[] => {
-    const warnings: ValidationWarning[] = [];
+  const validateParameters = useCallback(
+    (params: NoiseParameters): ValidationWarning[] => {
+      const warnings: ValidationWarning[] = [];
 
-    if (params.epsilon <= 0) {
-      warnings.push({
-        type: 'error',
-        message: 'Epsilon must be greater than 0',
-        recommendation: 'Set epsilon to at least 0.01'
-      });
-    }
+      if (params.epsilon <= 0) {
+        warnings.push({
+          type: 'error',
+          message: 'Epsilon must be greater than 0',
+          recommendation: 'Set epsilon to at least 0.01',
+        });
+      }
 
-    if (params.epsilon > 100) {
-      warnings.push({
-        type: 'warning',
-        message: 'Very high epsilon value may compromise privacy',
-        recommendation: 'Consider using epsilon < 10 for better privacy protection'
-      });
-    }
+      if (params.epsilon > 100) {
+        warnings.push({
+          type: 'warning',
+          message: 'Very high epsilon value may compromise privacy',
+          recommendation: 'Consider using epsilon < 10 for better privacy protection',
+        });
+      }
 
-    if (params.delta <= 0 || params.delta >= 1) {
-      warnings.push({
-        type: 'error',
-        message: 'Delta must be between 0 and 1 (exclusive)',
-        recommendation: 'Set delta to a value like 1e-5 or 1e-6'
-      });
-    }
+      if (params.delta <= 0 || params.delta >= 1) {
+        warnings.push({
+          type: 'error',
+          message: 'Delta must be between 0 and 1 (exclusive)',
+          recommendation: 'Set delta to a value like 1e-5 or 1e-6',
+        });
+      }
 
-    if (params.delta > 0.1 && params.epsilon < 1) {
-      warnings.push({
-        type: 'warning',
-        message: 'High delta with low epsilon is unusual',
-        recommendation: 'Consider reducing delta when using low epsilon'
-      });
-    }
+      if (params.delta > 0.1 && params.epsilon < 1) {
+        warnings.push({
+          type: 'warning',
+          message: 'High delta with low epsilon is unusual',
+          recommendation: 'Consider reducing delta when using low epsilon',
+        });
+      }
 
-    if (params.sensitivity <= 0) {
-      warnings.push({
-        type: 'error',
-        message: 'Sensitivity must be greater than 0',
-        recommendation: 'Set sensitivity based on your data characteristics'
-      });
-    }
+      if (params.sensitivity <= 0) {
+        warnings.push({
+          type: 'error',
+          message: 'Sensitivity must be greater than 0',
+          recommendation: 'Set sensitivity based on your data characteristics',
+        });
+      }
 
-    const noiseScale = calculateNoiseScale(params);
-    if (noiseScale > 10) {
-      warnings.push({
-        type: 'warning',
-        message: 'High noise scale may significantly impact utility',
-        recommendation: 'Consider increasing epsilon or adjusting sensitivity'
-      });
-    }
+      const noiseScale = calculateNoiseScale(params);
+      if (noiseScale > 10) {
+        warnings.push({
+          type: 'warning',
+          message: 'High noise scale may significantly impact utility',
+          recommendation: 'Consider increasing epsilon or adjusting sensitivity',
+        });
+      }
 
-    if (warnings.length === 0) {
-      warnings.push({
-        type: 'info',
-        message: 'Parameters are valid and ready for use'
-      });
-    }
+      if (warnings.length === 0) {
+        warnings.push({
+          type: 'info',
+          message: 'Parameters are valid and ready for use',
+        });
+      }
 
-    return warnings;
-  }, [calculateNoiseScale]);
+      return warnings;
+    },
+    [calculateNoiseScale]
+  );
 
   // Load settings from secure storage on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedSettings = secureSettingsStorage.get<NoiseParameters>('differential_privacy_config');
+        const savedSettings = secureSettingsStorage.get<NoiseParameters>(
+          'differential_privacy_config'
+        );
 
         if (savedSettings) {
           // Validate loaded settings
@@ -288,13 +305,16 @@ const DifferentialPrivacyConfig: React.FC = () => {
   }, [parameters, generateTradeoffData, generateNoiseDistribution, validateParameters]);
 
   // Handle parameter changes
-  const handleParameterChange = useCallback((key: keyof NoiseParameters, value: number | string) => {
-    setParameters(prev => ({
-      ...prev,
-      [key]: key === 'mechanism' ? value : Number(value)
-    }));
-    setSelectedPreset(null);
-  }, []);
+  const handleParameterChange = useCallback(
+    (key: keyof NoiseParameters, value: number | string) => {
+      setParameters((prev) => ({
+        ...prev,
+        [key]: key === 'mechanism' ? value : Number(value),
+      }));
+      setSelectedPreset(null);
+    },
+    []
+  );
 
   // Apply preset configuration
   const applyPreset = useCallback((preset: PresetConfig) => {
@@ -302,7 +322,7 @@ const DifferentialPrivacyConfig: React.FC = () => {
       epsilon: preset.epsilon,
       delta: preset.delta,
       mechanism: preset.mechanism,
-      sensitivity: preset.sensitivity
+      sensitivity: preset.sensitivity,
     });
     setSelectedPreset(preset.id);
     toast.success(`Applied ${preset.name} preset`);
@@ -311,7 +331,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
   // Export configuration
   const exportConfiguration = useCallback(async () => {
     try {
-      const encryptedData = await secureSettingsStorage.exportSettings(['differential_privacy_config']);
+      const encryptedData = await secureSettingsStorage.exportSettings([
+        'differential_privacy_config',
+      ]);
 
       const blob = new Blob([encryptedData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -338,7 +360,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
       await secureSettingsStorage.importSettings(content, 'merge');
 
       // Reload settings
-      const savedSettings = secureSettingsStorage.get<NoiseParameters>('differential_privacy_config');
+      const savedSettings = secureSettingsStorage.get<NoiseParameters>(
+        'differential_privacy_config'
+      );
       if (savedSettings) {
         const validation = validateSettings(DifferentialPrivacySchema, savedSettings);
         if (validation.success && validation.data) {
@@ -361,7 +385,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
         toast.success('Settings synced with backend');
 
         // Reload settings after sync
-        const savedSettings = secureSettingsStorage.get<NoiseParameters>('differential_privacy_config');
+        const savedSettings = secureSettingsStorage.get<NoiseParameters>(
+          'differential_privacy_config'
+        );
         if (savedSettings) {
           const validation = validateSettings(DifferentialPrivacySchema, savedSettings);
           if (validation.success && validation.data) {
@@ -386,7 +412,7 @@ const DifferentialPrivacyConfig: React.FC = () => {
         delta: parameters.delta,
         mechanism: parameters.mechanism,
         sensitivity: parameters.sensitivity,
-        sampleSize: 1000
+        sampleSize: 1000,
       });
 
       if (response.data.success) {
@@ -413,8 +439,12 @@ const DifferentialPrivacyConfig: React.FC = () => {
           <div className="flex items-center space-x-3">
             <Shield className="w-8 h-8 text-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Differential Privacy Configuration</h1>
-              <p className="text-sm text-gray-600">Configure noise parameters for privacy-preserving analytics</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Differential Privacy Configuration
+              </h1>
+              <p className="text-sm text-gray-600">
+                Configure noise parameters for privacy-preserving analytics
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -446,17 +476,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
                   <span>Import</span>
                 </span>
               </Button>
-              <input
-                type="file"
-                accept=".json"
-                onChange={importConfiguration}
-                className="hidden"
-              />
+              <input type="file" accept=".json" onChange={importConfiguration} className="hidden" />
             </label>
-            <Button
-              onClick={exportConfiguration}
-              className="flex items-center space-x-2"
-            >
+            <Button onClick={exportConfiguration} className="flex items-center space-x-2">
               <Download className="w-4 h-4" />
               <span>Export</span>
             </Button>
@@ -474,13 +496,16 @@ const DifferentialPrivacyConfig: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => applyPreset(preset)}
-              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedPreset === preset.id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-                }`}
+              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                selectedPreset === preset.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
             >
               <div className="flex items-center space-x-2 mb-2">
-                <Zap className={`w-5 h-5 ${selectedPreset === preset.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                <Zap
+                  className={`w-5 h-5 ${selectedPreset === preset.id ? 'text-blue-600' : 'text-gray-400'}`}
+                />
                 <h3 className="font-semibold text-gray-900">{preset.name}</h3>
               </div>
               <p className="text-sm text-gray-600 mb-2">{preset.description}</p>
@@ -508,7 +533,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
               <label className="text-sm font-medium text-gray-700">
                 Epsilon (ε) - Privacy Budget
               </label>
-              <span className="text-sm font-mono text-blue-600">{parameters.epsilon.toFixed(2)}</span>
+              <span className="text-sm font-mono text-blue-600">
+                {parameters.epsilon.toFixed(2)}
+              </span>
             </div>
             <input
               type="range"
@@ -531,7 +558,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
               <label className="text-sm font-medium text-gray-700">
                 Delta (δ) - Failure Probability
               </label>
-              <span className="text-sm font-mono text-blue-600">{parameters.delta.toExponential(2)}</span>
+              <span className="text-sm font-mono text-blue-600">
+                {parameters.delta.toExponential(2)}
+              </span>
             </div>
             <input
               type="range"
@@ -554,7 +583,9 @@ const DifferentialPrivacyConfig: React.FC = () => {
               <label className="text-sm font-medium text-gray-700">
                 Sensitivity - Maximum Impact of One Record
               </label>
-              <span className="text-sm font-mono text-blue-600">{parameters.sensitivity.toFixed(2)}</span>
+              <span className="text-sm font-mono text-blue-600">
+                {parameters.sensitivity.toFixed(2)}
+              </span>
             </div>
             <input
               type="range"
@@ -573,18 +604,17 @@ const DifferentialPrivacyConfig: React.FC = () => {
 
           {/* Mechanism Selection */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Noise Mechanism
-            </label>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Noise Mechanism</label>
             <div className="flex space-x-4">
               {(['laplace', 'gaussian'] as const).map((mech) => (
                 <button
                   key={mech}
                   onClick={() => handleParameterChange('mechanism', mech)}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all ${parameters.mechanism === mech
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
+                  className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                    parameters.mechanism === mech
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
                 >
                   {mech.charAt(0).toUpperCase() + mech.slice(1)}
                 </button>
@@ -594,18 +624,17 @@ const DifferentialPrivacyConfig: React.FC = () => {
 
           {/* Export Format Selection */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Export Format
-            </label>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Export Format</label>
             <div className="flex space-x-4">
               {(['json', 'yaml'] as const).map((format) => (
                 <button
                   key={format}
                   onClick={() => setExportFormat(format)}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all ${exportFormat === format
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
+                  className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                    exportFormat === format
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
                 >
                   {format.toUpperCase()}
                 </button>
@@ -622,12 +651,13 @@ const DifferentialPrivacyConfig: React.FC = () => {
           {warnings.map((warning, index) => (
             <div
               key={index}
-              className={`flex items-start space-x-3 p-3 rounded-lg ${warning.type === 'error'
-                ? 'bg-red-50 border border-red-200'
-                : warning.type === 'warning'
-                  ? 'bg-yellow-50 border border-yellow-200'
-                  : 'bg-green-50 border border-green-200'
-                }`}
+              className={`flex items-start space-x-3 p-3 rounded-lg ${
+                warning.type === 'error'
+                  ? 'bg-red-50 border border-red-200'
+                  : warning.type === 'warning'
+                    ? 'bg-yellow-50 border border-yellow-200'
+                    : 'bg-green-50 border border-green-200'
+              }`}
             >
               {warning.type === 'error' ? (
                 <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -637,16 +667,21 @@ const DifferentialPrivacyConfig: React.FC = () => {
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               )}
               <div>
-                <p className={`text-sm font-medium ${warning.type === 'error'
-                  ? 'text-red-800'
-                  : warning.type === 'warning'
-                    ? 'text-yellow-800'
-                    : 'text-green-800'
-                  }`}>
+                <p
+                  className={`text-sm font-medium ${
+                    warning.type === 'error'
+                      ? 'text-red-800'
+                      : warning.type === 'warning'
+                        ? 'text-yellow-800'
+                        : 'text-green-800'
+                  }`}
+                >
                   {warning.message}
                 </p>
                 {warning.recommendation && (
-                  <p className="text-xs text-gray-600 mt-1">Recommendation: {warning.recommendation}</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Recommendation: {warning.recommendation}
+                  </p>
                 )}
               </div>
             </div>
@@ -730,7 +765,8 @@ const DifferentialPrivacyConfig: React.FC = () => {
       {/* Noise Distribution Visualization */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Noise Distribution ({parameters.mechanism.charAt(0).toUpperCase() + parameters.mechanism.slice(1)})
+          Noise Distribution (
+          {parameters.mechanism.charAt(0).toUpperCase() + parameters.mechanism.slice(1)})
         </h2>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={noiseDistribution}>
@@ -739,20 +775,12 @@ const DifferentialPrivacyConfig: React.FC = () => {
               dataKey="x"
               label={{ value: 'Noise Value', position: 'insideBottom', offset: -5 }}
             />
-            <YAxis
-              label={{ value: 'Probability Density', angle: -90, position: 'insideLeft' }}
-            />
+            <YAxis label={{ value: 'Probability Density', angle: -90, position: 'insideLeft' }} />
             <Tooltip
               formatter={(value: number) => [value.toFixed(4), 'Density']}
               labelFormatter={(label) => `Noise = ${label}`}
             />
-            <Area
-              type="monotone"
-              dataKey="y"
-              stroke="#3b82f6"
-              fill="#3b82f6"
-              fillOpacity={0.3}
-            />
+            <Area type="monotone" dataKey="y" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -763,7 +791,7 @@ const DifferentialPrivacyConfig: React.FC = () => {
         <div className="flex items-center space-x-4">
           <button
             onClick={generateNoiseSample}
-            disabled={isGenerating || warnings.some(w => w.type === 'error')}
+            disabled={isGenerating || warnings.some((w) => w.type === 'error')}
             className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             {isGenerating ? (
@@ -780,8 +808,8 @@ const DifferentialPrivacyConfig: React.FC = () => {
           </button>
           <div className="flex-1">
             <p className="text-sm text-gray-600">
-              Generate a sample of noise using the current parameters from the backend service.
-              This will create 1000 samples for testing and validation.
+              Generate a sample of noise using the current parameters from the backend service. This
+              will create 1000 samples for testing and validation.
             </p>
           </div>
         </div>
@@ -792,21 +820,25 @@ const DifferentialPrivacyConfig: React.FC = () => {
         <div className="flex items-start space-x-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="font-semibold text-blue-900">Understanding Differential Privacy Parameters</h4>
+            <h4 className="font-semibold text-blue-900">
+              Understanding Differential Privacy Parameters
+            </h4>
             <div className="mt-2 space-y-2 text-sm text-blue-800">
               <p>
-                <strong>Epsilon (ε)</strong>: Controls the privacy guarantee. Lower values provide stronger privacy but add more noise.
-                Typical range: 0.1 to 10.
+                <strong>Epsilon (ε)</strong>: Controls the privacy guarantee. Lower values provide
+                stronger privacy but add more noise. Typical range: 0.1 to 10.
               </p>
               <p>
-                <strong>Delta (δ)</strong>: Probability that the privacy guarantee fails. Usually set very small (e.g., 1e-5).
+                <strong>Delta (δ)</strong>: Probability that the privacy guarantee fails. Usually
+                set very small (e.g., 1e-5).
               </p>
               <p>
-                <strong>Sensitivity</strong>: Maximum change in output when one record is added/removed.
-                Lower sensitivity requires less noise for the same privacy level.
+                <strong>Sensitivity</strong>: Maximum change in output when one record is
+                added/removed. Lower sensitivity requires less noise for the same privacy level.
               </p>
               <p>
-                <strong>Mechanism</strong>: Laplace is simpler and works for single queries. Gaussian is better for complex queries and compositions.
+                <strong>Mechanism</strong>: Laplace is simpler and works for single queries.
+                Gaussian is better for complex queries and compositions.
               </p>
             </div>
           </div>

@@ -1,5 +1,26 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from 'recharts';
 import { TrendingUp, TrendingDown, Minus, DollarSign, Shield, Activity } from 'lucide-react';
 
 import { BudgetAllocation, SimulationResult, ScenarioImpact } from '../../types/privacyBudget';
@@ -21,7 +42,7 @@ const BudgetVisualizationChart: React.FC<BudgetVisualizationChartProps> = ({
   showLegend = true,
   colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'],
   title,
-  subtitle
+  subtitle,
 }) => {
   const chartData = useMemo(() => {
     switch (type) {
@@ -43,9 +64,23 @@ const BudgetVisualizationChart: React.FC<BudgetVisualizationChartProps> = ({
   const renderChart = () => {
     switch (type) {
       case 'allocation':
-        return <AllocationChart data={chartData} height={height} colors={colors} showLegend={showLegend} />;
+        return (
+          <AllocationChart
+            data={chartData}
+            height={height}
+            colors={colors}
+            showLegend={showLegend}
+          />
+        );
       case 'comparison':
-        return <ComparisonChart data={chartData} height={height} colors={colors} showLegend={showLegend} />;
+        return (
+          <ComparisonChart
+            data={chartData}
+            height={height}
+            colors={colors}
+            showLegend={showLegend}
+          />
+        );
       case 'impact':
         return <ImpactChart data={chartData} height={height} colors={colors} />;
       case 'trend':
@@ -85,15 +120,9 @@ const AllocationChart: React.FC<{
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-900">{label}</p>
-          <p className="text-sm text-gray-600">
-            Amount: ${data.amount.toLocaleString()}
-          </p>
-          <p className="text-sm text-gray-600">
-            Percentage: {data.percentage.toFixed(1)}%
-          </p>
-          <p className="text-sm text-gray-600">
-            ROI: {(data.roi * 100).toFixed(1)}%
-          </p>
+          <p className="text-sm text-gray-600">Amount: ${data.amount.toLocaleString()}</p>
+          <p className="text-sm text-gray-600">Percentage: {data.percentage.toFixed(1)}%</p>
+          <p className="text-sm text-gray-600">ROI: {(data.roi * 100).toFixed(1)}%</p>
         </div>
       );
     }
@@ -103,16 +132,21 @@ const AllocationChart: React.FC<{
   return (
     <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-      <XAxis 
-        dataKey="name" 
+      <XAxis
+        dataKey="name"
         tick={{ fill: '#6B7280', fontSize: 12 }}
         angle={-45}
         textAnchor="end"
         height={60}
       />
-      <YAxis 
+      <YAxis
         tick={{ fill: '#6B7280', fontSize: 12 }}
-        label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft', style: { fill: '#6B7280' } }}
+        label={{
+          value: 'Amount ($)',
+          angle: -90,
+          position: 'insideLeft',
+          style: { fill: '#6B7280' },
+        }}
       />
       <Tooltip content={<CustomTooltip />} />
       {showLegend && <Legend />}
@@ -147,14 +181,14 @@ const ComparisonChart: React.FC<{
   return (
     <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-      <XAxis 
-        dataKey="name" 
+      <XAxis
+        dataKey="name"
         tick={{ fill: '#6B7280', fontSize: 12 }}
         angle={-45}
         textAnchor="end"
         height={60}
       />
-      <YAxis 
+      <YAxis
         tick={{ fill: '#6B7280', fontSize: 12 }}
         label={{ value: 'Score', angle: -90, position: 'insideLeft', style: { fill: '#6B7280' } }}
       />
@@ -178,15 +212,9 @@ const ImpactChart: React.FC<{
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-900">{label}</p>
-          <p className="text-sm text-gray-600">
-            Baseline: {data.baseline.toFixed(2)}
-          </p>
-          <p className="text-sm text-gray-600">
-            Scenario: {data.scenario.toFixed(2)}
-          </p>
-          <p className="text-sm text-gray-600">
-            Change: {data.changePercent.toFixed(1)}%
-          </p>
+          <p className="text-sm text-gray-600">Baseline: {data.baseline.toFixed(2)}</p>
+          <p className="text-sm text-gray-600">Scenario: {data.scenario.toFixed(2)}</p>
+          <p className="text-sm text-gray-600">Change: {data.changePercent.toFixed(1)}%</p>
           <div className="flex items-center mt-1">
             {data.changePercent > 0 ? (
               <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
@@ -206,21 +234,26 @@ const ImpactChart: React.FC<{
   return (
     <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-      <XAxis 
-        dataKey="metric" 
+      <XAxis
+        dataKey="metric"
         tick={{ fill: '#6B7280', fontSize: 12 }}
         angle={-45}
         textAnchor="end"
         height={60}
       />
-      <YAxis 
+      <YAxis
         tick={{ fill: '#6B7280', fontSize: 12 }}
-        label={{ value: 'Change (%)', angle: -90, position: 'insideLeft', style: { fill: '#6B7280' } }}
+        label={{
+          value: 'Change (%)',
+          angle: -90,
+          position: 'insideLeft',
+          style: { fill: '#6B7280' },
+        }}
       />
       <Tooltip content={<CustomTooltip />} />
-      <Bar 
-        dataKey="changePercent" 
-        fill={(entry: any) => entry.changePercent > 0 ? colors[1] : colors[3]}
+      <Bar
+        dataKey="changePercent"
+        fill={(entry: any) => (entry.changePercent > 0 ? colors[1] : colors[3])}
         radius={[4, 4, 0, 0]}
       />
     </BarChart>
@@ -252,20 +285,43 @@ const TrendChart: React.FC<{
   return (
     <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-      <XAxis 
-        dataKey="time" 
-        tick={{ fill: '#6B7280', fontSize: 12 }}
-      />
-      <YAxis 
+      <XAxis dataKey="time" tick={{ fill: '#6B7280', fontSize: 12 }} />
+      <YAxis
         tick={{ fill: '#6B7280', fontSize: 12 }}
         label={{ value: 'Value', angle: -90, position: 'insideLeft', style: { fill: '#6B7280' } }}
       />
       <Tooltip content={<CustomTooltip />} />
       <Legend />
-      <Line type="monotone" dataKey="baseline" stroke={colors[0]} strokeWidth={2} dot={{ fill: colors[0] }} />
-      <Line type="monotone" dataKey="scenario" stroke={colors[1]} strokeWidth={2} dot={{ fill: colors[1] }} />
-      <Line type="monotone" dataKey="upperBound" stroke={colors[2]} strokeWidth={1} strokeDasharray="5 5" dot={false} />
-      <Line type="monotone" dataKey="lowerBound" stroke={colors[2]} strokeWidth={1} strokeDasharray="5 5" dot={false} />
+      <Line
+        type="monotone"
+        dataKey="baseline"
+        stroke={colors[0]}
+        strokeWidth={2}
+        dot={{ fill: colors[0] }}
+      />
+      <Line
+        type="monotone"
+        dataKey="scenario"
+        stroke={colors[1]}
+        strokeWidth={2}
+        dot={{ fill: colors[1] }}
+      />
+      <Line
+        type="monotone"
+        dataKey="upperBound"
+        stroke={colors[2]}
+        strokeWidth={1}
+        strokeDasharray="5 5"
+        dot={false}
+      />
+      <Line
+        type="monotone"
+        dataKey="lowerBound"
+        stroke={colors[2]}
+        strokeWidth={1}
+        strokeDasharray="5 5"
+        dot={false}
+      />
     </LineChart>
   );
 };
@@ -296,24 +352,20 @@ const RadarChart: React.FC<{
     <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
       <PolarGrid stroke="#E5E7EB" />
       <PolarAngleAxis dataKey="metric" tick={{ fill: '#6B7280', fontSize: 12 }} />
-      <PolarRadiusAxis 
-        angle={90} 
-        domain={[0, 100]} 
-        tick={{ fill: '#6B7280', fontSize: 10 }}
-      />
-      <Radar 
-        name="Baseline" 
-        dataKey="baseline" 
-        stroke={colors[0]} 
-        fill={colors[0]} 
+      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#6B7280', fontSize: 10 }} />
+      <Radar
+        name="Baseline"
+        dataKey="baseline"
+        stroke={colors[0]}
+        fill={colors[0]}
         fillOpacity={0.3}
         strokeWidth={2}
       />
-      <Radar 
-        name="Scenario" 
-        dataKey="scenario" 
-        stroke={colors[1]} 
-        fill={colors[1]} 
+      <Radar
+        name="Scenario"
+        dataKey="scenario"
+        stroke={colors[1]}
+        fill={colors[1]}
         fillOpacity={0.3}
         strokeWidth={2}
       />
@@ -325,13 +377,13 @@ const RadarChart: React.FC<{
 
 // Data transformation functions
 function transformAllocationData(allocations: BudgetAllocation[]): any[] {
-  return allocations.map(alloc => ({
+  return allocations.map((alloc) => ({
     name: alloc.category.name,
     amount: alloc.amount,
     percentage: alloc.percentage,
     roi: alloc.expectedROI,
     risk: alloc.riskLevel,
-    priority: alloc.priority
+    priority: alloc.priority,
   }));
 }
 
@@ -342,24 +394,24 @@ function transformComparisonData(result: SimulationResult): any[] {
     { name: 'Privacy', baseline: 75, scenario: result.metrics.privacyScore },
     { name: 'Utility', baseline: 70, scenario: result.metrics.utilityScore },
     { name: 'Efficiency', baseline: 65, scenario: result.metrics.efficiency },
-    { name: 'Compliance', baseline: 80, scenario: result.metrics.complianceScore }
+    { name: 'Compliance', baseline: 80, scenario: result.metrics.complianceScore },
   ];
 
-  return metrics.map(metric => ({
+  return metrics.map((metric) => ({
     name: metric.name,
     baseline: metric.baseline,
-    scenario: metric.scenario
+    scenario: metric.scenario,
   }));
 }
 
 function transformImpactData(impacts: ScenarioImpact[]): any[] {
-  return impacts.map(impact => ({
+  return impacts.map((impact) => ({
     metric: impact.metric,
     baseline: impact.baseline,
     scenario: impact.scenario,
     change: impact.change,
     changePercent: impact.changePercent,
-    significance: impact.significance
+    significance: impact.significance,
   }));
 }
 
@@ -372,7 +424,7 @@ function transformTrendData(projections: any[]): any[] {
     { time: 'Month 3', baseline: 110, scenario: 125, upperBound: 135, lowerBound: 115 },
     { time: 'Month 4', baseline: 115, scenario: 132, upperBound: 145, lowerBound: 119 },
     { time: 'Month 5', baseline: 120, scenario: 138, upperBound: 155, lowerBound: 121 },
-    { time: 'Month 6', baseline: 125, scenario: 143, upperBound: 165, lowerBound: 121 }
+    { time: 'Month 6', baseline: 125, scenario: 143, upperBound: 165, lowerBound: 121 },
   ];
 }
 
@@ -385,7 +437,7 @@ function transformRadarData(data: any[]): any[] {
     { metric: 'Privacy', baseline: 80, scenario: 90 },
     { metric: 'Utility', baseline: 70, scenario: 78 },
     { metric: 'Efficiency', baseline: 65, scenario: 75 },
-    { metric: 'Compliance', baseline: 85, scenario: 92 }
+    { metric: 'Compliance', baseline: 85, scenario: 92 },
   ];
 }
 

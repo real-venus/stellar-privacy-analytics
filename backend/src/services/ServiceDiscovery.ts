@@ -1,9 +1,13 @@
-import { ServiceRegistry, ServiceRegistration } from './ServiceRegistry';
-import { ServiceMesh, ServiceMeshConfig } from './ServiceMesh';
-import { HealthMonitor } from './HealthMonitor';
-import { FailoverManager, FailoverPolicy, DisasterRecoveryPlan } from './FailoverManager';
-import { logger } from '../utils/logger';
-import { EventEmitter } from 'events';
+import { ServiceRegistry, ServiceRegistration } from "./ServiceRegistry";
+import { ServiceMesh, ServiceMeshConfig } from "./ServiceMesh";
+import { HealthMonitor } from "./HealthMonitor";
+import {
+  FailoverManager,
+  FailoverPolicy,
+  DisasterRecoveryPlan,
+} from "./FailoverManager";
+import { logger } from "../utils/logger";
+import { EventEmitter } from "events";
 
 export interface ServiceDiscoveryConfig {
   redisUrl: string;
@@ -25,9 +29,9 @@ export interface ServiceInfo {
 }
 
 // Re-export types from other modules
-export { ServiceRegistration } from './ServiceRegistry';
-export { ServiceMeshConfig } from './ServiceMesh';
-export { FailoverPolicy, DisasterRecoveryPlan } from './FailoverManager';
+export { ServiceRegistration } from "./ServiceRegistry";
+export { ServiceMeshConfig } from "./ServiceMesh";
+export { FailoverPolicy, DisasterRecoveryPlan } from "./FailoverManager";
 
 export class ServiceDiscovery extends EventEmitter {
   private serviceRegistry: ServiceRegistry;
@@ -40,79 +44,89 @@ export class ServiceDiscovery extends EventEmitter {
 
   constructor(config: ServiceDiscoveryConfig) {
     super();
-    
+
     this.config = {
       redisUrl: config.redisUrl,
       serviceMesh: config.serviceMesh || {},
       autoRegister: config.autoRegister !== false,
       healthCheckInterval: config.healthCheckInterval || 30000,
       enableFailover: config.enableFailover !== false,
-      enableMonitoring: config.enableMonitoring !== false
+      enableMonitoring: config.enableMonitoring !== false,
     };
 
     this.serviceRegistry = new ServiceRegistry(config.redisUrl);
-    this.serviceMesh = new ServiceMesh(this.serviceRegistry, this.config.serviceMesh);
-    this.healthMonitor = new HealthMonitor(this.serviceRegistry, this.serviceMesh);
-    this.failoverManager = new FailoverManager(this.serviceRegistry, this.serviceMesh);
+    this.serviceMesh = new ServiceMesh(
+      this.serviceRegistry,
+      this.config.serviceMesh,
+    );
+    this.healthMonitor = new HealthMonitor(
+      this.serviceRegistry,
+      this.serviceMesh,
+    );
+    this.failoverManager = new FailoverManager(
+      this.serviceRegistry,
+      this.serviceMesh,
+    );
 
     this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
     // Forward events from components
-    this.serviceRegistry.on('serviceRegistered', (instance) => {
-      this.emit('serviceRegistered', instance);
+    this.serviceRegistry.on("serviceRegistered", (instance) => {
+      this.emit("serviceRegistered", instance);
     });
 
-    this.serviceRegistry.on('serviceDeregistered', (instance) => {
-      this.emit('serviceDeregistered', instance);
+    this.serviceRegistry.on("serviceDeregistered", (instance) => {
+      this.emit("serviceDeregistered", instance);
     });
 
-    this.serviceMesh.on('serviceHealthIssue', (instance, status, error) => {
-      this.emit('serviceHealthIssue', instance, status, error);
+    this.serviceMesh.on("serviceHealthIssue", (instance, status, error) => {
+      this.emit("serviceHealthIssue", instance, status, error);
     });
 
-    this.healthMonitor.on('alert', (alert) => {
-      this.emit('alert', alert);
+    this.healthMonitor.on("alert", (alert) => {
+      this.emit("alert", alert);
     });
 
-    this.failoverManager.on('failoverInitiated', (serviceName) => {
-      this.emit('failoverInitiated', serviceName);
+    this.failoverManager.on("failoverInitiated", (serviceName) => {
+      this.emit("failoverInitiated", serviceName);
     });
 
-    this.failoverManager.on('disasterRecoveryInitiated', (serviceName) => {
-      this.emit('disasterRecoveryInitiated', serviceName);
+    this.failoverManager.on("disasterRecoveryInitiated", (serviceName) => {
+      this.emit("disasterRecoveryInitiated", serviceName);
     });
   }
 
   async initialize(serviceInfo?: ServiceInfo): Promise<void> {
     try {
-      logger.info('Initializing Service Discovery...');
-      
+      logger.info("Initializing Service Discovery...");
+
       // Initialize service registry
       await this.serviceRegistry.initializeRedis();
-      
+
       // Start health monitoring if enabled
       if (this.config.enableMonitoring) {
         await this.healthMonitor.startMonitoring();
       }
-      
+
       // Auto-register current service if provided
       if (this.config.autoRegister && serviceInfo) {
         await this.registerCurrentService(serviceInfo);
       }
-      
+
       this.isInitialized = true;
-      logger.info('Service Discovery initialized successfully');
-      this.emit('initialized');
-      
+      logger.info("Service Discovery initialized successfully");
+      this.emit("initialized");
     } catch (error) {
-      logger.error('Failed to initialize Service Discovery:', error);
+      logger.error("Failed to initialize Service Discovery:", error);
       throw error;
     }
   }
 
-  private async registerCurrentService(serviceInfo: ServiceInfo): Promise<void> {
+  private async registerCurrentService(
+    serviceInfo: ServiceInfo,
+  ): Promise<void> {
     try {
       const registration: ServiceRegistration = {
         name: serviceInfo.name,
@@ -122,15 +136,17 @@ export class ServiceDiscovery extends EventEmitter {
         tags: serviceInfo.tags,
         version: serviceInfo.version,
         weight: serviceInfo.weight,
-        healthCheckEndpoint: '/health',
-        healthCheckInterval: this.config.healthCheckInterval
+        healthCheckEndpoint: "/health",
+        healthCheckInterval: this.config.healthCheckInterval,
       };
 
-      this.currentServiceId = await this.serviceRegistry.registerService(registration);
-      logger.info(`Current service registered with ID: ${this.currentServiceId}`);
-      
+      this.currentServiceId =
+        await this.serviceRegistry.registerService(registration);
+      logger.info(
+        `Current service registered with ID: ${this.currentServiceId}`,
+      );
     } catch (error) {
-      logger.error('Failed to register current service:', error);
+      logger.error("Failed to register current service:", error);
       throw error;
     }
   }
@@ -171,12 +187,22 @@ export class ServiceDiscovery extends EventEmitter {
     return await this.serviceMesh.get(serviceName, path, options);
   }
 
-  async post(serviceName: string, path: string, data?: any, options?: any): Promise<any> {
+  async post(
+    serviceName: string,
+    path: string,
+    data?: any,
+    options?: any,
+  ): Promise<any> {
     this.ensureInitialized();
     return await this.serviceMesh.post(serviceName, path, data, options);
   }
 
-  async put(serviceName: string, path: string, data?: any, options?: any): Promise<any> {
+  async put(
+    serviceName: string,
+    path: string,
+    data?: any,
+    options?: any,
+  ): Promise<any> {
     this.ensureInitialized();
     return await this.serviceMesh.put(serviceName, path, data, options);
   }
@@ -187,13 +213,17 @@ export class ServiceDiscovery extends EventEmitter {
   }
 
   // Health monitoring methods
-  addHealthCheck(serviceName: string, endpoint: string, interval?: number): void {
+  addHealthCheck(
+    serviceName: string,
+    endpoint: string,
+    interval?: number,
+  ): void {
     this.ensureInitialized();
     this.healthMonitor.addHealthCheck({
       serviceName,
       endpoint,
       interval: interval || this.config.healthCheckInterval,
-      timeout: 5000
+      timeout: 5000,
     });
   }
 
@@ -246,27 +276,29 @@ export class ServiceDiscovery extends EventEmitter {
   // Performance optimization methods
   async optimizeServiceDiscovery(): Promise<void> {
     this.ensureInitialized();
-    
-    logger.info('Optimizing service discovery performance...');
-    
+
+    logger.info("Optimizing service discovery performance...");
+
     // Clean up stale services
     const allServices = await this.serviceRegistry.getAllServices();
     const now = Date.now();
     const staleThreshold = 5 * 60 * 1000; // 5 minutes
-    
+
     for (const service of allServices) {
       const timeSinceLastCheck = now - service.lastHealthCheck.getTime();
       if (timeSinceLastCheck > staleThreshold) {
-        logger.warn(`Stale service detected: ${service.id}, last check: ${service.lastHealthCheck}`);
+        logger.warn(
+          `Stale service detected: ${service.id}, last check: ${service.lastHealthCheck}`,
+        );
         await this.serviceRegistry.deregisterService(service.id);
       }
     }
-    
+
     // Optimize Redis memory usage
     const stats = await this.serviceRegistry.getServiceStatistics();
-    logger.info('Service statistics:', stats);
-    
-    this.emit('optimizationCompleted', stats);
+    logger.info("Service statistics:", stats);
+
+    this.emit("optimizationCompleted", stats);
   }
 
   // Monitoring and metrics
@@ -288,7 +320,9 @@ export class ServiceDiscovery extends EventEmitter {
   // Utility methods
   private ensureInitialized(): void {
     if (!this.isInitialized) {
-      throw new Error('Service Discovery is not initialized. Call initialize() first.');
+      throw new Error(
+        "Service Discovery is not initialized. Call initialize() first.",
+      );
     }
   }
 
@@ -301,30 +335,29 @@ export class ServiceDiscovery extends EventEmitter {
   }
 
   async shutdown(): Promise<void> {
-    logger.info('Shutting down Service Discovery...');
-    
+    logger.info("Shutting down Service Discovery...");
+
     try {
       // Deregister current service
       if (this.currentServiceId) {
         await this.serviceRegistry.deregisterService(this.currentServiceId);
       }
-      
+
       // Stop monitoring
       if (this.config.enableMonitoring) {
         await this.healthMonitor.stopMonitoring();
       }
-      
+
       // Shutdown failover manager
       await this.failoverManager.shutdown();
-      
+
       // Shutdown service registry
       await this.serviceRegistry.shutdown();
-      
+
       this.isInitialized = false;
-      logger.info('Service Discovery shutdown complete');
-      
+      logger.info("Service Discovery shutdown complete");
     } catch (error) {
-      logger.error('Error during Service Discovery shutdown:', error);
+      logger.error("Error during Service Discovery shutdown:", error);
       throw error;
     }
   }
@@ -332,7 +365,7 @@ export class ServiceDiscovery extends EventEmitter {
   // Configuration methods
   updateConfig(newConfig: Partial<ServiceDiscoveryConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    logger.info('Service Discovery configuration updated');
+    logger.info("Service Discovery configuration updated");
   }
 
   getConfig(): Required<ServiceDiscoveryConfig> {

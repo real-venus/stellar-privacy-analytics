@@ -55,7 +55,7 @@ export const LogTerminal: React.FC<LogTerminalProps> = ({ logs }) => {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      fractionalSecondDigits: 3
+      fractionalSecondDigits: 3,
     });
   };
 
@@ -65,12 +65,14 @@ export const LogTerminal: React.FC<LogTerminalProps> = ({ logs }) => {
   };
 
   const downloadLogs = () => {
-    const logText = logs.map(log => {
-      const timestamp = formatTimestamp(log.timestamp);
-      const level = log.level.toUpperCase();
-      const phase = log.phase ? `[${log.phase}]` : '';
-      return `[${timestamp}] ${level} ${phase} ${log.message}`;
-    }).join('\n');
+    const logText = logs
+      .map((log) => {
+        const timestamp = formatTimestamp(log.timestamp);
+        const level = log.level.toUpperCase();
+        const phase = log.phase ? `[${log.phase}]` : '';
+        return `[${timestamp}] ${level} ${phase} ${log.message}`;
+      })
+      .join('\n');
 
     const blob = new Blob([logText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -153,9 +155,7 @@ export const LogTerminal: React.FC<LogTerminalProps> = ({ logs }) => {
                 </span>
 
                 {/* Log Icon */}
-                <span className={`mt-0.5 ${getLogColor(log.level)}`}>
-                  {getLogIcon(log.level)}
-                </span>
+                <span className={`mt-0.5 ${getLogColor(log.level)}`}>{getLogIcon(log.level)}</span>
 
                 {/* Log Content */}
                 <div className="flex-1 min-w-0">
@@ -174,9 +174,7 @@ export const LogTerminal: React.FC<LogTerminalProps> = ({ logs }) => {
                   </div>
 
                   {/* Message */}
-                  <p className="text-gray-300 break-words leading-tight mt-0.5">
-                    {log.message}
-                  </p>
+                  <p className="text-gray-300 break-words leading-tight mt-0.5">{log.message}</p>
                 </div>
               </div>
             ))}

@@ -1,20 +1,20 @@
-import { EventEmitter } from 'events';
-import { logger } from '../../utils/logger';
-import { DistributedCacheManager } from './DistributedCacheManager';
+import { EventEmitter } from "events";
+import { logger } from "../../utils/logger";
+import { DistributedCacheManager } from "./DistributedCacheManager";
 
 export interface WarmingStrategy {
   name: string;
   enabled: boolean;
   priority: number;
   schedule?: string; // Cron expression
-  trigger?: 'startup' | 'scheduled' | 'manual' | 'threshold';
+  trigger?: "startup" | "scheduled" | "manual" | "threshold";
   threshold?: number;
 }
 
 export interface WarmingTask {
   id: string;
   strategy: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   startTime?: Date;
   endTime?: Date;
   itemsWarmed: number;
@@ -44,7 +44,7 @@ export class CacheWarmingStrategy extends EventEmitter {
 
   constructor(
     cacheManager: DistributedCacheManager,
-    config?: Partial<WarmingConfig>
+    config?: Partial<WarmingConfig>,
   ) {
     super();
 
@@ -54,7 +54,7 @@ export class CacheWarmingStrategy extends EventEmitter {
       batchSize: config?.batchSize || 100,
       concurrency: config?.concurrency || 5,
       retryAttempts: config?.retryAttempts || 3,
-      retryDelay: config?.retryDelay || 1000
+      retryDelay: config?.retryDelay || 1000,
     };
   }
 
@@ -63,13 +63,13 @@ export class CacheWarmingStrategy extends EventEmitter {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      logger.warn('Cache warming strategy already initialized');
+      logger.warn("Cache warming strategy already initialized");
       return;
     }
 
     // Schedule warming tasks
     for (const strategy of this.config.strategies) {
-      if (strategy.enabled && strategy.trigger === 'startup') {
+      if (strategy.enabled && strategy.trigger === "startup") {
         await this.executeStrategy(strategy.name);
       }
 
@@ -80,11 +80,11 @@ export class CacheWarmingStrategy extends EventEmitter {
 
     this.isInitialized = true;
 
-    logger.info('Cache warming strategy initialized', {
-      strategies: this.config.strategies.length
+    logger.info("Cache warming strategy initialized", {
+      strategies: this.config.strategies.length,
     });
 
-    this.emit('initialized');
+    this.emit("initialized");
   }
 
   /**
@@ -99,16 +99,18 @@ export class CacheWarmingStrategy extends EventEmitter {
 
     this.isInitialized = false;
 
-    logger.info('Cache warming strategy shutdown completed');
-    this.emit('shutdown');
+    logger.info("Cache warming strategy shutdown completed");
+    this.emit("shutdown");
   }
 
   /**
    * Execute warming strategy
    */
   async executeStrategy(strategyName: string): Promise<WarmingTask> {
-    const strategy = this.config.strategies.find(s => s.name === strategyName);
-    
+    const strategy = this.config.strategies.find(
+      (s) => s.name === strategyName,
+    );
+
     if (!strategy) {
       throw new Error(`Strategy not found: ${strategyName}`);
     }
@@ -120,61 +122,63 @@ export class CacheWarmingStrategy extends EventEmitter {
     const task: WarmingTask = {
       id: this.generateTaskId(),
       strategy: strategyName,
-      status: 'pending',
+      status: "pending",
       itemsWarmed: 0,
-      errors: 0
+      errors: 0,
     };
 
     this.tasks.set(task.id, task);
 
     try {
-      task.status = 'running';
+      task.status = "running";
       task.startTime = new Date();
 
       logger.info(`Executing warming strategy: ${strategyName}`);
-      this.emit('strategyStarted', { task, strategy });
+      this.emit("strategyStarted", { task, strategy });
 
       // Execute strategy-specific warming logic
       switch (strategyName) {
-        case 'frequently-accessed':
+        case "frequently-accessed":
           await this.warmFrequentlyAccessed(task);
           break;
-        case 'predictive':
+        case "predictive":
           await this.warmPredictive(task);
           break;
-        case 'time-based':
+        case "time-based":
           await this.warmTimeBased(task);
           break;
-        case 'user-specific':
+        case "user-specific":
           await this.warmUserSpecific(task);
           break;
-        case 'critical-data':
+        case "critical-data":
           await this.warmCriticalData(task);
           break;
         default:
           throw new Error(`Unknown strategy: ${strategyName}`);
       }
 
-      task.status = 'completed';
+      task.status = "completed";
       task.endTime = new Date();
       task.duration = task.endTime.getTime() - task.startTime.getTime();
 
       logger.info(`Warming strategy completed: ${strategyName}`, {
         itemsWarmed: task.itemsWarmed,
         duration: task.duration,
-        errors: task.errors
+        errors: task.errors,
       });
 
-      this.emit('strategyCompleted', { task, strategy });
+      this.emit("strategyCompleted", { task, strategy });
 
       return task;
     } catch (error) {
-      task.status = 'failed';
+      task.status = "failed";
       task.endTime = new Date();
-      task.duration = task.endTime ? task.endTime.getTime() - (task.startTime?.getTime() || 0) : 0;
+      task.duration = task.endTime
+        ? task.endTime.getTime() - (task.startTime?.getTime() || 0)
+        : 0;
 
       logger.error(`Warming strategy failed: ${strategyName}`, error);
-      this.emit('strategyFailed', { task, strategy, error });
+      this.emit("strategyFailed", { task, strategy, error });
 
       throw error;
     }
@@ -197,7 +201,7 @@ export class CacheWarmingStrategy extends EventEmitter {
         await this.warmBatch(batch, task);
       }
     } catch (error) {
-      logger.error('Error warming frequently accessed keys:', error);
+      logger.error("Error warming frequently accessed keys:", error);
       throw error;
     }
   }
@@ -218,7 +222,7 @@ export class CacheWarmingStrategy extends EventEmitter {
         await this.warmBatch(batch, task);
       }
     } catch (error) {
-      logger.error('Error warming predicted keys:', error);
+      logger.error("Error warming predicted keys:", error);
       throw error;
     }
   }
@@ -239,7 +243,7 @@ export class CacheWarmingStrategy extends EventEmitter {
         await this.warmBatch(batch, task);
       }
     } catch (error) {
-      logger.error('Error warming time-based keys:', error);
+      logger.error("Error warming time-based keys:", error);
       throw error;
     }
   }
@@ -260,7 +264,7 @@ export class CacheWarmingStrategy extends EventEmitter {
         await this.warmBatch(batch, task);
       }
     } catch (error) {
-      logger.error('Error warming user-specific keys:', error);
+      logger.error("Error warming user-specific keys:", error);
       throw error;
     }
   }
@@ -281,7 +285,7 @@ export class CacheWarmingStrategy extends EventEmitter {
         await this.warmBatch(batch, task);
       }
     } catch (error) {
-      logger.error('Error warming critical data:', error);
+      logger.error("Error warming critical data:", error);
       throw error;
     }
   }
@@ -291,7 +295,7 @@ export class CacheWarmingStrategy extends EventEmitter {
    */
   private async warmBatch(
     keys: Array<{ key: string; loader: () => Promise<any> }>,
-    task: WarmingTask
+    task: WarmingTask,
   ): Promise<void> {
     const promises = keys.map(async ({ key, loader }) => {
       try {
@@ -327,7 +331,7 @@ export class CacheWarmingStrategy extends EventEmitter {
       const sorted = Array.from(this.accessPatterns.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10000);
-      
+
       this.accessPatterns = new Map(sorted);
     }
   }
@@ -335,38 +339,43 @@ export class CacheWarmingStrategy extends EventEmitter {
   /**
    * Get top accessed keys
    */
-  private getTopAccessedKeys(limit: number): Array<{ key: string; loader: () => Promise<any> }> {
+  private getTopAccessedKeys(
+    limit: number,
+  ): Array<{ key: string; loader: () => Promise<any> }> {
     const sorted = Array.from(this.accessPatterns.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit);
 
     return sorted.map(([key]) => ({
       key,
-      loader: () => this.loadData(key)
+      loader: () => this.loadData(key),
     }));
   }
 
   /**
    * Predict likely keys based on patterns
    */
-  private predictLikelyKeys(): Array<{ key: string; loader: () => Promise<any> }> {
+  private predictLikelyKeys(): Array<{
+    key: string;
+    loader: () => Promise<any>;
+  }> {
     // Simple prediction: keys with increasing access frequency
     const predictions: Array<{ key: string; loader: () => Promise<any> }> = [];
 
     // This is a simplified implementation
     // In production, use ML models or more sophisticated algorithms
     const topKeys = this.getTopAccessedKeys(50);
-    
+
     // Add related keys (e.g., if user:123 is accessed, predict user:123:profile)
     for (const { key } of topKeys) {
       predictions.push({ key, loader: () => this.loadData(key) });
-      
+
       // Add related keys
       const relatedKeys = this.getRelatedKeys(key);
       for (const relatedKey of relatedKeys) {
         predictions.push({
           key: relatedKey,
-          loader: () => this.loadData(relatedKey)
+          loader: () => this.loadData(relatedKey),
         });
       }
     }
@@ -377,7 +386,10 @@ export class CacheWarmingStrategy extends EventEmitter {
   /**
    * Get time-based keys
    */
-  private getTimeBasedKeys(): Array<{ key: string; loader: () => Promise<any> }> {
+  private getTimeBasedKeys(): Array<{
+    key: string;
+    loader: () => Promise<any>;
+  }> {
     const hour = new Date().getHours();
     const dayOfWeek = new Date().getDay();
 
@@ -388,16 +400,16 @@ export class CacheWarmingStrategy extends EventEmitter {
     // Example: warm analytics data during business hours
     if (hour >= 9 && hour <= 17) {
       keys.push({
-        key: 'analytics:dashboard',
-        loader: () => this.loadData('analytics:dashboard')
+        key: "analytics:dashboard",
+        loader: () => this.loadData("analytics:dashboard"),
       });
     }
 
     // Example: warm reports on Monday mornings
     if (dayOfWeek === 1 && hour >= 8 && hour <= 10) {
       keys.push({
-        key: 'reports:weekly',
-        loader: () => this.loadData('reports:weekly')
+        key: "reports:weekly",
+        loader: () => this.loadData("reports:weekly"),
       });
     }
 
@@ -407,10 +419,12 @@ export class CacheWarmingStrategy extends EventEmitter {
   /**
    * Get user-specific keys
    */
-  private async getUserSpecificKeys(): Promise<Array<{ key: string; loader: () => Promise<any> }>> {
+  private async getUserSpecificKeys(): Promise<
+    Array<{ key: string; loader: () => Promise<any> }>
+  > {
     // This would typically query active users from database
     // Simplified implementation
-    const activeUsers = ['user:1', 'user:2', 'user:3']; // Mock data
+    const activeUsers = ["user:1", "user:2", "user:3"]; // Mock data
 
     const keys: Array<{ key: string; loader: () => Promise<any> }> = [];
 
@@ -418,16 +432,16 @@ export class CacheWarmingStrategy extends EventEmitter {
       keys.push(
         {
           key: `${userId}:profile`,
-          loader: () => this.loadData(`${userId}:profile`)
+          loader: () => this.loadData(`${userId}:profile`),
         },
         {
           key: `${userId}:preferences`,
-          loader: () => this.loadData(`${userId}:preferences`)
+          loader: () => this.loadData(`${userId}:preferences`),
         },
         {
           key: `${userId}:recent-activity`,
-          loader: () => this.loadData(`${userId}:recent-activity`)
-        }
+          loader: () => this.loadData(`${userId}:recent-activity`),
+        },
       );
     }
 
@@ -437,24 +451,27 @@ export class CacheWarmingStrategy extends EventEmitter {
   /**
    * Get critical data keys
    */
-  private getCriticalDataKeys(): Array<{ key: string; loader: () => Promise<any> }> {
+  private getCriticalDataKeys(): Array<{
+    key: string;
+    loader: () => Promise<any>;
+  }> {
     return [
       {
-        key: 'config:app',
-        loader: () => this.loadData('config:app')
+        key: "config:app",
+        loader: () => this.loadData("config:app"),
       },
       {
-        key: 'config:features',
-        loader: () => this.loadData('config:features')
+        key: "config:features",
+        loader: () => this.loadData("config:features"),
       },
       {
-        key: 'metadata:schema',
-        loader: () => this.loadData('metadata:schema')
+        key: "metadata:schema",
+        loader: () => this.loadData("metadata:schema"),
       },
       {
-        key: 'privacy:policies',
-        loader: () => this.loadData('privacy:policies')
-      }
+        key: "privacy:policies",
+        loader: () => this.loadData("privacy:policies"),
+      },
     ];
   }
 
@@ -465,12 +482,12 @@ export class CacheWarmingStrategy extends EventEmitter {
     // Simple pattern matching for related keys
     const related: string[] = [];
 
-    if (key.includes(':')) {
-      const parts = key.split(':');
+    if (key.includes(":")) {
+      const parts = key.split(":");
       const prefix = parts[0];
-      
+
       // Add common related suffixes
-      const suffixes = ['profile', 'settings', 'metadata', 'stats'];
+      const suffixes = ["profile", "settings", "metadata", "stats"];
       for (const suffix of suffixes) {
         related.push(`${prefix}:${suffix}`);
       }
@@ -510,12 +527,15 @@ export class CacheWarmingStrategy extends EventEmitter {
     // Simple interval-based scheduling
     // In production, use a proper cron library
     const interval = this.parseCronToInterval(strategy.schedule);
-    
+
     const timer = setInterval(async () => {
       try {
         await this.executeStrategy(strategy.name);
       } catch (error) {
-        logger.error(`Scheduled warming strategy failed: ${strategy.name}`, error);
+        logger.error(
+          `Scheduled warming strategy failed: ${strategy.name}`,
+          error,
+        );
       }
     }, interval);
 
@@ -523,7 +543,7 @@ export class CacheWarmingStrategy extends EventEmitter {
 
     logger.info(`Scheduled warming strategy: ${strategy.name}`, {
       schedule: strategy.schedule,
-      interval
+      interval,
     });
   }
 
@@ -533,10 +553,10 @@ export class CacheWarmingStrategy extends EventEmitter {
   private parseCronToInterval(cron: string): number {
     // Simplified cron parsing
     // In production, use a proper cron parser
-    if (cron === '0 * * * *') return 3600000; // Every hour
-    if (cron === '*/15 * * * *') return 900000; // Every 15 minutes
-    if (cron === '0 0 * * *') return 86400000; // Daily
-    
+    if (cron === "0 * * * *") return 3600000; // Every hour
+    if (cron === "*/15 * * * *") return 900000; // Every 15 minutes
+    if (cron === "0 0 * * *") return 86400000; // Daily
+
     return 3600000; // Default to 1 hour
   }
 
@@ -546,36 +566,36 @@ export class CacheWarmingStrategy extends EventEmitter {
   private getDefaultStrategies(): WarmingStrategy[] {
     return [
       {
-        name: 'frequently-accessed',
+        name: "frequently-accessed",
         enabled: true,
         priority: 1,
-        trigger: 'startup',
-        schedule: '*/15 * * * *' // Every 15 minutes
+        trigger: "startup",
+        schedule: "*/15 * * * *", // Every 15 minutes
       },
       {
-        name: 'predictive',
+        name: "predictive",
         enabled: true,
         priority: 2,
-        schedule: '0 * * * *' // Every hour
+        schedule: "0 * * * *", // Every hour
       },
       {
-        name: 'time-based',
+        name: "time-based",
         enabled: true,
         priority: 3,
-        schedule: '0 * * * *' // Every hour
+        schedule: "0 * * * *", // Every hour
       },
       {
-        name: 'user-specific',
+        name: "user-specific",
         enabled: false,
         priority: 4,
-        trigger: 'manual'
+        trigger: "manual",
       },
       {
-        name: 'critical-data',
+        name: "critical-data",
         enabled: true,
         priority: 5,
-        trigger: 'startup'
-      }
+        trigger: "startup",
+      },
     ];
   }
 
@@ -605,7 +625,7 @@ export class CacheWarmingStrategy extends EventEmitter {
    */
   getActiveTasks(): WarmingTask[] {
     return Array.from(this.tasks.values()).filter(
-      task => task.status === 'running' || task.status === 'pending'
+      (task) => task.status === "running" || task.status === "pending",
     );
   }
 
@@ -613,15 +633,15 @@ export class CacheWarmingStrategy extends EventEmitter {
    * Update strategy
    */
   updateStrategy(name: string, updates: Partial<WarmingStrategy>): void {
-    const index = this.config.strategies.findIndex(s => s.name === name);
-    
+    const index = this.config.strategies.findIndex((s) => s.name === name);
+
     if (index === -1) {
       throw new Error(`Strategy not found: ${name}`);
     }
 
     this.config.strategies[index] = {
       ...this.config.strategies[index],
-      ...updates
+      ...updates,
     };
 
     // Reschedule if needed
@@ -632,13 +652,16 @@ export class CacheWarmingStrategy extends EventEmitter {
         this.warmingTimers.delete(name);
       }
 
-      if (this.config.strategies[index].enabled && this.config.strategies[index].schedule) {
+      if (
+        this.config.strategies[index].enabled &&
+        this.config.strategies[index].schedule
+      ) {
         this.scheduleStrategy(this.config.strategies[index]);
       }
     }
 
     logger.info(`Strategy updated: ${name}`, updates);
-    this.emit('strategyUpdated', { name, updates });
+    this.emit("strategyUpdated", { name, updates });
   }
 
   /**

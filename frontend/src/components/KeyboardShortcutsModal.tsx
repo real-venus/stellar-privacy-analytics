@@ -1,5 +1,9 @@
 import React from 'react';
-import { useKeyboardShortcutsModal, useKeyboardShortcuts, ShortcutDefinition } from '../hooks/useKeyboardShortcuts';
+import {
+  useKeyboardShortcutsModal,
+  useKeyboardShortcuts,
+  ShortcutDefinition,
+} from '../hooks/useKeyboardShortcuts';
 
 function ShortcutKey({ shortcut }: { shortcut: ShortcutDefinition }) {
   const keys: string[] = [];
@@ -74,7 +78,9 @@ export function KeyboardShortcutsModal() {
         </div>
 
         <div className="px-6 py-3 bg-gray-50 border-t text-xs text-gray-500 text-center">
-          Press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Esc</kbd> or click outside to close
+          Press{' '}
+          <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Esc</kbd>{' '}
+          or click outside to close
         </div>
       </div>
     </div>
