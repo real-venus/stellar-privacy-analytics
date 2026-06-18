@@ -565,9 +565,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 )}
               </div>
             ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
