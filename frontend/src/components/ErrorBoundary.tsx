@@ -2,6 +2,37 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import CryptoJS from 'crypto-js';
+
+const STORAGE_KEY = 'app_errors';
+const MAX_TRACE_FRAMES = 3;
+const MAX_STORED_ERRORS = 10;
+
+function getEncryptionKey(): string {
+  let key = sessionStorage.getItem('error_encryption_key');
+  if (!key) {
+    const array = new Uint32Array(4);
+    crypto.getRandomValues(array);
+    key = Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+    sessionStorage.setItem('error_encryption_key', key);
+  }
+  return key;
+}
+
+function encryptPayload(data: string): string {
+  return CryptoJS.AES.encrypt(data, getEncryptionKey()).toString();
+}
+
+function decryptPayload(encrypted: string): string {
+  const bytes = CryptoJS.AES.decrypt(encrypted, getEncryptionKey());
+  return bytes.toString(CryptoJS.enc.Utf8);
+}
+
+function truncateStack(stack: string | undefined): string | undefined {
+  if (!stack) return undefined;
+  const frames = stack.split('\n');
+  return frames.slice(0, MAX_TRACE_FRAMES).join('\n');
+}
 
 interface Props {
   children: ReactNode;
@@ -64,27 +95,42 @@ export class ErrorBoundary extends Component<Props, State> {
       const errorData = {
         errorId: this.state.errorId,
         message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
+        stack: truncateStack(error.stack),
+        componentStack: truncateStack(errorInfo.componentStack),
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         url: window.location.href
       };
 
-      // Store in localStorage for debugging
-      const existingErrors = JSON.parse(localStorage.getItem('app_errors') || '[]');
-      existingErrors.push(errorData);
-      
-      // Keep only last 10 errors
-      if (existingErrors.length > 10) {
-        existingErrors.shift();
+      let existing: unknown[] = [];
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          existing = JSON.parse(decryptPayload(raw));
+        } catch {
+          existing = [];
+        }
       }
-      
-      localStorage.setItem('app_errors', JSON.stringify(existingErrors));
+
+      existing.push(errorData);
+
+      if (existing.length > MAX_STORED_ERRORS) {
+        existing = existing.slice(-MAX_STORED_ERRORS);
+      }
+
+      localStorage.setItem(STORAGE_KEY, encryptPayload(JSON.stringify(existing)));
     } catch (e) {
       console.warn('Failed to store error for debugging:', e);
     }
   };
+
+  static clearStoredErrors(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // silently ignore
+    }
+  }
 
   private handleRetry = () => {
     this.setState({
