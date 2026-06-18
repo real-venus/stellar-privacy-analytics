@@ -8,10 +8,19 @@ interface ServiceNode {
   activeRequests: number;
 }
 
+interface LoadBalancerOptions {
+  healthCheckInterval?: number;
+  healthCheckTimeout?: number;
+}
+
 export class LoadBalancer {
   private nodes: ServiceNode[] = [];
+  private healthCheckTimeout: number;
 
-  constructor(urls: string[]) {
+  constructor(urls: string[], options: LoadBalancerOptions = {}) {
+    const { healthCheckInterval = 10000, healthCheckTimeout = 5000 } = options;
+    this.healthCheckTimeout = healthCheckTimeout;
+
     this.nodes = urls.map(url => ({
       url,
       isHealthy: true,
@@ -20,15 +29,24 @@ export class LoadBalancer {
     }));
     
     // Start routine health check polling
-    setInterval(() => this.healthCheck(), 10000);
+    setInterval(() => this.healthCheck(), healthCheckInterval);
   }
 
   private async healthCheck() {
     for (const node of this.nodes) {
       try {
-        // Active ping to backend /health endpoint to verify service availability
-        const response = await fetch(`${node.url}/health`);
-        node.isHealthy = response.ok;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.healthCheckTimeout);
+
+        try {
+          // Active ping to backend /health endpoint to verify service availability
+          const response = await fetch(`${node.url}/health`, {
+            signal: controller.signal
+          });
+          node.isHealthy = response.ok;
+        } finally {
+          clearTimeout(timeoutId);
+        }
       } catch (error) {
         node.isHealthy = false;
       }
