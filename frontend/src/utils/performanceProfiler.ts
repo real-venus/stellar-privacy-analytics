@@ -2,21 +2,6 @@
  * Performance profiling and optimization utilities for chart rendering
  */
 
-// Extend Performance interface to include memory API
-declare global {
-  interface Performance {
-    memory?: {
-      usedJSHeapSize: number;
-      totalJSHeapSize: number;
-      jsHeapSizeLimit: number;
-    };
-  }
-
-  interface Window {
-    gc?: () => void;
-  }
-}
-
 export interface ProfileMetrics {
   renderTime: number;
   memoryUsage: number;
