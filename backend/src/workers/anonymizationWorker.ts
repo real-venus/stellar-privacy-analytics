@@ -380,9 +380,7 @@ export class AnonymizationWorker {
     return { sanitizedValue, detections };
   }
 
-  private async anonymizeObject(
-    obj: Record<string, any>,
-  ): Promise<{
+  private async anonymizeObject(obj: Record<string, any>): Promise<{
     sanitizedObject: Record<string, any>;
     detections: PIIDetection[];
   }> {

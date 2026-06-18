@@ -32,13 +32,11 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            error: "Validation failed",
-            details: errors.array(),
-          });
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
       }
 
       const { system, inputs, circuitId, priority = 5 } = req.body;
