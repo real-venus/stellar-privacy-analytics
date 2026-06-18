@@ -1,67 +1,155 @@
+# ─────────────────────────────────────────────────────────────
+#  Stellar Privacy Analytics — CI/CD Pipeline
+#  Jobs run sequentially to avoid redundant setup duplication.
+#  Deploy requires manual approval via GitHub Environments.
+# ─────────────────────────────────────────────────────────────
 name: CI/CD Pipeline
 
 on:
   push:
     branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: 'Deployment target (only used when triggered manually)'
+        type: choice
+        options:
+          - production
+          - staging
+        default: staging
+        required: false
 
 env:
   NODE_VERSION: '22'
+  CARGO_TERM_COLOR: always
 
 jobs:
+  # ── Quality: lint, type-check, format, tests ──────────────
+  # Combined into one job to avoid duplicating setup across
+  # separate quality and test jobs.
   quality:
-    name: Code Quality, Type Checks & Tests
+    name: Quality & Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Install dependencies
         run: npm run setup
 
-      - name: Check formatting
+      - name: Format check
         run: npm run format:check
 
-      - name: Run linting
+      - name: Lint (all packages)
         run: npm run lint
 
-      - name: Run type checking
-        run: npm run type-check && cd contracts && npm run type-check
+      - name: Type-check (all packages)
+        run: npm run type-check
 
-      - name: Run shared package tests
-        run: cd shared && npm test
+      - name: Rust format check
+        run: cd contracts && cargo fmt --check
 
-      - name: Run backend tests
-        run: cd backend && npm test
+      - name: Rust clippy
+        run: cd contracts && cargo clippy -- -D warnings
 
-      - name: Run contracts tests
-        run: cd contracts && npm test
+      - name: Run tests (all packages)
+        run: npm test
 
-      - name: Build shared package
-        run: cd shared && npm run build
+  # ── Build all packages ────────────────────────────────────
+  build:
+    name: Build
+    needs: [quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Build backend
-        run: cd backend && npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: Build frontend
-        run: cd frontend && npm run build
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
-      - name: Build service-discovery-dashboard
-        run: cd service-discovery-dashboard && npm run build
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-      - name: Build docs
-        run: cd docs && npm run build
+      - name: Install dependencies
+        run: npm run setup
 
-      - name: Build contracts
-        run: cd contracts && npm run build
+      - name: Build all packages
+        run: npm run build
+
+  # ── Deploy (manual approval required) ─────────────────────
+  # On push to main → deploys to production (with approval gate).
+  # On workflow_dispatch → deploys to the user-selected environment.
+  # The `environment:` block enforces that a user with the
+  # required GitHub Environment protection rule (required
+  # reviewers) must approve before this runs.
+  deploy:
+    name: Deploy
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: >
+      ( github.ref == 'refs/heads/main' && github.event_name == 'push' )
+      || github.event_name == 'workflow_dispatch'
+
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || 'production' }}
+      url: https://stellar-analytics.example.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm run setup
+
+      - name: Build and push Docker images
+        run: |
+          docker compose -f docker-compose.yml build
+          echo "Images built. Push step would go here with docker compose push"
+
+      - name: Deploy services to ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || 'production' }}
+        run: |
+          TARGET=${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || 'production' }}
+          echo "Deploying Stellar Privacy Analytics to $TARGET..."
+          echo "docker compose -f docker-compose.yml -f docker-compose.optimized.yml up -d"
+          echo "(Configure $TARGET credentials in GitHub Environment secrets)"
