@@ -98,7 +98,7 @@ export const FieldControls: React.FC<FieldControlsProps> = ({
                   ...field.constraints, 
                   max: e.target.value ? parseInt(e.target.value) : undefined 
                 }
-              }}
+              })
               className="w-full px-2 py-1 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Maximum value"
             />
