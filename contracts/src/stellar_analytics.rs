@@ -5,6 +5,7 @@ use soroban_sdk::Address;
 use soroban_sdk::Env;
 use soroban_sdk::Vec;
 use soroban_sdk::String;
+use soroban_sdk::symbol;
 use soroban_sdk::symbol_short;
 use soroban_sdk::Map;
 use soroban_sdk::BytesN;
