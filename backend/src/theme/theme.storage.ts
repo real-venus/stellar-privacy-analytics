@@ -4,7 +4,9 @@ import { ThemeMode } from "./theme.types";
 export const saveTheme = (theme: ThemeMode) => {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {}
+  } catch {
+    // Ignore storage write failures (private mode, quota exceeded, etc.)
+  }
 };
 
 export const getStoredTheme = (): ThemeMode | null => {

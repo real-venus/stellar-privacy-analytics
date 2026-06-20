@@ -116,7 +116,7 @@ export class PerformanceOptimizer {
       this.cache.set(cacheKey, {
         data: response,
         timestamp: Date.now(),
-        ttl: ttl || this.cache.options.ttl,
+        ttl: ttl || 60000,
       });
 
       logger.debug("Response cached", { cacheKey });
@@ -281,10 +281,15 @@ export class PerformanceOptimizer {
           allResponseTimes.length
         : 0;
 
+    const cacheStats = this.cache as LRUCache<string, any> & {
+      hitCount?: number;
+      missCount?: number;
+    };
+    const hitCount = cacheStats.hitCount ?? 0;
+    const missCount = cacheStats.missCount ?? 0;
     const cacheHitRate =
-      this.cache.size > 0
-        ? (this.cache.hitCount / (this.cache.hitCount + this.cache.missCount)) *
-          100
+      this.cache.size > 0 && hitCount + missCount > 0
+        ? (hitCount / (hitCount + missCount)) * 100
         : 0;
 
     const memoryUsage = process.memoryUsage();
@@ -419,12 +424,19 @@ export class PerformanceOptimizer {
     hitRate: number;
     memoryUsage: number;
   } {
+    const cacheStats = this.cache as LRUCache<string, any> & {
+      hitCount?: number;
+      missCount?: number;
+      calculatedSize?: number;
+    };
+    const hitCount = cacheStats.hitCount ?? 0;
+    const missCount = cacheStats.missCount ?? 0;
+
     return {
       size: this.cache.size,
       hitRate:
-        (this.cache.hitCount / (this.cache.hitCount + this.cache.missCount)) *
-        100,
-      memoryUsage: this.cache.calculatedSize,
+        hitCount + missCount > 0 ? (hitCount / (hitCount + missCount)) * 100 : 0,
+      memoryUsage: cacheStats.calculatedSize ?? 0,
     };
   }
 

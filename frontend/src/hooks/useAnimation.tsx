@@ -123,7 +123,9 @@ export function AnimationProvider({
         const prefs: StoredPreferences = JSON.parse(stored);
         return prefs.enabled;
       }
-    } catch {}
+    } catch {
+      // Ignore invalid stored animation preferences
+    }
     return true;
   });
   const [animationSpeed, setAnimationSpeed] = useState(() => {
@@ -133,7 +135,9 @@ export function AnimationProvider({
         const prefs: StoredPreferences = JSON.parse(stored);
         return prefs.speed || defaultSpeed;
       }
-    } catch {}
+    } catch {
+      // Ignore invalid stored animation preferences
+    }
     return defaultSpeed;
   });
   const [hasGpuAcceleration] = useState(detectGpuAcceleration);

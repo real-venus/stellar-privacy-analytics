@@ -127,7 +127,9 @@ export function useFormPersistence<T extends Record<string, unknown>>(
           step: parsed.step || 0,
         };
       }
-    } catch {}
+    } catch {
+      // Ignore invalid stored form metadata
+    }
     return null;
   });
   const [isAbandoned, setIsAbandoned] = useState(() => {
@@ -137,7 +139,9 @@ export function useFormPersistence<T extends Record<string, unknown>>(
         const parsed: StoredFormData<T> = JSON.parse(stored);
         return parsed.isAbandoned || false;
       }
-    } catch {}
+    } catch {
+      // Ignore invalid stored form metadata
+    }
     return false;
   });
 

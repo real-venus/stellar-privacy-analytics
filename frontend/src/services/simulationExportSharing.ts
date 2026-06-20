@@ -1124,7 +1124,7 @@ export class SimulationExportSharing {
     const flattened: Record<string, any> = {};
 
     for (const key in data) {
-      if (data.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = data[key];
         const newKey = prefix ? `${prefix}.${key}` : key;
 

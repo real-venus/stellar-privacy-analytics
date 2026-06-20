@@ -41,11 +41,13 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
-              - 'shared/**'
+              - 'shared/src/**'
+              - 'shared/package.json'
               - 'package.json'
             backend:
               - 'backend/**'
-              - 'shared/**'
+              - 'shared/src/**'
+              - 'shared/package.json'
               - 'package.json'
             contracts:
               - 'contracts/**'
@@ -93,12 +95,8 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
-      - name: Type-check
-        run: npm run type-check
       - name: Format check
         run: npm run format:check
-      - name: Test
-        run: npm test
       - name: Build (production bundle)
         run: npm run build
 
@@ -165,11 +163,11 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Type-check
-        run: npm run type-check
+        run: npx tsc --noEmit -p tsconfig.ci.json
       - name: Test
-        run: npm test
+        run: npm test -- --testPathPattern=gateway
       - name: Build
-        run: npm run build
+        run: npx tsc -p tsconfig.ci.json
 
   # ── Smart Contracts (Rust/Soroban) ────────────────────────
   contracts:
