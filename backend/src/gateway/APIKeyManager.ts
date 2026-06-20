@@ -145,16 +145,19 @@ export class APIKeyManager {
         return { valid: false, reason: "Invalid API key format" };
       }
 
-      // Extract prefix for quick lookup
-      const prefix = apiKey.substring(0, this.keyPrefixLength);
-
-      // Find key by prefix (more efficient than iterating all keys)
-      const keyInfo = Array.from(this.keys.values()).find(
-        (k) => k.keyPrefix === prefix,
-      );
+      const inputHash = this.hashKey(apiKey);
+      const keyInfo = Array.from(this.keys.values()).find((k) => {
+        if (k.keyHash.length !== inputHash.length) {
+          return false;
+        }
+        return timingSafeEqual(
+          Buffer.from(inputHash),
+          Buffer.from(k.keyHash),
+        );
+      });
 
       if (!keyInfo) {
-        return { valid: false, reason: "API key not found" };
+        return { valid: false, reason: "Invalid API key" };
       }
 
       // Check if key is active
@@ -168,14 +171,6 @@ export class APIKeyManager {
         keyInfo.metadata.expiresAt < new Date()
       ) {
         return { valid: false, reason: "API key has expired" };
-      }
-
-      // Verify key hash
-      const inputHash = this.hashKey(apiKey);
-      if (
-        !timingSafeEqual(Buffer.from(inputHash), Buffer.from(keyInfo.keyHash))
-      ) {
-        return { valid: false, reason: "Invalid API key" };
       }
 
       // Check restrictions
@@ -445,12 +440,18 @@ export class APIKeyManager {
   }
 
   private initializeDefaultKeys(): void {
-    // Create a default admin key for development
+    if (process.env.NODE_ENV !== "development") {
+      return;
+    }
+
+    const apiKey = this.generateAPIKey();
+    const keyPrefix = apiKey.substring(0, this.keyPrefixLength);
+
     const adminKey: APIKey = {
       id: "admin_key_default",
       name: "Default Admin Key",
-      keyHash: this.hashKey("stellar_admin_default_key_1234567890abcdef"),
-      keyPrefix: "stellar_ad",
+      keyHash: this.hashKey(apiKey),
+      keyPrefix,
       permissions: ["admin", "read", "write", "delete"],
       rateLimit: {
         requestsPerMinute: 1000,
@@ -472,6 +473,14 @@ export class APIKeyManager {
     };
 
     this.keys.set(adminKey.id, adminKey);
+
+    logger.warn(
+      "Development-only default admin API key created. Do not use in production.",
+      { keyPrefix },
+    );
+
+    // Emit full key to console only — avoid persisting secrets to log files
+    console.warn(`[DEV] Default admin API key: ${apiKey}`);
   }
 
   private setupUsageLogCleanup(): void {
