@@ -1,5 +1,6 @@
 import { randomBytes, createHash, scrypt, timingSafeEqual } from "crypto";
 import { HSMService, WrappedKey, KeyMetadata } from "./hsmService";
+import { AuditService } from "./auditService";
 import { logger } from "../utils/logger";
 import { EventEmitter } from "events";
 
@@ -36,10 +37,12 @@ export class MasterKeyManager extends EventEmitter {
   private dataKeyCache: Map<string, { key: string; expires: Date }> = new Map();
   private maxCacheSize: number = 1000;
   private dataKeyTtl: number = 3600; // 1 hour default
+  private auditService?: AuditService;
 
-  constructor(hsmService: HSMService) {
+  constructor(hsmService: HSMService, auditService?: AuditService) {
     super();
     this.hsmService = hsmService;
+    this.auditService = auditService;
     this.startCacheCleanup();
   }
 
@@ -71,6 +74,15 @@ export class MasterKeyManager extends EventEmitter {
 
       logger.info("Master key initialized", { keyId: wrappedMasterKey.keyId });
       this.emit("masterKeyInitialized", { keyId: wrappedMasterKey.keyId });
+
+      if (this.auditService) {
+        await this.auditService.logKeyManagement(
+          "master_key_initialized",
+          { userId: "system", ipAddress: "internal" },
+          { type: "master_key", id: wrappedMasterKey.keyId },
+          "success",
+        );
+      }
 
       return wrappedMasterKey.keyId;
     } catch (error) {
@@ -143,10 +155,20 @@ export class MasterKeyManager extends EventEmitter {
         userId: request.userId,
       });
 
+      if (this.auditService) {
+        await this.auditService.logKeyManagement(
+          "data_key_generated",
+          { userId: request.userId || "system", ipAddress: "internal" },
+          { type: "data_key", id: this.activeMasterKeyId },
+          "success",
+          { purpose: request.purpose },
+        );
+      }
+
       return response;
     } catch (error) {
       logger.error("Failed to generate data key:", error);
-      throw new Error("Data key generation failed");
+      throw error instanceof Error ? error : new Error("Data key generation failed");
     }
   }
 
