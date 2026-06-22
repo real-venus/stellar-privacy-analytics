@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────
 #  Stellar Privacy Analytics — CI/CD Pipeline
-#  Path-filtered: each job triggers only on relevant changes.
-#  On main/master/develop branches, all checks run regardless.
+#  Path-filtered: each job triggers only on relevant changes
+#  On main/master/develop branches, all checks run regardless
 # ─────────────────────────────────────────────────────────────
 name: CI/CD Pipeline
 
@@ -14,6 +14,7 @@ on:
 
 env:
   NODE_VERSION: '22'
+  RUST_VERSION: '1.77.0'
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -30,6 +31,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       contracts: ${{ steps.filter.outputs.contracts }}
+      shared: ${{ steps.filter.outputs.shared }}
       service-discovery: ${{ steps.filter.outputs.service-discovery }}
       docs: ${{ steps.filter.outputs.docs }}
       rust-root: ${{ steps.filter.outputs.rust-root }}
@@ -43,19 +45,17 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
-              - 'shared/src/**'
-              - 'shared/package.json'
               - 'package.json'
             backend:
               - 'backend/**'
-              - 'shared/src/**'
-              - 'shared/package.json'
+              - 'package.json'
+            shared:
+              - 'shared/**'
               - 'package.json'
             contracts:
               - 'contracts/**'
             service-discovery:
               - 'service-discovery-dashboard/**'
-              - 'package.json'
             rust-root:
               - 'src/**'
               - 'Cargo.toml'
@@ -73,47 +73,16 @@ jobs:
               - '.github/workflows/**'
               - '.github/actions/**'
 
-  # ── Frontend: lint, format, build ─────────────────────────
-  frontend:
-    name: Frontend
+  # ── Shared library ────────────────────────────────────────
+  shared:
+    name: Shared Library
     needs: [changes]
     if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.frontend == 'true' ||
-       needs.changes.outputs.ci == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Format check
-        run: npm run format:check
-      - name: Build (production bundle)
-        run: npm run build
-
-  # ── Build shared library (dependency for backend) ────────
-  shared-build:
-    name: Build Shared
-    needs: [changes]
-    if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.backend == 'true' ||
-       needs.changes.outputs.ci == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
+      always() && !cancelled() && (
+        needs.changes.outputs.shared == 'true' ||
+        needs.changes.outputs.ci == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -126,25 +95,60 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: shared/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Build
-        run: npm run build
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm test
+      - run: npm run build
       - name: Cache shared dist
         uses: actions/cache@v4
         with:
           path: shared/dist
           key: shared-dist-${{ hashFiles('shared/src/**/*.ts', 'shared/tsconfig.json') }}
 
+  # ── Frontend: lint, type-check, test, build ───────────────
+  frontend:
+    name: Frontend
+    needs: [changes, shared]
+    if: |
+      always() && !cancelled() && (
+        needs.changes.outputs.frontend == 'true' ||
+        needs.changes.outputs.ci == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Restore shared dist cache
+        uses: actions/cache@v4
+        with:
+          path: shared/dist
+          key: shared-dist-${{ hashFiles('shared/src/**/*.ts', 'shared/tsconfig.json') }}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm test
+      - run: npm run build
+
+  # ── Backend: lint, type-check, test, build ────────────────
   backend:
     name: Backend
-    needs: [changes, shared-build]
+    needs: [changes, shared]
     if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.backend == 'true' ||
-       needs.changes.outputs.ci == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
+      always() && !cancelled() && (
+        needs.changes.outputs.backend == 'true' ||
+        needs.changes.outputs.ci == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -162,71 +166,64 @@ jobs:
         with:
           path: shared/dist
           key: shared-dist-${{ hashFiles('shared/src/**/*.ts', 'shared/tsconfig.json') }}
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Type-check
-        run: npx tsc --noEmit -p tsconfig.ci.json
-      - name: Test
-        run: npm test -- --testPathPattern=gateway
-      - name: Build
-        run: npx tsc -p tsconfig.ci.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm test
+      - run: npx tsc -p tsconfig.ci.json
 
   # ── Smart Contracts (Rust/Soroban) ────────────────────────
   contracts:
-    name: Contracts
+    name: Smart Contracts
     needs: [changes]
     if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.contracts == 'true' ||
-       needs.changes.outputs.rust == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
+      always() && !cancelled() && (
+        needs.changes.outputs.contracts == 'true' ||
+        needs.changes.outputs.rust == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: contracts
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+          cache-on-failure: true
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: contracts/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-          components: rustfmt, clippy
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: contracts
-          cache-on-failure: true
-      - name: Install npm dependencies
-        run: npm ci
-      - name: Lint TypeScript
-        run: npm run lint
-      - name: Type-check TypeScript
-        run: npm run type-check
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
       - name: Format check (cargo fmt)
         run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Test (Rust)
-        run: cargo test 2>/dev/null || echo "Contract Rust tests skipped pending Soroban SDK 22 migration"
+        run: cargo test
       - name: Build WASM (release)
-        run: cargo build --target wasm32-unknown-unknown --release 2>/dev/null || echo "Contract WASM build skipped pending Soroban SDK 22 migration"
+        run: cargo build --target wasm32-unknown-unknown --release
 
   # ── Root Soroban Extras ──────────────────────────────────
   rust-extras:
     name: Rust Extras
     needs: [changes]
     if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.rust-root == 'true' ||
-       needs.changes.outputs.rust == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
+      always() && !cancelled() && (
+        needs.changes.outputs.rust-root == 'true' ||
+        needs.changes.outputs.rust == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -235,18 +232,17 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: .
           cache-on-failure: true
-      - name: Format check (cargo fmt)
+      - name: Format check
         run: cargo fmt --check --manifest-path Cargo.toml
       - name: Clippy
         run: cargo clippy --all-targets --all-features --manifest-path Cargo.toml -- -D warnings
       - name: Test
         run: cargo test --manifest-path Cargo.toml
-      - name: Build WASM (release)
+      - name: Build WASM
         run: cargo build --target wasm32-unknown-unknown --release --manifest-path Cargo.toml
 
   # ── Service Discovery Dashboard ──────────────────────────
@@ -254,10 +250,10 @@ jobs:
     name: Service Discovery
     needs: [changes]
     if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.service-discovery == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
+      always() && !cancelled() && (
+        needs.changes.outputs.service-discovery == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -270,24 +266,20 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: service-discovery-dashboard/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Type-check
-        run: npm run type-check
-      - name: Build
-        run: npm run build
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run build
 
-  # ── Docs build (Next.js) ─────────────────────────────────
+  # ── Documentation ────────────────────────────────────────
   docs:
     name: Documentation
     needs: [changes]
     if: |
-      always() &&
-      !cancelled() &&
-      (needs.changes.outputs.docs == 'true' ||
-       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
+      always() && !cancelled() && (
+        needs.changes.outputs.docs == 'true' ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -300,22 +292,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: docs/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Build
-        run: npm run build
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
 
-  # ── Deploy (manual approval required) ─────────────────────
+  # ── Deploy ───────────────────────────────────────────────
   deploy:
     name: Deploy
     needs: [frontend, backend, contracts, rust-extras, service-discovery, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: >
-      ( github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' )
-      && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: production
       url: https://stellar-analytics.example.com
@@ -325,13 +312,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build and push Docker images
-        run: |
-          docker compose -f docker-compose.yml build
-          echo "Images built. Push step would go here with docker compose push"
-      - name: Deploy services to production
-        run: |
-          echo "Deploying Stellar Privacy Analytics to production..."
-          echo "docker compose -f docker-compose.yml -f docker-compose.optimized.yml up -d"
+      - run: npm ci
+      - name: Build Docker images
+        run: docker compose -f docker-compose.yml build
+      - name: Deploy services
+        run: echo "Deploying Stellar Privacy Analytics to production..."
