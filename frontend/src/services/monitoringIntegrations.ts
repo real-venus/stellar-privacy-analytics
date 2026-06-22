@@ -663,7 +663,7 @@ export class MonitoringIntegrations {
       },
       body: new URLSearchParams({
         username: 'admin',
-        password: 'changeme',
+        password: config.password ?? process.env.SPLUNK_PASSWORD ?? '',
       }),
     });
 

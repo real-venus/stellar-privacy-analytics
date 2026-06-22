@@ -1,15 +1,15 @@
-use soroban_sdk::contracttype;
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
+use soroban_sdk::contracttype;
 use soroban_sdk::Address;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
-use soroban_sdk::Map;
-use soroban_sdk::BytesN;
-use soroban_sdk::Symbol;
 use soroban_sdk::Bytes;
-use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
+use soroban_sdk::Symbol;
+use soroban_sdk::Vec;
 
 // Constants
 const MIN_FEE: i128 = 10000000; // 0.01 XLM (10^7 stroops)
@@ -70,18 +70,25 @@ pub enum PrivacyOracleError {
     Unauthorized = 10,
 }
 
+#[contract]
 pub struct PrivacyOracle;
 
 #[contractimpl]
 impl PrivacyOracle {
     /// Initialize the contract with default data source fees
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&Symbol::new(&env, "initialized")) {
+        if env
+            .storage()
+            .instance()
+            .has(&Symbol::new(&env, "initialized"))
+        {
             return; // Already initialized
         }
 
         // Set admin
-        env.storage().instance().set(&Symbol::new(&env, "admin"), &admin);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "admin"), &admin);
 
         // Initialize default data source fees
         // Keys are String (not SymbolShort) to align with consumer's
@@ -92,10 +99,18 @@ impl PrivacyOracle {
         fees.set(String::from_str(&env, "social_metrics"), 30000000i128); // 0.03 XLM
         fees.set(String::from_str(&env, "financial_data"), 100000000i128); // 0.1 XLM
 
-        env.storage().instance().set(&Symbol::new(&env, "data_source_fees"), &fees);
-        env.storage().instance().set(&Symbol::new(&env, "total_requests"), &0u64);
-        env.storage().instance().set(&Symbol::new(&env, "total_fees_collected"), 0i128);
-        env.storage().instance().set(&Symbol::new(&env, "initialized"), true);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "data_source_fees"), &fees);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "total_requests"), &0u64);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "total_fees_collected"), 0i128);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "initialized"), true);
     }
 
     /// Request data from external source with privacy protection
@@ -139,10 +154,16 @@ impl PrivacyOracle {
         hash_input.append(&data_source.to_xdr(&env));
         hash_input.append(&data_hash.to_xdr(&env));
         hash_input.append(&Bytes::from_slice(&env, &privacy_level.to_be_bytes()));
-        hash_input.append(&Bytes::from_slice(&env, &env.ledger().timestamp().to_be_bytes()));
-        hash_input.append(&Bytes::from_slice(&env, &env.ledger().sequence().to_be_bytes()));
+        hash_input.append(&Bytes::from_slice(
+            &env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        hash_input.append(&Bytes::from_slice(
+            &env,
+            &env.ledger().sequence().to_be_bytes(),
+        ));
 
-        let request_id = env.crypto().sha256(&hash_input);
+        let request_id: BytesN<32> = env.crypto().sha256(&hash_input).into();
 
         // Create data request
         let request = DataRequest {
@@ -165,7 +186,9 @@ impl PrivacyOracle {
             .unwrap_or_else(|| Map::new(&env));
 
         requests.set(request_id.clone(), request.clone());
-        env.storage().instance().set(&Symbol::new(&env, "data_requests"), &requests);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "data_requests"), &requests);
 
         // Add to pending requests
         let mut pending_requests: Vec<BytesN<32>> = env
@@ -198,20 +221,20 @@ impl PrivacyOracle {
             .instance()
             .get(&Symbol::new(&env, "total_fees_collected"))
             .unwrap_or(0);
-        env.storage()
-            .instance()
-            .set(&Symbol::new(&env, "total_fees_collected"), &(total_fees_collected + fee));
+        env.storage().instance().set(
+            &Symbol::new(&env, "total_fees_collected"),
+            &(total_fees_collected + fee),
+        );
 
         // Emit event
-        env.events()
-            .publish(
-                (
-                    Symbol::new(&env, "data_requested"),
-                    request_id.clone(),
-                    data_source.clone(),
-                ),
-                (),
-            );
+        env.events().publish(
+            (
+                Symbol::new(&env, "data_requested"),
+                request_id.clone(),
+                data_source.clone(),
+            ),
+            (),
+        );
 
         Ok(request_id)
     }
@@ -270,13 +293,17 @@ impl PrivacyOracle {
             .unwrap_or_else(|| Map::new(&env));
 
         responses.set(request_id.clone(), response);
-        env.storage().instance().set(&Symbol::new(&env, "data_responses"), &responses);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "data_responses"), &responses);
 
         // Update request status
         let mut updated_request = request;
         updated_request.fulfilled = true;
         requests.set(request_id.clone(), updated_request);
-        env.storage().instance().set(&Symbol::new(&env, "data_requests"), &requests);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "data_requests"), &requests);
 
         // Clone oracle before moving into update_oracle_stats
         let oracle_for_event = oracle.clone();
@@ -289,15 +316,14 @@ impl PrivacyOracle {
         Self::remove_from_pending(env.clone(), request_id.clone());
 
         // Emit event
-        env.events()
-            .publish(
-                (
-                    Symbol::new(&env, "data_fulfilled"),
-                    request_id.clone(),
-                    oracle_for_event,
-                ),
-                (),
-            );
+        env.events().publish(
+            (
+                Symbol::new(&env, "data_fulfilled"),
+                request_id.clone(),
+                oracle_for_event,
+            ),
+            (),
+        );
 
         Ok(())
     }
@@ -336,7 +362,9 @@ impl PrivacyOracle {
         let mut updated_request = request;
         updated_request.cancelled = true;
         requests.set(request_id.clone(), updated_request);
-        env.storage().instance().set(&Symbol::new(&env, "data_requests"), &requests);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "data_requests"), &requests);
 
         // Refund 50% of the fee
         let refund = cancel_fee / 2;
@@ -347,8 +375,10 @@ impl PrivacyOracle {
         Self::remove_from_pending(env.clone(), request_id.clone());
 
         // Emit event
-        env.events()
-            .publish((Symbol::new(&env, "request_cancelled"), request_id.clone()), ());
+        env.events().publish(
+            (Symbol::new(&env, "request_cancelled"), request_id.clone()),
+            (),
+        );
 
         Ok(())
     }
@@ -391,7 +421,9 @@ impl PrivacyOracle {
         };
 
         nodes.set(node.clone(), oracle_node);
-        env.storage().instance().set(&Symbol::new(&env, "oracle_nodes"), &nodes);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "oracle_nodes"), &nodes);
 
         // Add to active nodes list
         let mut active_nodes: Vec<Address> = env
@@ -437,7 +469,9 @@ impl PrivacyOracle {
 
         oracle_node.active = false;
         nodes.set(node.clone(), oracle_node);
-        env.storage().instance().set(&Symbol::new(&env, "oracle_nodes"), &nodes);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "oracle_nodes"), &nodes);
 
         // Remove from active nodes list
         Self::remove_from_active_nodes(env.clone(), node.clone());
@@ -529,9 +563,7 @@ impl PrivacyOracle {
             .get(&Symbol::new(&env, "oracle_nodes"))
             .ok_or(PrivacyOracleError::OracleNotFound)?;
 
-        nodes
-            .get(node)
-            .ok_or(PrivacyOracleError::OracleNotFound)
+        nodes.get(node).ok_or(PrivacyOracleError::OracleNotFound)
     }
 
     /// Get contract statistics
@@ -546,14 +578,18 @@ impl PrivacyOracle {
             .instance()
             .get(&Symbol::new(&env, "total_fees_collected"))
             .unwrap_or(0);
-        
+
         let active_nodes: Vec<Address> = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "active_oracle_nodes"))
             .unwrap_or_else(|| Vec::new(&env));
 
-        (total_requests, total_fees_collected, active_nodes.len() as u32)
+        (
+            total_requests,
+            total_fees_collected,
+            active_nodes.len() as u32,
+        )
     }
 
     // Helper functions
@@ -575,7 +611,9 @@ impl PrivacyOracle {
             .unwrap_or_else(|| Map::new(&env));
 
         deposits.set(user, deposit);
-        env.storage().instance().set(&Symbol::new(&env, "user_deposits"), &deposits);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "user_deposits"), &deposits);
     }
 
     fn is_active_oracle(env: Env, oracle: Address) -> bool {
@@ -609,7 +647,9 @@ impl PrivacyOracle {
             node.reputation = new_reputation as u32;
 
             nodes.set(oracle, node);
-            env.storage().instance().set(&Symbol::new(&env, "oracle_nodes"), &nodes);
+            env.storage()
+                .instance()
+                .set(&Symbol::new(&env, "oracle_nodes"), &nodes);
         }
     }
 

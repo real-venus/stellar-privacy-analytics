@@ -445,7 +445,7 @@ const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
 
   const saveSchemaToLocalStorage = (schema: SchemaConfig): void => {
     try {
-      localStorage.setItem("schema-builder-schema", JSON.stringify(schema));
+      localStorage.setItem('schema-builder-schema', JSON.stringify(schema));
     } catch (error) {
       console.error('Failed to save schema to local storage:', error);
     }

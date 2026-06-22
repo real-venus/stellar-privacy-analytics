@@ -202,7 +202,7 @@ describe("HSM Integration Tests", () => {
       immutableStorage: true,
     });
 
-    masterKeyManager = new MasterKeyManager(hsmService);
+    masterKeyManager = new MasterKeyManager(hsmService, auditService);
     killSwitchService = new KillSwitchService(
       hsmService,
       masterKeyManager,

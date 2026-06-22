@@ -1,15 +1,15 @@
-use soroban_sdk::contracttype;
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
+use soroban_sdk::contracttype;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
-use soroban_sdk::Map;
 use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
 use soroban_sdk::Symbol;
-use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::Vec;
 
 // Contract state storage keys
 const ACTIVE_SCHEMAS_KEY: &str = "ACTIVE_SCHEMAS";
@@ -117,20 +117,29 @@ pub enum SchemaValidationError {
     NotAuthorized = 12,
 }
 
+#[contract]
 pub struct SchemaEnforcer;
 
 #[contractimpl]
 impl SchemaEnforcer {
     /// Initialize the schema enforcement contract
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&Symbol::new(&env, "initialized")) {
+        if env
+            .storage()
+            .instance()
+            .has(&Symbol::new(&env, "initialized"))
+        {
             return; // Already initialized
         }
 
         // Set admin
-        env.storage().instance().set(&Symbol::new(&env, "admin"), &admin);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "admin"), &admin);
 
-        env.storage().instance().set(&Symbol::new(&env, "initialized"), &true);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     /// Create a new data schema for an organization
@@ -146,27 +155,27 @@ impl SchemaEnforcer {
         org_id.require_auth();
 
         // Validate schema constraints
-        if fields.len() > MAX_SCHEMA_FIELDS as usize {
+        if fields.len() > MAX_SCHEMA_FIELDS {
             return Err(SchemaValidationError::MaxFieldsExceeded);
         }
 
         // Validate field names
         for field in fields.iter() {
-            if field.name.len() > MAX_FIELD_NAME_LENGTH as usize {
+            if field.name.len() > MAX_FIELD_NAME_LENGTH {
                 return Err(SchemaValidationError::FieldNameTooLong);
             }
         }
 
         // Generate schema ID
         let schema_id = Self::generate_schema_id(&env, &org_id, &name, &version);
-        
+
         // Check if schema already exists
         if Self::get_schema(&env, &schema_id).is_some() {
             return Err(SchemaValidationError::InvalidSchemaId);
         }
 
         let current_time = env.ledger().timestamp();
-        
+
         let schema = DataSchema {
             schema_id: schema_id.clone(),
             org_id: org_id.clone(),
@@ -184,18 +193,26 @@ impl SchemaEnforcer {
 
         // Add to organization's schemas
         let org_schemas_key = (Symbol::new(&env, "org_schemas_"), org_id.clone());
-        let mut org_schemas: Vec<BytesN<32>> = env.storage().persistent()
+        let mut org_schemas: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
             .get(&org_schemas_key)
             .unwrap_or_else(|| Vec::new(&env));
         org_schemas.push_back(schema_id.clone());
-        env.storage().persistent().set(&org_schemas_key, &org_schemas);
+        env.storage()
+            .persistent()
+            .set(&org_schemas_key, &org_schemas);
 
         // Add to active schemas
-        let mut active_schemas: Vec<BytesN<32>> = env.storage().persistent()
+        let mut active_schemas: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
             .get(&Symbol::new(&env, "active_schemas"))
             .unwrap_or_else(|| Vec::new(&env));
         active_schemas.push_back(schema_id.clone());
-        env.storage().persistent().set(&Symbol::new(&env, "active_schemas"), &active_schemas);
+        env.storage()
+            .persistent()
+            .set(&Symbol::new(&env, "active_schemas"), &active_schemas);
 
         Ok(schema_id)
     }
@@ -230,29 +247,32 @@ impl SchemaEnforcer {
         for required_meta in schema.required_metadata.iter() {
             if !payload.metadata.contains_key(required_meta) {
                 validation_log.validation_result = false;
-                validation_log.error_messages.push_back(
-                    String::from_str(&env, "Missing required metadata")
-                );
+                validation_log
+                    .error_messages
+                    .push_back(String::from_str(&env, "Missing required metadata"));
             }
         }
 
         // Validate encrypted fields against schema
         let schema_field_map = Self::create_field_map(&env, &schema.fields);
-        
+
         for (field_name, _encrypted_data) in payload.encrypted_fields.iter() {
             if let Some(expected_field) = schema_field_map.get(field_name) {
                 // Validate field type (basic check - encrypted data type validation)
-                if !Self::validate_encrypted_field_type(expected_field.field_type.clone(), _encrypted_data) {
+                if !Self::validate_encrypted_field_type(
+                    expected_field.field_type.clone(),
+                    _encrypted_data,
+                ) {
                     validation_log.validation_result = false;
-                    validation_log.error_messages.push_back(
-                        String::from_str(&env, "Invalid field type")
-                    );
+                    validation_log
+                        .error_messages
+                        .push_back(String::from_str(&env, "Invalid field type"));
                 }
             } else {
                 validation_log.validation_result = false;
-                validation_log.error_messages.push_back(
-                    String::from_str(&env, "Unexpected field in payload")
-                );
+                validation_log
+                    .error_messages
+                    .push_back(String::from_str(&env, "Unexpected field in payload"));
             }
         }
 
@@ -260,9 +280,9 @@ impl SchemaEnforcer {
         for field in schema.fields.iter() {
             if field.required && !payload.encrypted_fields.contains_key(&field.name) {
                 validation_log.validation_result = false;
-                validation_log.error_messages.push_back(
-                    String::from_str(&env, "Missing required field")
-                );
+                validation_log
+                    .error_messages
+                    .push_back(String::from_str(&env, "Missing required field"));
             }
         }
 
@@ -277,13 +297,20 @@ impl SchemaEnforcer {
                 payload_id: payload.payload_id.clone(),
                 provider_id: payload.provider_id.clone(),
                 schema_id: payload.schema_id.clone(),
-                rejection_reason: validation_log.error_messages.get(0).unwrap_or(&String::from_str(&env, "Validation failed")).clone(),
+                rejection_reason: validation_log
+                    .error_messages
+                    .get(0)
+                    .unwrap_or(&String::from_str(&env, "Validation failed"))
+                    .clone(),
                 timestamp: env.ledger().timestamp(),
             };
-            
+
             // Store rejection event
-            env.storage().persistent().set(&(Symbol::new(&env, "rejection_"), payload.payload_id.clone()), &rejection_event);
-            
+            env.storage().persistent().set(
+                &(Symbol::new(&env, "rejection_"), payload.payload_id.clone()),
+                &rejection_event,
+            );
+
             return Err(SchemaValidationError::InvalidPayload);
         }
 
@@ -301,8 +328,8 @@ impl SchemaEnforcer {
         // Verify organization authorization
         org_id.require_auth();
 
-        let mut schema = Self::get_schema(&env, &schema_id)
-            .ok_or(SchemaValidationError::SchemaNotFound)?;
+        let mut schema =
+            Self::get_schema(&env, &schema_id).ok_or(SchemaValidationError::SchemaNotFound)?;
 
         // Verify ownership
         if schema.org_id != org_id {
@@ -310,7 +337,7 @@ impl SchemaEnforcer {
         }
 
         // Validate new schema constraints
-        if new_fields.len() > MAX_SCHEMA_FIELDS as usize {
+        if new_fields.len() > MAX_SCHEMA_FIELDS {
             return Err(SchemaValidationError::MaxFieldsExceeded);
         }
 
@@ -334,8 +361,8 @@ impl SchemaEnforcer {
         // Verify organization authorization
         org_id.require_auth();
 
-        let mut schema = Self::get_schema(&env, &schema_id)
-            .ok_or(SchemaValidationError::SchemaNotFound)?;
+        let mut schema =
+            Self::get_schema(&env, &schema_id).ok_or(SchemaValidationError::SchemaNotFound)?;
 
         // Verify ownership
         if schema.org_id != org_id {
@@ -350,10 +377,12 @@ impl SchemaEnforcer {
         env.storage().persistent().set(&schema_id, &schema);
 
         // Remove from active schemas
-        let mut active_schemas: Vec<BytesN<32>> = env.storage().persistent()
+        let mut active_schemas: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
             .get(&Symbol::new(&env, "active_schemas"))
             .unwrap_or_else(|| Vec::new(&env));
-        
+
         let mut filtered_schemas = Vec::new(&env);
         for id in active_schemas {
             if id != schema_id {
@@ -361,22 +390,27 @@ impl SchemaEnforcer {
             }
         }
         active_schemas = filtered_schemas;
-        
-        env.storage().persistent().set(&Symbol::new(&env, "active_schemas"), &active_schemas);
+
+        env.storage()
+            .persistent()
+            .set(&Symbol::new(&env, "active_schemas"), &active_schemas);
 
         Ok(())
     }
 
     /// Get schema details
-    pub fn get_schema_details(env: Env, schema_id: BytesN<32>) -> Result<DataSchema, SchemaValidationError> {
-        Self::get_schema(&env, &schema_id)
-            .ok_or(SchemaValidationError::SchemaNotFound)
+    pub fn get_schema_details(
+        env: Env,
+        schema_id: BytesN<32>,
+    ) -> Result<DataSchema, SchemaValidationError> {
+        Self::get_schema(&env, &schema_id).ok_or(SchemaValidationError::SchemaNotFound)
     }
 
     /// Get all schemas for an organization
     pub fn get_org_schemas(env: Env, org_id: Address) -> Vec<BytesN<32>> {
         let org_schemas_key = (Symbol::new(&env, "org_schemas_"), org_id.clone());
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&org_schemas_key)
             .unwrap_or_else(|| Vec::new(&env))
     }
@@ -386,7 +420,11 @@ impl SchemaEnforcer {
         // Find log by payload_id (simplified approach)
         // In production, you'd maintain an index
         let logs_key = Symbol::new(&env, "validation_logs");
-        if let Some(logs) = env.storage().persistent().get::<_, Vec<BytesN<32>>>(&logs_key) {
+        if let Some(logs) = env
+            .storage()
+            .persistent()
+            .get::<_, Vec<BytesN<32>>>(&logs_key)
+        {
             for log_id in logs.iter() {
                 if let Some(log) = env.storage().persistent().get::<_, ValidationLog>(log_id) {
                     if log.payload_id == payload_id {
@@ -400,33 +438,49 @@ impl SchemaEnforcer {
 
     /// Get rejection event for a payload
     pub fn get_rejection_event(env: Env, payload_id: BytesN<32>) -> Option<RejectionEvent> {
-        env.storage().persistent().get(&(Symbol::new(&env, "rejection_"), payload_id.clone()))
+        env.storage()
+            .persistent()
+            .get(&(Symbol::new(&env, "rejection_"), payload_id.clone()))
     }
 
     // Helper functions
 
-    fn generate_schema_id(env: &Env, org_id: &Address, name: &String, version: &String) -> BytesN<32> {
+    fn generate_schema_id(
+        env: &Env,
+        org_id: &Address,
+        name: &String,
+        version: &String,
+    ) -> BytesN<32> {
         let mut combined = soroban_sdk::Bytes::new(env);
         combined.append(&org_id.to_xdr(env));
         combined.append(&name.to_xdr(env));
         combined.append(&version.to_xdr(env));
-        combined.append(&Bytes::from_slice(env, &env.ledger().timestamp().to_be_bytes()));
-        env.crypto().sha256(&combined)
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined).into()
     }
 
     fn generate_log_id(env: &Env, payload_id: &BytesN<32>) -> BytesN<32> {
         let mut combined = soroban_sdk::Bytes::new(env);
         combined.append(&payload_id.to_xdr(env));
-        combined.append(&Bytes::from_slice(env, &env.ledger().timestamp().to_be_bytes()));
-        env.crypto().sha256(&combined)
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined).into()
     }
 
     fn generate_rejection_id(env: &Env, payload_id: &BytesN<32>) -> BytesN<32> {
         let mut combined = soroban_sdk::Bytes::new(env);
         combined.append(&payload_id.to_xdr(env));
         combined.append(&String::from_str(env, "rejection").to_xdr(env));
-        combined.append(&Bytes::from_slice(env, &env.ledger().timestamp().to_be_bytes()));
-        env.crypto().sha256(&combined)
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined).into()
     }
 
     fn get_schema(env: &Env, schema_id: &BytesN<32>) -> Option<DataSchema> {
@@ -445,10 +499,9 @@ impl SchemaEnforcer {
         // Basic validation - in production, you'd have more sophisticated checks
         // For encrypted data, we mainly check that data exists and has reasonable length
         match field_type {
-            SchemaFieldType::EncryptedString | SchemaFieldType::EncryptedInteger | 
-            SchemaFieldType::EncryptedFloat => {
-                !_encrypted_data.is_empty()
-            }
+            SchemaFieldType::EncryptedString
+            | SchemaFieldType::EncryptedInteger
+            | SchemaFieldType::EncryptedFloat => !_encrypted_data.is_empty(),
             _ => false, // Non-encrypted types shouldn't be in encrypted fields
         }
     }

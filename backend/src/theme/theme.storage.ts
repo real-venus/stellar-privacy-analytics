@@ -5,7 +5,7 @@ export const saveTheme = (theme: ThemeMode) => {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
-    /* localStorage may be unavailable */
+    // Ignore storage write failures (private mode, quota exceeded, etc.)
   }
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import LargeDatasetChart from './components/PerformanceCharts';
+import LargeDatasetChart from '../components/PerformanceCharts';
 
 const PerformancePage: React.FC = () => {
   return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Eye} from 'lucide-react';
+import { Trash2, Eye } from 'lucide-react';
 
 export interface SchemaField {
   id: string;

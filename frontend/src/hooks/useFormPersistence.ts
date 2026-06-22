@@ -128,7 +128,7 @@ export function useFormPersistence<T extends Record<string, unknown>>(
         };
       }
     } catch {
-      /* localStorage may be unavailable */
+      // Ignore invalid stored form metadata
     }
     return null;
   });
@@ -140,7 +140,7 @@ export function useFormPersistence<T extends Record<string, unknown>>(
         return parsed.isAbandoned || false;
       }
     } catch {
-      /* localStorage may be unavailable */
+      // Ignore invalid stored form metadata
     }
     return false;
   });

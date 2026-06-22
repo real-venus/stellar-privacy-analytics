@@ -1,15 +1,15 @@
-use soroban_sdk::contracttype;
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
+use soroban_sdk::contracttype;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
-use soroban_sdk::Map;
 use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
 use soroban_sdk::Symbol;
-use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::Vec;
 
 // Contract state storage keys
 const DATA_ENTRIES_KEY: &str = "DATA_ENTRIES";
@@ -75,29 +75,42 @@ pub enum TtlStorageError {
     CleanupInProgress = 8,
 }
 
+#[contract]
 pub struct TtlStorage;
 
 #[contractimpl]
 impl TtlStorage {
     /// Initialize the TTL storage contract
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&Symbol::new(&env, "initialized")) {
+        if env
+            .storage()
+            .instance()
+            .has(&Symbol::new(&env, "initialized"))
+        {
             return; // Already initialized
         }
 
         // Set admin
-        env.storage().instance().set(&Symbol::new(&env, "admin"), &admin);
-        
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "admin"), &admin);
+
         // Initialize cleanup worker
-        env.storage().instance().set(&Symbol::new(&env, "cleanup_worker"), &admin);
-        
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "cleanup_worker"), &admin);
+
         // Set default storage fees
         let mut fees = Map::new(&env);
         fees.set(Symbol::new(&env, "permanent"), 10000000i128); // 0.01 XLM/hour
         fees.set(Symbol::new(&env, "temporary"), 5000000i128); // 0.005 XLM/hour
-        env.storage().instance().set(&Symbol::new(&env, "storage_fees"), &fees);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "storage_fees"), &fees);
 
-        env.storage().instance().set(&Symbol::new(&env, "initialized"), &true);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     /// Store data with TTL support, automatically chunked if needed
@@ -114,7 +127,7 @@ impl TtlStorage {
 
         // Calculate entry ID
         let entry_id = Self::generate_entry_id(&env, &owner, &data);
-        
+
         // Check if entry already exists
         if Self::get_data_entry(&env, &entry_id).is_some() {
             return Err(TtlStorageError::InvalidEntryId);
@@ -126,7 +139,11 @@ impl TtlStorage {
         let expires_at = current_time + ttl_seconds;
 
         // Calculate storage fee
-        let fee_type = if is_temporary { "temporary" } else { "permanent" };
+        let fee_type = if is_temporary {
+            "temporary"
+        } else {
+            "permanent"
+        };
         let fee_per_hour = Self::get_storage_fee(&env, fee_type);
         let total_fee = fee_per_hour * (ttl_hours as i128);
 
@@ -141,7 +158,7 @@ impl TtlStorage {
 
         // Split data into chunks if necessary
         let chunks = Self::split_into_chunks(&env, &data, &entry_id)?;
-        
+
         // Store chunks
         for chunk in chunks {
             env.storage().temporary().set(&chunk.chunk_id, &chunk);
@@ -151,7 +168,7 @@ impl TtlStorage {
         let entry = DataEntry {
             entry_id: entry_id.clone(),
             owner: owner.clone(),
-            data_hash: env.crypto().sha256(&data),
+            data_hash: env.crypto().sha256(&data).into(),
             chunk_count: chunks.len() as u32,
             created_at: current_time,
             expires_at,
@@ -172,15 +189,20 @@ impl TtlStorage {
             paid_until: expires_at,
             auto_renew: !is_temporary,
         };
-        env.storage().persistent().set(&(Symbol::new(&env, "fee_"), entry_id.clone()), &fee_record);
+        env.storage()
+            .persistent()
+            .set(&(Symbol::new(&env, "fee_"), entry_id.clone()), &fee_record);
 
         Ok(entry_id)
     }
 
     /// Retrieve stored data by entry ID
-    pub fn retrieve_data(env: Env, entry_id: BytesN<32>, requester: Address) -> Result<Bytes, TtlStorageError> {
-        let entry = Self::get_data_entry(&env, &entry_id)
-            .ok_or(TtlStorageError::EntryNotFound)?;
+    pub fn retrieve_data(
+        env: Env,
+        entry_id: BytesN<32>,
+        requester: Address,
+    ) -> Result<Bytes, TtlStorageError> {
+        let entry = Self::get_data_entry(&env, &entry_id).ok_or(TtlStorageError::EntryNotFound)?;
 
         // Check if entry has expired
         if env.ledger().timestamp() > entry.expires_at {
@@ -188,7 +210,11 @@ impl TtlStorage {
         }
 
         // Verify requester authorization (owner or admin)
-        let admin = env.storage().instance().get(&Symbol::new(&env, "admin")).unwrap();
+        let admin = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "admin"))
+            .unwrap();
         if requester != entry.owner && requester != admin {
             return Err(TtlStorageError::NotAuthorized);
         }
@@ -204,8 +230,8 @@ impl TtlStorage {
         requester: Address,
         extension_hours: u32,
     ) -> Result<(), TtlStorageError> {
-        let mut entry = Self::get_data_entry(&env, &entry_id)
-            .ok_or(TtlStorageError::EntryNotFound)?;
+        let mut entry =
+            Self::get_data_entry(&env, &entry_id).ok_or(TtlStorageError::EntryNotFound)?;
 
         // Verify owner authorization
         if requester != entry.owner {
@@ -218,7 +244,11 @@ impl TtlStorage {
         }
 
         // Calculate extension fee
-        let fee_type = if entry.is_temporary { "temporary" } else { "permanent" };
+        let fee_type = if entry.is_temporary {
+            "temporary"
+        } else {
+            "permanent"
+        };
         let fee_per_hour = Self::get_storage_fee(&env, fee_type);
         let extension_fee = fee_per_hour * (extension_hours as i128);
 
@@ -251,7 +281,10 @@ impl TtlStorage {
     /// Cleanup expired temporary data (called by cleanup worker)
     pub fn cleanup_expired_data(env: Env, worker: Address) -> Result<u32, TtlStorageError> {
         // Verify cleanup worker authorization
-        let cleanup_worker = env.storage().instance().get(&Symbol::new(&env, "cleanup_worker"))
+        let cleanup_worker = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "cleanup_worker"))
             .ok_or(TtlStorageError::NotAuthorized)?;
         if worker != cleanup_worker {
             return Err(TtlStorageError::NotAuthorized);
@@ -263,9 +296,13 @@ impl TtlStorage {
         // Get all data entries (this is a simplified approach)
         // In production, you'd want to maintain an index of temporary entries
         let entries_key = Symbol::new(&env, "data_entries");
-        if let Some(entries) = env.storage().persistent().get::<_, Vec<BytesN<32>>>(&entries_key) {
+        if let Some(entries) = env
+            .storage()
+            .persistent()
+            .get::<_, Vec<BytesN<32>>>(&entries_key)
+        {
             let mut remaining_entries = Vec::new(&env);
-            
+
             for entry_id in entries {
                 if let Some(entry) = Self::get_data_entry(&env, &entry_id) {
                     if entry.is_temporary && current_time > entry.expires_at {
@@ -277,18 +314,27 @@ impl TtlStorage {
                     }
                 }
             }
-            
+
             // Update entries list
-            env.storage().persistent().set(&entries_key, &remaining_entries);
+            env.storage()
+                .persistent()
+                .set(&entries_key, &remaining_entries);
         }
 
         Ok(cleaned_count)
     }
 
     /// Add storage credits to user balance
-    pub fn add_storage_credits(env: Env, user: Address, amount: i128) -> Result<(), TtlStorageError> {
+    pub fn add_storage_credits(
+        env: Env,
+        user: Address,
+        amount: i128,
+    ) -> Result<(), TtlStorageError> {
         // Verify admin authorization
-        let admin = env.storage().instance().get(&Symbol::new(&env, "admin"))
+        let admin = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "admin"))
             .ok_or(TtlStorageError::NotAuthorized)?;
         admin.require_auth();
 
@@ -302,47 +348,56 @@ impl TtlStorage {
     }
 
     /// Get data entry information
-    pub fn get_data_entry_info(env: Env, entry_id: BytesN<32>) -> Result<DataEntry, TtlStorageError> {
-        Self::get_data_entry(&env, &entry_id)
-            .ok_or(TtlStorageError::EntryNotFound)
+    pub fn get_data_entry_info(
+        env: Env,
+        entry_id: BytesN<32>,
+    ) -> Result<DataEntry, TtlStorageError> {
+        Self::get_data_entry(&env, &entry_id).ok_or(TtlStorageError::EntryNotFound)
     }
 
     // Helper functions
-    
+
     fn generate_entry_id(env: &Env, owner: &Address, data: &Bytes) -> BytesN<32> {
         let mut combined = soroban_sdk::Bytes::new(env);
         combined.append(&owner.to_xdr(env));
         combined.append(data);
-        combined.append(&Bytes::from_slice(env, &env.ledger().timestamp().to_be_bytes()));
-        env.crypto().sha256(&combined)
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined).into()
     }
 
     fn get_data_entry(env: &Env, entry_id: &BytesN<32>) -> Option<DataEntry> {
         env.storage().persistent().get(entry_id)
     }
 
-    fn split_into_chunks(env: &Env, data: &Bytes, entry_id: &BytesN<32>) -> Result<Vec<DataChunk>, TtlStorageError> {
+    fn split_into_chunks(
+        env: &Env,
+        data: &Bytes,
+        entry_id: &BytesN<32>,
+    ) -> Result<Vec<DataChunk>, TtlStorageError> {
         let mut chunks = Vec::new(env);
         let data_len = data.len();
-        let chunk_count = if data_len <= MAX_ENTRY_SIZE as usize {
+        let chunk_count = if data_len <= MAX_ENTRY_SIZE {
             1
         } else {
-            ((data_len as u32 + MAX_ENTRY_SIZE - 1) / MAX_ENTRY_SIZE)
+            (data_len + MAX_ENTRY_SIZE - 1) / MAX_ENTRY_SIZE
         };
 
         for i in 0..chunk_count {
-            let start = (i as usize) * (MAX_ENTRY_SIZE as usize);
-            let end = std::cmp::min(start + (MAX_ENTRY_SIZE as usize), data_len);
-            
+            let start = i * MAX_ENTRY_SIZE;
+            let end = std::cmp::min(start + MAX_ENTRY_SIZE, data_len);
+
             if start >= data_len {
                 break;
             }
 
-            let chunk_data = data.slice(start as u32, (end - start) as u32);
+            let chunk_data = data.slice(start, end - start);
             let chunk_id = Self::generate_chunk_id(env, entry_id, i);
-            let checksum = env.crypto().sha256(&chunk_data);
+            let checksum: BytesN<32> = env.crypto().sha256(&chunk_data).into();
 
-            if chunk_data.len() > MAX_ENTRY_SIZE as usize {
+            if chunk_data.len() > MAX_ENTRY_SIZE {
                 return Err(TtlStorageError::ChunkTooLarge);
             }
 
@@ -353,7 +408,7 @@ impl TtlStorage {
                 data: chunk_data,
                 checksum,
             };
-            
+
             chunks.push_back(chunk);
         }
 
@@ -364,17 +419,17 @@ impl TtlStorage {
         let mut combined = soroban_sdk::Bytes::new(env);
         combined.append(&entry_id.to_xdr(env));
         combined.append(&Bytes::from_slice(env, &chunk_index.to_be_bytes()));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn reconstruct_data(env: &Env, entry: &DataEntry) -> Result<Bytes, TtlStorageError> {
         let mut reconstructed = soroban_sdk::Bytes::new(env);
-        
+
         for i in 0..entry.chunk_count {
             let chunk_id = Self::generate_chunk_id(env, &entry.entry_id, i);
             if let Some(chunk) = env.storage().temporary().get::<_, DataChunk>(&chunk_id) {
                 // Verify checksum
-                let calculated_checksum = env.crypto().sha256(&chunk.data);
+                let calculated_checksum: BytesN<32> = env.crypto().sha256(&chunk.data).into();
                 if calculated_checksum != chunk.checksum {
                     return Err(TtlStorageError::InvalidChecksum);
                 }
@@ -390,11 +445,11 @@ impl TtlStorage {
     fn remove_entry(env: &Env, entry_id: &BytesN<32>) {
         // Remove entry
         env.storage().persistent().remove(entry_id);
-        
+
         // Remove fee record
         let fee_key = (Symbol::new(&env, "fee_"), entry_id.clone());
         env.storage().persistent().remove(&fee_key);
-        
+
         // Remove chunks (if they exist)
         if let Some(entry) = Self::get_data_entry(env, entry_id) {
             for i in 0..entry.chunk_count {
@@ -405,20 +460,24 @@ impl TtlStorage {
     }
 
     fn get_storage_fee(env: &Env, fee_type: &str) -> i128 {
-        let fees = env.storage().instance().get::<_, Map<Symbol, i128>>(&Symbol::new(&env, "storage_fees"))
+        let fees = env
+            .storage()
+            .instance()
+            .get::<_, Map<Symbol, i128>>(&Symbol::new(&env, "storage_fees"))
             .unwrap_or_else(|| Map::new(env));
-        
+
         let fee_symbol = match fee_type {
             "temporary" => Symbol::new(&env, "temporary"),
             "permanent" => Symbol::new(&env, "permanent"),
             _ => Symbol::new(&env, "permanent"), // default
         };
-        
+
         fees.get(fee_symbol).unwrap_or(MIN_STORAGE_FEE)
     }
 
     fn get_user_balance(env: &Env, user: &Address) -> i128 {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&(Symbol::new(&env, "balance_"), user.clone()))
             .unwrap_or(0i128)
     }
@@ -426,7 +485,8 @@ impl TtlStorage {
     fn update_user_balance(env: &Env, user: &Address, delta: i128) {
         let current_balance = Self::get_user_balance(env, user);
         let new_balance = current_balance + delta;
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .set(&(Symbol::new(&env, "balance_"), user.clone()), &new_balance);
     }
 }

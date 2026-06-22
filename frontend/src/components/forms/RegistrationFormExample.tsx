@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { User, Building, FileText, CheckCircle} from 'lucide-react';
-import { MultiStepForm} from './MultiStepForm';
+import { User, Building, FileText, CheckCircle } from 'lucide-react';
+import { MultiStepForm } from './MultiStepForm';
 import { FormField, FieldGroup, RadioOption } from './FormField';
 import { useFormPersistence, prefillFromProfile } from '../../hooks/useFormPersistence';
 import { validateFormData, rules, patterns } from '../../lib/formValidation';

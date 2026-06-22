@@ -390,29 +390,37 @@ export class KillSwitchService extends EventEmitter {
     this.status.recoveryAttempts++;
 
     try {
-      // Check system health
+      // Deactivate first, then verify health
+      await this.deactivate(
+        `Auto-recovery attempt ${this.status.recoveryAttempts}`,
+        "system",
+      );
+
       const health = await this.masterKeyManager.healthCheck();
 
       if (health.healthy) {
-        await this.deactivate(
-          `Auto-recovery attempt ${this.status.recoveryAttempts}`,
-          "system",
-        );
         logger.info("Auto-recovery successful", {
           attempt: this.status.recoveryAttempts,
         });
         this.emit("autoRecovered", { attempt: this.status.recoveryAttempts });
       } else {
-        logger.warn("Auto-recovery failed: System unhealthy", {
+        logger.warn("Auto-recovery: System unhealthy after deactivation", {
           health,
           attempt: this.status.recoveryAttempts,
         });
+
+        // Re-activate kill switch since system is unhealthy
+        await this.activate(
+          `System unhealthy after auto-recovery attempt ${this.status.recoveryAttempts}`,
+          "automated",
+          "high",
+        );
 
         // Schedule next attempt with exponential backoff
         const nextDelay = Math.min(
           30 * Math.pow(2, this.status.recoveryAttempts),
           240,
-        ); // Max 4 hours
+        );
         this.enableAutoRecovery(nextDelay);
 
         this.emit("autoRecoveryFailed", {

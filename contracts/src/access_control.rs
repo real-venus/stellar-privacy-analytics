@@ -1,15 +1,15 @@
-use soroban_sdk::contracttype;
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
+use soroban_sdk::contracttype;
 use soroban_sdk::Address;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
-use soroban_sdk::Map;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
 use soroban_sdk::Symbol;
-use soroban_sdk::Val;
+use soroban_sdk::Vec;
 
 const USER_PERMISSIONS_KEY: &str = "USER_PERMISSIONS";
 const RESOURCE_OWNERS_KEY: &str = "RESOURCE_OWNERS";
@@ -92,18 +92,27 @@ pub enum AccessControlError {
     InvalidSigner = 10,
 }
 
+#[contract]
 pub struct DataSovereigntyAccessControl;
 
 #[contractimpl]
 impl DataSovereigntyAccessControl {
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&Symbol::new(&env, "initialized")) {
+        if env
+            .storage()
+            .instance()
+            .has(&Symbol::new(&env, "initialized"))
+        {
             return; // Already initialized
         }
 
         // Set admin
-        env.storage().instance().set(&Symbol::new(&env, "admin"), &admin);
-        env.storage().instance().set(&Symbol::new(&env, "initialized"), &true);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "admin"), &admin);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     pub fn register_resource(
@@ -115,7 +124,11 @@ impl DataSovereigntyAccessControl {
         authorized_signers: Vec<Address>,
     ) -> Result<(), AccessControlError> {
         let caller = env.current_contract_address();
-        let admin: Address = env.storage().instance().get(&Symbol::new(&env, "admin")).unwrap_or_else(|| caller);
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "admin"))
+            .unwrap_or_else(|| caller);
 
         if env.current_contract_address() != admin && !Self::is_authorized(&env, &owner) {
             return Err(AccessControlError::Unauthorized);
@@ -210,7 +223,9 @@ impl DataSovereigntyAccessControl {
             .get(&Symbol::new(&env, USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
-        let user_permissions = permissions.get(user.clone()).unwrap_or_else(|| Vec::new(&env));
+        let user_permissions = permissions
+            .get(user.clone())
+            .unwrap_or_else(|| Vec::new(&env));
         let mut updated_permissions = user_permissions;
         updated_permissions.push_back(permission);
 
@@ -325,12 +340,19 @@ impl DataSovereigntyAccessControl {
             None
         };
 
-        let mut input: Vec<Val> = Vec::new(&env);
-        input.push_back(resource_id.clone().into());
-        input.push_back(holder.clone().into());
-        input.push_back(env.ledger().timestamp().into());
-        input.push_back(env.ledger().sequence().into());
-        let key_id = env.crypto().sha256(&input.to_xdr(env.clone()));
+        // Generate unique key ID
+        let mut key_data = soroban_sdk::Bytes::new(&env);
+        key_data.append(&resource_id.to_xdr(&env));
+        key_data.append(&holder.to_xdr(&env));
+        key_data.append(&Bytes::from_slice(
+            &env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        key_data.append(&Bytes::from_slice(
+            &env,
+            &(permissions.len() as u32).to_be_bytes(),
+        ));
+        let key_id: BytesN<32> = env.crypto().sha256(&key_data).into();
 
         let access_key = AccessKey {
             key_id: key_id.clone(),
@@ -354,8 +376,11 @@ impl DataSovereigntyAccessControl {
             .set(&Symbol::new(&env, ACCESS_KEYS_KEY), &access_keys);
 
         env.events().publish(
-            (Symbol::new(&env, "access_key_created"), resource_id),
-            (key_id.clone(), holder, expires_at),
+            (
+                Symbol::new(&env, "access_key_created"),
+                resource_id.clone(),
+            ),
+            (key_id.clone(), holder.clone(), expires_at),
         );
 
         Ok(key_id)
@@ -395,12 +420,14 @@ impl DataSovereigntyAccessControl {
                     && permission.active
                     && Self::has_permission_level(&permission.permission_type, &required_permission)
                 {
+                    // Check if permission has expired
                     if let Some(expires_at) = permission.expires_at {
                         if current_time >= expires_at {
                             continue;
                         }
                     }
 
+                    // Log successful access check
                     Self::log_access(
                         &env,
                         user.clone(),
@@ -427,12 +454,14 @@ impl DataSovereigntyAccessControl {
                 && access_key.holder == user
                 && access_key.active
             {
+                // Check if key has expired
                 if let Some(expires_at) = access_key.expires_at {
                     if current_time >= expires_at {
                         continue;
                     }
                 }
 
+                // Check if key has required permission
                 for permission in access_key.permissions.iter() {
                     if Self::has_permission_level(&permission, &required_permission) {
                         Self::log_access(
@@ -473,7 +502,11 @@ impl DataSovereigntyAccessControl {
     }
 
     fn is_authorized(env: &Env, address: &Address) -> bool {
-        let admin: Address = env.storage().instance().get(&Symbol::new(&env, "admin")).unwrap_or_else(|| env.current_contract_address());
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "admin"))
+            .unwrap_or_else(|| env.current_contract_address());
         address == &admin
     }
 
@@ -502,9 +535,10 @@ impl DataSovereigntyAccessControl {
 
         access_log.push_back(log_entry);
 
+        // Keep only last 1000 log entries to prevent storage bloat
         if access_log.len() > 1000 {
             let start = access_log.len() - 1000;
-            let mut trimmed = Vec::new(env);
+            let mut trimmed = Vec::new(&env);
             for i in start..access_log.len() {
                 if let Some(entry) = access_log.get(i) {
                     trimmed.push_back(entry);
@@ -535,7 +569,7 @@ impl DataSovereigntyAccessControl {
             .get(&Symbol::new(&env, USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
-        let mut updated_permissions: Map<Address, Vec<AccessPermission>> = Map::new(&env);
+        let mut updated_permissions = Map::new(&env);
 
         for (user, user_permissions) in permissions.iter() {
             let mut active_permissions = Vec::new(&env);
@@ -559,9 +593,10 @@ impl DataSovereigntyAccessControl {
             }
         }
 
-        env.storage()
-            .instance()
-            .set(&Symbol::new(&env, USER_PERMISSIONS_KEY), &updated_permissions);
+        env.storage().instance().set(
+            &Symbol::new(&env, USER_PERMISSIONS_KEY),
+            &updated_permissions,
+        );
 
         let mut access_keys: Map<BytesN<32>, AccessKey> = env
             .storage()
@@ -569,7 +604,7 @@ impl DataSovereigntyAccessControl {
             .get(&Symbol::new(&env, ACCESS_KEYS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
-        let mut updated_keys: Map<BytesN<32>, AccessKey> = Map::new(&env);
+        let mut updated_keys = Map::new(&env);
 
         for (key_id, access_key) in access_keys.iter() {
             let is_expired = if let Some(expires_at) = access_key.expires_at {

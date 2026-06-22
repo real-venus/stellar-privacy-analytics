@@ -1256,7 +1256,6 @@ export class DatasetManagementIntegration {
   private async performScheduledSync(): Promise<void> {
     // Perform scheduled synchronization for all datasets
     // Performing scheduled synchronization
-
     // Get all datasets that need syncing
     // This would integrate with the metadata management service
   }

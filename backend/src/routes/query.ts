@@ -4,7 +4,7 @@ import { asyncHandler } from "../middleware/errorHandler";
 import {
   AggregationType,
   AnalysisFilter,
-} from "@stellar/shared/types/analytics";
+} from "@stellar/shared";
 import { validateRequest } from "../middleware/validation";
 
 const router = Router();
@@ -205,7 +205,7 @@ router.post(
     const { query, walletSignature } = req.body;
 
     // Validate query first
-    const validationResponse = await (
+    const validationResponse: any = await (
       await fetch(
         `${req.protocol}://${req.get("host")}/api/v1/query/validate`,
         {
@@ -225,7 +225,7 @@ router.post(
     }
 
     // Check privacy cost
-    const costResponse = await (
+    const costResponse: any = await (
       await fetch(
         `${req.protocol}://${req.get("host")}/api/v1/query/privacy-cost`,
         {

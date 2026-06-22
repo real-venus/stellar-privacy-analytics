@@ -16,7 +16,7 @@ import {
   ArrowRight,
   Settings,
 } from 'lucide-react';
-import { AggregationType} from '@stellar/shared/types/analytics';
+import { AggregationType } from '@stellar/shared/types/analytics';
 import { Modal } from './ui/Modal';
 
 interface DataField {

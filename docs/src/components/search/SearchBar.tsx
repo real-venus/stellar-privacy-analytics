@@ -141,7 +141,7 @@ export function SearchBar() {
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-sm text-gray-500">
-                      No results found for "{searchQuery}"
+                      No results found for &quot;{searchQuery}&quot;
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Try searching for differential privacy, SMPC, or ZK proofs

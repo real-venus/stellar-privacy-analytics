@@ -104,9 +104,13 @@ export class AuditService extends EventEmitter {
   }
 
   private signRecord(record: AuditRecord): string {
+    const timestamp =
+      typeof record.timestamp === "string"
+        ? record.timestamp
+        : record.timestamp.toISOString();
     const recordData = {
       id: record.id,
-      timestamp: record.timestamp.toISOString(),
+      timestamp,
       category: record.category,
       action: record.action,
       actor: record.actor,
@@ -299,6 +303,11 @@ export class AuditService extends EventEmitter {
   async query(query: AuditQuery): Promise<AuditRecord[]> {
     const records: AuditRecord[] = [];
 
+    // Flush any pending buffered records to disk before querying
+    if (this.batchBuffer.length > 0) {
+      await this.flushBatch();
+    }
+
     try {
       const logContent = require("fs").readFileSync(this.auditLogPath, "utf8");
       const lines = logContent.split("\n").filter((line) => line.trim());
@@ -316,7 +325,7 @@ export class AuditService extends EventEmitter {
       }
 
       // Sort by timestamp (newest first)
-      records.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      records.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       // Apply pagination
       const offset = query.offset || 0;
@@ -330,8 +339,9 @@ export class AuditService extends EventEmitter {
   }
 
   private matchesQuery(record: AuditRecord, query: AuditQuery): boolean {
-    if (query.startDate && record.timestamp < query.startDate) return false;
-    if (query.endDate && record.timestamp > query.endDate) return false;
+    const recordTime = new Date(record.timestamp).getTime();
+    if (query.startDate && recordTime < query.startDate.getTime()) return false;
+    if (query.endDate && recordTime > query.endDate.getTime()) return false;
     if (query.category && record.category !== query.category) return false;
     if (query.action && !record.action.includes(query.action)) return false;
     if (query.userId && record.actor.userId !== query.userId) return false;
@@ -356,9 +366,11 @@ export class AuditService extends EventEmitter {
       timeRange: {
         start:
           records.length > 0
-            ? records[records.length - 1].timestamp
+            ? new Date(records[records.length - 1].timestamp)
             : new Date(),
-        end: records.length > 0 ? records[0].timestamp : new Date(),
+        end: records.length > 0
+          ? new Date(records[0].timestamp)
+          : new Date(),
       },
       criticalIncidents: 0,
       securityViolations: 0,
@@ -396,8 +408,18 @@ export class AuditService extends EventEmitter {
     let invalidRecords = 0;
     let totalRecords = 0;
 
+    // Flush any pending buffered records to disk before verifying
+    if (this.batchBuffer.length > 0) {
+      await this.flushBatch();
+    }
+
     try {
-      const logContent = require("fs").readFileSync(this.auditLogPath, "utf8");
+      let logContent: string;
+      try {
+        logContent = require("fs").readFileSync(this.auditLogPath, "utf8");
+      } catch {
+        return { valid: true, totalRecords: 0, invalidRecords: 0, errors: [] };
+      }
       const lines = logContent.split("\n").filter((line) => line.trim());
 
       for (const line of lines) {

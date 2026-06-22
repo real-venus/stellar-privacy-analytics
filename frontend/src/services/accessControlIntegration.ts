@@ -1283,7 +1283,7 @@ export class AccessControlIntegration {
         await this.syncWithSAML(system);
         break;
       default:
-        // Sync not implemented for ${system.type}
+      // Sync not implemented for ${system.type}
     }
   }
 

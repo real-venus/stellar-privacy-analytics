@@ -73,8 +73,8 @@ export class DeadLetterQueue extends EventEmitter {
       socket: {
         host: process.env.REDIS_HOST || "localhost",
         port: parseInt(process.env.REDIS_PORT || "6379"),
-        password: process.env.REDIS_PASSWORD,
       },
+      password: process.env.REDIS_PASSWORD,
     });
 
     this.redis.on("error", (err) => {
@@ -111,7 +111,7 @@ export class DeadLetterQueue extends EventEmitter {
     this.retryWorker = new Worker(
       `${this.queue.name}-retry`,
       async (job: Job<DeadLetterJob>) => {
-        return this.retryJob(job);
+        return this.processRetryJob(job);
       },
       {
         connection: {
@@ -120,22 +120,22 @@ export class DeadLetterQueue extends EventEmitter {
           password: process.env.REDIS_PASSWORD,
         },
         concurrency: 2, // Low concurrency for retry jobs
-        maxRetriesPerJob: 0, // No retries for retry jobs
+        // No retries for retry jobs
       },
     );
 
     this.retryWorker.on("completed", (job: Job, result: any) => {
       logger.info("Dead Letter job retry completed", {
         jobId: job.id,
-        originalJobId: result.originalJobId,
-        retryCount: result.retryCount,
+      originalJobId: result.jobId,
+      retryCount: result.retryCount,
       });
     });
 
     this.retryWorker.on("failed", (job: Job, err: Error) => {
       logger.error("Dead Letter job retry failed permanently", {
         jobId: job.id,
-        originalJobId: job.data?.originalJobId,
+        originalJobId: (job.data as DeadLetterJob)?.jobId,
         error: err.message,
         retryCount: job.data?.retryCount || 0,
       });
@@ -179,7 +179,7 @@ export class DeadLetterQueue extends EventEmitter {
   /**
    * Retry a dead letter job
    */
-  private async retryJob(job: Job<DeadLetterJob>): Promise<any> {
+  private async processRetryJob(job: Job<DeadLetterJob>): Promise<any> {
     const deadLetterJob = job.data;
 
     if (!this.isRetryable(deadLetterJob)) {
@@ -203,7 +203,7 @@ export class DeadLetterQueue extends EventEmitter {
 
     logger.info("Retrying dead letter job", {
       jobId: deadLetterJob.id,
-      originalJobId: deadLetterJob.originalJobId,
+      originalJobId: deadLetterJob.jobId,
       retryCount: retryCount + 1,
       retryDelay,
     });
@@ -221,7 +221,7 @@ export class DeadLetterQueue extends EventEmitter {
     // Here you would typically re-add the job to the original queue
     // For now, we'll just simulate a successful retry
     const retryResult = {
-      originalJobId: deadLetterJob.originalJobId,
+      originalJobId: deadLetterJob.jobId,
       retryCount: retryCount + 1,
       success: true,
       retriedAt: new Date(),
@@ -308,7 +308,7 @@ export class DeadLetterQueue extends EventEmitter {
     try {
       const job = await this.queue.getJob(jobId);
       if (job) {
-        await job.update({
+        await (job as any).update({
           metadata: {
             ...job.data.metadata,
             ...metadata,
@@ -456,7 +456,7 @@ export class DeadLetterQueue extends EventEmitter {
       }
 
       // Add to retry queue
-      await this.retryWorker?.add(job.data);
+      await (this.retryWorker as any)?.add(job.data);
 
       logger.info("Job queued for retry", { jobId });
       return true;
