@@ -113,7 +113,7 @@ describe("DistributedCacheManager", () => {
 
   describe("Basic Operations", () => {
     test("should set and get cache entry", async () => {
-      const key = "test-key";
+      const key = "basic-ops-key";
       const value = { data: "test-value" };
 
       await cacheManager.set(key, value);
@@ -128,7 +128,7 @@ describe("DistributedCacheManager", () => {
     });
 
     test("should use fallback when key not found", async () => {
-      const key = "test-key";
+      const key = "fallback-key";
       const fallbackValue = { data: "fallback-value" };
       const fallback = jest.fn().mockResolvedValue(fallbackValue);
 
@@ -139,7 +139,7 @@ describe("DistributedCacheManager", () => {
     });
 
     test("should cache fallback result", async () => {
-      const key = "test-key";
+      const key = "fallback-cache-key";
       const fallbackValue = { data: "fallback-value" };
       const fallback = jest.fn().mockResolvedValue(fallbackValue);
 
@@ -154,7 +154,7 @@ describe("DistributedCacheManager", () => {
     });
 
     test("should delete cache entry", async () => {
-      const key = "test-key";
+      const key = "delete-ops-key";
       const value = { data: "test-value" };
 
       await cacheManager.set(key, value);

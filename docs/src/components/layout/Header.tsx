@@ -1,15 +1,15 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 export function Header() {
   return (
-    <header className="border-b border-gray-200 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/" className="text-lg font-semibold text-gray-900">
-          Stellar Docs
+    <header className="border-b bg-white sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link href="/" className="text-xl font-bold text-blue-600">
+          Stellar Privacy Docs
         </Link>
-        <nav className="flex gap-4 text-sm text-gray-600">
-          <Link href="/">Home</Link>
-          <Link href="/tracks">Tracks</Link>
+        <nav className="flex items-center gap-6">
+          <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">Home</Link>
+          <a href="/api" className="text-sm text-gray-600 hover:text-gray-900">API</a>
         </nav>
       </div>
     </header>

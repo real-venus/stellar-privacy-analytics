@@ -1,8 +1,8 @@
 export function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-8 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
-        Stellar Privacy Analytics Documentation
+    <footer className="border-t bg-gray-50 py-8 mt-16">
+      <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
+        <p>&copy; {new Date().getFullYear()} Stellar Privacy Analytics. All rights reserved.</p>
       </div>
     </footer>
   );

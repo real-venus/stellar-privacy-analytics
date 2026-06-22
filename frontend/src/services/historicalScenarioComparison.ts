@@ -877,7 +877,7 @@ export class HistoricalScenarioComparison {
     const olderResults = results.slice(-20, -10); // Previous 10 results
 
     const recentPatterns = this.extractPatternsFromResults(recentResults);
-    const olderPatterns = this.extractPatternsFromResults(olderResults);
+    const _olderPatterns = this.extractPatternsFromResults(olderResults);
 
     const patternGrowth = new Map<string, number>();
 
@@ -920,7 +920,7 @@ export class HistoricalScenarioComparison {
     const recentResults = results.slice(-10);
     const olderResults = results.slice(-20, -10);
 
-    const recentPatterns = this.extractPatternsFromResults(recentResults);
+    const _recentPatterns = this.extractPatternsFromResults(recentResults);
     const olderPatterns = this.extractPatternsFromResults(olderResults);
 
     const patternDecline = new Map<string, number>();
@@ -965,7 +965,7 @@ export class HistoricalScenarioComparison {
 
     // Look for patterns in current result that don't match historical patterns
     const currentPatterns = this.extractScenarioPatterns(currentResult);
-    const historicalPatterns = this.extractPatternsFromResults(results.slice(0, -1)); // Exclude current
+    const _historicalPatterns = this.extractPatternsFromResults(results.slice(0, -1)); // Exclude current
 
     currentPatterns.forEach((currentPattern) => {
       const key = `${currentPattern.type}-${currentPattern.description}`;
@@ -1169,7 +1169,7 @@ export class HistoricalScenarioComparison {
 
   // Evolution analysis methods
   private getEvolutionPoints(scenarioId: string, timeRange?: number): EvolutionPoint[] {
-    const cutoffTime = timeRange ? Date.now() - timeRange * 24 * 60 * 60 * 1000 : 0;
+    const _cutoffTime = timeRange ? Date.now() - timeRange * 24 * 60 * 60 * 1000 : 0;
 
     // This would typically fetch historical versions of the scenario
     // For now, return a mock evolution
@@ -1274,7 +1274,7 @@ export class HistoricalScenarioComparison {
   private analyzeTimelineTrends(timeline: TimelineData[]): TrendAnalysis[] {
     // This would analyze trends across the timeline
     // For now, return a single trend analysis
-    const values = timeline.map((t) => t.value);
+    const _values = timeline.map((t) => t.value);
     const trend = this.calculateTrendAnalysis(
       timeline.map((t) => ({
         timestamp: t.timestamp,

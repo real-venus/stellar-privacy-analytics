@@ -206,6 +206,3 @@ class SandboxConfiguration {
 
 // Singleton instance
 export const sandboxConfig = new SandboxConfiguration();
-
-// Export types for use in other modules
-export type { SandboxConfig };

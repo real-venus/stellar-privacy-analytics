@@ -116,10 +116,7 @@ export class RetryManager {
           config.maxDelay,
         );
 
-        console.warn(
-          `Attempt ${attempt} failed (Context: ${context || "unknown"}). ` +
-            `Retrying in ${delay}ms. Error: ${lastError.message}`,
-        );
+        // Retry attempt logging (context: ${context || "unknown"}, delay: ${delay}ms)
 
         await this.sleep(delay);
       }
@@ -211,10 +208,7 @@ export class StellarLedgerManager {
     const entries = this.entries.get(entry.datasetId)!;
     entries.push(entry);
 
-    // Simulate Stellar ledger transaction
-    console.log(
-      `Storing CID ${entry.cid} for dataset ${entry.datasetId} on Stellar ledger`,
-    );
+    // Stellar ledger transaction (simulated)
   }
 
   /**

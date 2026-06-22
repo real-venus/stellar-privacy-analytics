@@ -116,7 +116,7 @@ export class PerformanceOptimizer {
       this.cache.set(cacheKey, {
         data: response,
         timestamp: Date.now(),
-        ttl: ttl || 60000,
+        ttl: ttl || 5 * 60 * 1000,
       });
 
       logger.debug("Response cached", { cacheKey });
@@ -447,8 +447,8 @@ export class PerformanceOptimizer {
 
   public optimizeCache(): void {
     // Remove least recently used items if cache is full
-    if (this.cache.size >= this.cache.max * 0.9) {
-      const purgeCount = Math.floor(this.cache.max * 0.2);
+    if (this.cache.size >= (this.cache as any).max * 0.9) {
+      const purgeCount = Math.floor((this.cache as any).max * 0.2);
       this.cache.purgeStale();
       logger.debug(`Cache optimization: purged ${purgeCount} items`);
     }

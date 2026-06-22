@@ -596,7 +596,7 @@ export class PrivacyBudgetSimulation {
         currentValue *= 1 + noise;
 
         // Calculate confidence bounds
-        const confidence = 0.95;
+        const _confidence = 0.95;
         const margin = currentValue * 0.1;
 
         timePoints.push({

@@ -187,7 +187,6 @@ export class PrivacyApiGateway {
       // Add custom rate limiting if specified
       if (route.rateLimitOverride) {
         const limiter = new RateLimiterMemory({
-          keyGenerator: (req) => `${req.ip}:${(req as any).apiKey}`,
           points: route.rateLimitOverride.maxRequests,
           duration: route.rateLimitOverride.windowMs / 1000,
         } as any);
@@ -419,7 +418,7 @@ export class PrivacyApiGateway {
       if (keyInfo) {
         attributes.apiKeyId = keyInfo.id;
         attributes.apiKeyPermissions = keyInfo.permissions;
-        attributes.apiKeyOwner = keyInfo.metadata.owner;
+        attributes.apiKeyOwner = keyInfo.metadata?.owner ?? (keyInfo as { owner?: string }).owner;
       }
     }
 
@@ -455,7 +454,7 @@ export class PrivacyApiGateway {
 
   // Management endpoints
   private async healthCheck(req: Request, res: Response): Promise<void> {
-    const health = await this.loadBalancer.getServicesHealth();
+    const health = await (this.loadBalancer as any).getServicesHealth();
     res.json({
       status: "healthy",
       timestamp: new Date().toISOString(),
@@ -507,7 +506,7 @@ export class PrivacyApiGateway {
 
   public async start(port: number): Promise<void> {
     await this.privacyMetrics.start();
-    await this.loadBalancer.start();
+    await (this.loadBalancer as any).start();
 
     this.app.listen(port, () => {
       logger.info(`🚀 Privacy API Gateway running on port ${port}`);
@@ -521,6 +520,6 @@ export class PrivacyApiGateway {
 
   public async stop(): Promise<void> {
     await this.privacyMetrics.stop();
-    await this.loadBalancer.stop();
+    await (this.loadBalancer as any).stop();
   }
 }

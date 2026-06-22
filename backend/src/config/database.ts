@@ -10,7 +10,7 @@ export interface DatabaseConfig {
     user: string;
     password: string;
     database: string;
-    ssl?: boolean;
+    ssl?: boolean | { rejectUnauthorized: boolean };
   };
   pool: {
     min: number;
@@ -99,7 +99,7 @@ class DatabaseManager {
     if (!this.mainInstance) {
       this.mainInstance = knex(this.config);
       this.mainInstance.on("query", (query) => {
-        if (sandboxConfig.isFeatureEnabled("enhancedLogging")) {
+        if (this.isFeatureEnabled("enhancedLogging")) {
           logger.debug("Database query", {
             sql: query.sql,
             bindings: query.bindings,
@@ -129,7 +129,7 @@ class DatabaseManager {
       this.sandboxInstance = knex(sandboxConfig);
 
       this.sandboxInstance.on("query", (query) => {
-        if (sandboxConfig.isFeatureEnabled("enhancedLogging")) {
+        if (this.isFeatureEnabled("enhancedLogging")) {
           logger.debug("Sandbox database query", {
             sql: query.sql,
             bindings: query.bindings,
@@ -385,6 +385,10 @@ class DatabaseManager {
   public isIsolationEnabled(): boolean {
     return sandboxConfig.getConfig().database.isolationEnabled;
   }
+
+  private isFeatureEnabled(feature: string): boolean {
+    return sandboxConfig.isFeatureEnabled(feature as any);
+  }
 }
 
 // Singleton instance
@@ -396,4 +400,3 @@ export function getDb(): Knex {
 
 // Export types and utilities
 export { DatabaseManager };
-export type { DatabaseConfig };

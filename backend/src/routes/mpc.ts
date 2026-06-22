@@ -547,20 +547,20 @@ export function initializeMPCSocket(io: SocketIOServer): void {
   const mpcNamespace = io.of("/mpc");
 
   mpcNamespace.on("connection", (socket) => {
-    console.log("MPC client connected:", socket.id);
+    logger.info("MPC client connected:", socket.id);
 
     socket.on("join-session", (sessionId: string) => {
       socket.join(`session-${sessionId}`);
-      console.log(`Client ${socket.id} joined MPC session room: ${sessionId}`);
+      logger.info(`Client ${socket.id} joined MPC session room: ${sessionId}`);
     });
 
     socket.on("leave-session", (sessionId: string) => {
       socket.leave(`session-${sessionId}`);
-      console.log(`Client ${socket.id} left MPC session room: ${sessionId}`);
+      logger.info(`Client ${socket.id} left MPC session room: ${sessionId}`);
     });
 
     socket.on("disconnect", () => {
-      console.log("MPC client disconnected:", socket.id);
+      logger.info("MPC client disconnected:", socket.id);
     });
   });
 

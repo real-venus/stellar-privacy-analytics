@@ -153,12 +153,12 @@ const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
     }
   }, []);
 
-  const handleDragStart = useCallback((item: DragItem) => {
+  const _handleDragStart = useCallback((item: DragItem) => {
     setDraggedItem(item);
     setIsDragging(true);
   }, []);
 
-  const handleDragEnd = useCallback(() => {
+  const _handleDragEnd = useCallback(() => {
     setDraggedItem(null);
     setIsDragging(false);
   }, []);
@@ -258,7 +258,7 @@ const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
     }
 
     const testData = generateTestData(schema);
-    const startTime = Date.now();
+    const _startTime = Date.now();
 
     try {
       // This would integrate with your Rust backend verifier
@@ -446,7 +446,6 @@ const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
   const saveSchemaToLocalStorage = (schema: SchemaConfig): void => {
     try {
       localStorage.setItem('schema-builder-schema', JSON.stringify(schema));
-      console.log('Schema saved to local storage', { schemaName: schema.name });
     } catch (error) {
       console.error('Failed to save schema to local storage:', error);
     }
@@ -462,7 +461,7 @@ const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
     }
   };
 
-  const generateFieldId = (): string => {
+  const _generateFieldId = (): string => {
     return `field_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
   };
 

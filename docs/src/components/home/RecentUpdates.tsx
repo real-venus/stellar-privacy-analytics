@@ -1,24 +1,20 @@
-const updates = [
-  { title: 'Gateway key persistence', date: '2026-06-20' },
-  { title: 'CI pipeline hardening', date: '2026-06-20' },
-  { title: 'Privacy API gateway docs', date: '2026-05-15' },
-];
-
 export function RecentUpdates() {
   return (
-    <section>
-      <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Recent Updates</h2>
-      <ul className="mx-auto max-w-2xl space-y-3">
-        {updates.map((item) => (
-          <li
-            key={item.title}
-            className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm"
-          >
-            <span className="font-medium text-gray-900">{item.title}</span>
-            <span className="text-gray-500">{item.date}</span>
-          </li>
+    <section className="py-12 bg-gray-50">
+      <h2 className="text-2xl font-bold text-center mb-6">Recent Updates</h2>
+      <div className="max-w-3xl mx-auto px-4 space-y-4">
+        {[
+          { date: "2024-01-15", title: "PQL v2.0 Released", desc: "New privacy-preserving query language features" },
+          { date: "2024-01-10", title: "HSM Integration Guide", desc: "Hardware security module setup documentation" },
+          { date: "2024-01-05", title: "Compliance Automation", desc: "Automated GDPR/CCPA compliance checks" },
+        ].map((update) => (
+          <div key={update.title} className="p-4 bg-white rounded-lg border">
+            <span className="text-xs text-gray-500">{update.date}</span>
+            <h3 className="font-medium mt-1">{update.title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{update.desc}</p>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

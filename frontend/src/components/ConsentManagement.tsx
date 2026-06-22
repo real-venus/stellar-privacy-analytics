@@ -21,7 +21,7 @@ import {
   Edit,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { format, subDays, addDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 export interface ConsentCategory {
   id: string;

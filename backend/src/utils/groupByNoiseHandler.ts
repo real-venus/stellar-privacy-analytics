@@ -4,6 +4,7 @@ import {
   NoiseParameters,
   DPAggregationType,
   PrivacyMode,
+  DPNoiseMechanism,
 } from "@stellar/shared";
 import { NoiseGenerator } from "./noiseGenerator";
 import { SensitivityAnalyzer } from "./sensitivityAnalyzer";
@@ -157,12 +158,12 @@ export class GroupByNoiseHandler {
     }
   }
 
-  applyAdaptiveGroupByNoise(
+  async applyAdaptiveGroupByNoise(
     query: GroupByQuery,
     epsilon: number,
     mechanism: DPNoiseMechanism,
     mode: PrivacyMode = PrivacyMode.STRICT,
-  ): GroupByResult[] {
+  ): Promise<GroupByResult[]> {
     if (!query.data || query.data.length === 0) {
       return [];
     }
@@ -177,16 +178,20 @@ export class GroupByNoiseHandler {
       mode,
     );
 
-    return query.data.map((groupData, index) => {
-      const groupEpsilon = epsilonAllocations[index];
-      return this.applyNoiseToGroup(
-        groupData,
-        query.aggregations,
-        groupEpsilon,
-        mechanism,
-        mode,
-      );
-    });
+    const results = await Promise.all(
+      query.data.map(async (groupData, index) => {
+        const groupEpsilon = epsilonAllocations[index];
+        return this.applyNoiseToGroup(
+          groupData,
+          query.aggregations,
+          groupEpsilon,
+          mechanism,
+          mode,
+        );
+      }),
+    );
+
+    return results;
   }
 
   private calculateAdaptiveEpsilonAllocation(
@@ -217,13 +222,13 @@ export class GroupByNoiseHandler {
     return sizeWeights.map((weight) => (totalEpsilon * weight) / totalWeight);
   }
 
-  applyHierarchicalGroupByNoise(
+  async applyHierarchicalGroupByNoise(
     query: GroupByQuery,
     epsilon: number,
     mechanism: DPNoiseMechanism,
     hierarchyLevels: string[][],
     mode: PrivacyMode = PrivacyMode.STRICT,
-  ): GroupByResult[] {
+  ): Promise<GroupByResult[]> {
     if (!query.data || query.data.length === 0) {
       return [];
     }
@@ -238,7 +243,7 @@ export class GroupByNoiseHandler {
         data: levelGroups,
       };
 
-      const levelResults = this.applyGroupByNoise(
+      const levelResults = await this.applyGroupByNoise(
         levelQuery,
         epsilonPerLevel,
         mechanism,

@@ -150,8 +150,7 @@ export const TranslationManager: React.FC = () => {
       const unflattened = unflattenObject(translations);
       i18n.addResourceBundle(selectedLanguage, selectedNamespace, unflattened, true, true);
 
-      // In a real application, you would save this to your backend
-      console.log('Saving translations:', unflattened);
+      // In a real application, this would save to your backend
 
       setHasChanges(false);
     } catch (error) {

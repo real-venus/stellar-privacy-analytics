@@ -1,4 +1,6 @@
 import { logger } from "../utils/logger";
+import { EventEmitter } from "events";
+import { Readable, Writable, Transform } from "stream";
 
 export interface StreamOptions {
   batchSize: number;
@@ -56,9 +58,9 @@ export class StreamingDataProcessor<T, R> extends EventEmitter {
    * Process data stream with batch processing
    */
   async processStream(
-    inputStream: stream.Readable,
+    inputStream: Readable,
     processor: BatchProcessor<T, R>,
-    outputStream?: stream.Writable,
+    outputStream?: Writable,
   ): Promise<ProcessingStats> {
     if (this.isProcessing) {
       throw new Error("Processor is already running");

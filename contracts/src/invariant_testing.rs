@@ -1,14 +1,12 @@
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::crypto::sha256;
-use soroban_sdk::symbol;
-use soroban_sdk::symbol_short;
 use soroban_sdk::Address;
 use soroban_sdk::BytesN;
 use soroban_sdk::Env;
 use soroban_sdk::Map;
 use soroban_sdk::String;
+use soroban_sdk::Symbol;
 use soroban_sdk::Vec;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -53,7 +51,7 @@ impl InvariantTesting {
 
             env.events().publish(
                 (
-                    symbol!("invariant_violation"),
+                    Symbol::new(&env, "invariant_violation"),
                     violation.invariant_name.clone(),
                 ),
                 (violation.description, violation.severity),
@@ -82,7 +80,7 @@ impl InvariantTesting {
 
             env.events().publish(
                 (
-                    symbol!("invariant_violation"),
+                    Symbol::new(&env, "invariant_violation"),
                     violation.invariant_name.clone(),
                 ),
                 (violation.description, violation.severity),
@@ -109,7 +107,7 @@ impl InvariantTesting {
 
             env.events().publish(
                 (
-                    symbol!("invariant_violation"),
+                    Symbol::new(&env, "invariant_violation"),
                     violation.invariant_name.clone(),
                 ),
                 (violation.description, violation.severity),
@@ -135,7 +133,7 @@ impl InvariantTesting {
 
             env.events().publish(
                 (
-                    symbol!("invariant_violation"),
+                    Symbol::new(&env, "invariant_violation"),
                     violation.invariant_name.clone(),
                 ),
                 (violation.description, violation.severity),
@@ -179,7 +177,7 @@ impl InvariantTesting {
 
             env.events().publish(
                 (
-                    symbol!("invariant_violation"),
+                    Symbol::new(&env, "invariant_violation"),
                     violation.invariant_name.clone(),
                 ),
                 (violation.description, violation.severity),

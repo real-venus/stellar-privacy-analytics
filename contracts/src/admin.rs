@@ -8,9 +8,6 @@ use soroban_sdk::Map;
 use soroban_sdk::String;
 use soroban_sdk::Vec;
 
-#[cfg(any(test, feature = "clientgen"))]
-pub type MultiSigAdminClient = ();
-
 // Contract state storage keys
 const OWNERS_KEY: &str = "OWNERS";
 const THRESHOLD_KEY: &str = "THRESHOLD";
@@ -309,6 +306,7 @@ impl MultiSigAdmin {
 
         // Calculate transaction hash
         let transaction_hash = Self::hash_transaction(env.clone(), &transaction);
+        let tx_hash_copy = transaction_hash.clone();
 
         // Store transaction
         let mut executions = env
@@ -317,7 +315,7 @@ impl MultiSigAdmin {
             .get::<_, Map<BytesN<32>, Transaction>>(&String::from_str(&env, EXECUTIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
-        executions.set(transaction_hash, transaction);
+        executions.set(transaction_hash.clone(), transaction);
         env.storage()
             .instance()
             .set(&String::from_str(&env, EXECUTIONS_KEY), &executions);
@@ -330,10 +328,10 @@ impl MultiSigAdmin {
         // Emit transaction submitted event
         env.events().publish(
             (String::from_str(&env, "transaction_submitted"),),
-            (transaction_hash, destination, value, nonce),
+            (tx_hash_copy.clone(), destination, value, nonce),
         );
 
-        Ok(transaction_hash)
+        Ok(tx_hash_copy)
     }
 
     /// Confirm a transaction
@@ -381,7 +379,7 @@ impl MultiSigAdmin {
 
         // Add confirmation
         tx_confirmations.push_back(caller);
-        confirmations.set(transaction_hash, tx_confirmations);
+        confirmations.set(transaction_hash.clone(), tx_confirmations);
         env.storage()
             .instance()
             .set(&String::from_str(&env, CONFIRMATIONS_KEY), &confirmations);
@@ -441,7 +439,7 @@ impl MultiSigAdmin {
 
         // Mark as executed
         transaction.executed = true;
-        executions.set(transaction_hash, transaction);
+        executions.set(transaction_hash.clone(), transaction);
         env.storage()
             .instance()
             .set(&String::from_str(&env, EXECUTIONS_KEY), &executions);
@@ -527,11 +525,12 @@ impl MultiSigAdmin {
     fn hash_transaction(env: Env, transaction: &Transaction) -> BytesN<32> {
         let mut data = Vec::new(&env);
         data.push_back(transaction.destination.clone());
-        data.push_back(transaction.value.into());
+        data.push_back(transaction.value.into_val(&env));
         data.push_back(transaction.data.clone());
-        data.push_back(transaction.nonce.into());
-        data.push_back(transaction.executed.into());
+        data.push_back(transaction.nonce.into_val(&env));
+        data.push_back(transaction.executed.into_val(&env));
 
-        env.crypto().sha256(&data.to_xdr(&env))
+        let xdr = env.to_xdr(&data);
+        env.crypto().sha256(&xdr)
     }
 }

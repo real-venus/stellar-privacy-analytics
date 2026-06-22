@@ -16,7 +16,7 @@ import {
   ArrowRight,
   Settings,
 } from 'lucide-react';
-import { AggregationType, AnalysisFilter } from '@stellar/shared/types/analytics';
+import { AggregationType } from '@stellar/shared/types/analytics';
 import { Modal } from './ui/Modal';
 
 interface DataField {
@@ -239,8 +239,7 @@ export const QueryConstructor: React.FC = () => {
       return;
     }
 
-    // Simulate query execution
-    console.log('Executing query:', querySteps);
+    // Execute query (simulated)
     // In real implementation, this would call the backend API
   }, [querySteps, validateQuery]);
 

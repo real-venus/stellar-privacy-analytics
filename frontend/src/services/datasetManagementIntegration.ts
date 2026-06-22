@@ -1079,7 +1079,7 @@ export class DatasetManagementIntegration {
     metadata: DatasetMetadata
   ): Promise<void> {
     // System-specific implementation
-    console.log(`Creating dataset ${metadata.id} in system ${system.name}`);
+    // Creating dataset ${metadata.id} in system ${system.name}
   }
 
   private async updateDatasetInSystem(
@@ -1088,7 +1088,7 @@ export class DatasetManagementIntegration {
     updates: Partial<DatasetMetadata>
   ): Promise<void> {
     // System-specific implementation
-    console.log(`Updating dataset ${datasetId} in system ${system.name}`);
+    // Updating dataset ${datasetId} in system ${system.name}
   }
 
   private async deleteDatasetFromSystem(
@@ -1096,17 +1096,17 @@ export class DatasetManagementIntegration {
     datasetId: string
   ): Promise<void> {
     // System-specific implementation
-    console.log(`Deleting dataset ${datasetId} from system ${system.name}`);
+    // Deleting dataset ${datasetId} from system ${system.name}
   }
 
   private async testSystemConnection(system: ExternalDatasetSystem): Promise<void> {
     // Test connection to external system
-    console.log(`Testing connection to system ${system.name}`);
+    // Testing connection to system ${system.name}
   }
 
   private async cleanupSystemData(systemId: string): Promise<void> {
     // Cleanup data related to external system
-    console.log(`Cleaning up data for system ${systemId}`);
+    // Cleaning up data for system ${systemId}
   }
 
   private async getDatasetMetadata(datasetId: string): Promise<DatasetMetadata | null> {
@@ -1122,10 +1122,10 @@ export class DatasetManagementIntegration {
   }
 
   private async applyRetentionPolicy(metadata: DatasetMetadata): Promise<void> {
-    const retentionPeriod = this.calculateRetentionPeriod(metadata);
+    const _retentionPeriod = this.calculateRetentionPeriod(metadata);
 
     // Schedule archival and deletion based on retention policy
-    console.log(`Applying retention policy for dataset ${metadata.id}: ${retentionPeriod} days`);
+    // Applying retention policy for dataset ${metadata.id}: ${retentionPeriod} days
   }
 
   private calculateRetentionPeriod(metadata: DatasetMetadata): number {
@@ -1195,12 +1195,12 @@ export class DatasetManagementIntegration {
 
   private async restoreFromBackup(backup: DatasetBackup): Promise<void> {
     // Restore dataset from backup
-    console.log(`Restoring dataset from backup ${backup.id}`);
+    // Restoring dataset from backup ${backup.id}
   }
 
   private async restoreDatasetFromArchive(archive: DatasetArchive): Promise<void> {
     // Restore dataset from archive
-    console.log(`Restoring dataset from archive ${archive.id}`);
+    // Restoring dataset from archive ${archive.id}
   }
 
   private getDefaultSyncSystem(metadata: DatasetMetadata): ExternalDatasetSystem | undefined {
@@ -1220,7 +1220,7 @@ export class DatasetManagementIntegration {
     options?: any
   ): Promise<void> {
     // Perform full synchronization
-    console.log(`Performing full sync for dataset ${metadata.id} with system ${system.name}`);
+    // Full sync for dataset ${metadata.id} with system ${system.name}
 
     // Simulate sync processing
     result.recordsProcessed = 1000;
@@ -1236,9 +1236,7 @@ export class DatasetManagementIntegration {
     options?: any
   ): Promise<void> {
     // Perform incremental synchronization
-    console.log(
-      `Performing incremental sync for dataset ${metadata.id} with system ${system.name}`
-    );
+    // Incremental sync for dataset ${metadata.id} with system ${system.name}
 
     // Simulate sync processing
     result.recordsProcessed = 100;
@@ -1257,8 +1255,7 @@ export class DatasetManagementIntegration {
 
   private async performScheduledSync(): Promise<void> {
     // Perform scheduled synchronization for all datasets
-    console.log('Performing scheduled synchronization');
-
+    // Performing scheduled synchronization
     // Get all datasets that need syncing
     // This would integrate with the metadata management service
   }

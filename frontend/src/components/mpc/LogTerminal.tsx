@@ -61,7 +61,6 @@ export const LogTerminal: React.FC<LogTerminalProps> = ({ logs }) => {
 
   const clearLogs = () => {
     // This would be handled by the parent component
-    console.log('Clear logs requested');
   };
 
   const downloadLogs = () => {

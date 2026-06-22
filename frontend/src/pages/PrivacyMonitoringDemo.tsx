@@ -36,7 +36,7 @@ const PrivacyMonitoringDemo: React.FC = () => {
 
           // Subscribe to real-time updates
           dataService.subscribe('metrics', (data) => {
-            console.log('Real-time metric update:', data);
+            // Real-time metric update received
           });
 
           dataService.subscribe('alerts', (alert) => {
@@ -57,7 +57,7 @@ const PrivacyMonitoringDemo: React.FC = () => {
           enableML: false,
         });
 
-        const patternAnalyzer = AccessPatternAnalyzer.getInstance({
+        const _patternAnalyzer = AccessPatternAnalyzer.getInstance({
           timeWindow: 60,
           minAccessCount: 10,
           riskThresholds: {
@@ -69,15 +69,15 @@ const PrivacyMonitoringDemo: React.FC = () => {
           enableML: false,
         });
 
-        const complianceMonitor = ComplianceMonitor.getInstance();
-        const alertService = AlertConfigurationService.getInstance();
-        const trendAnalyzer = HistoricalTrendAnalyzer.getInstance();
-        const monitoringIntegrations = MonitoringIntegrations.getInstance();
+        const _complianceMonitor = ComplianceMonitor.getInstance();
+        const _alertService = AlertConfigurationService.getInstance();
+        const _trendAnalyzer = HistoricalTrendAnalyzer.getInstance();
+        const _monitoringIntegrations = MonitoringIntegrations.getInstance();
 
         // Generate some mock data for demonstration
         if (mockDataEnabled) {
           const mockData = dataService.generateMockData();
-          console.log('Generated mock data:', mockData);
+          // Mock data generated
 
           // Train anomaly detection engine with historical data
           await anomalyEngine.trainModel(mockData.accessEvents);

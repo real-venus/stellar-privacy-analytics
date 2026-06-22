@@ -316,9 +316,6 @@ export const PrivacyImpactAssessmentWizard: React.FC = () => {
       };
 
       setResult(assessmentResult);
-
-      // In a real implementation, this would be saved to backend
-      console.log('Assessment completed:', assessmentResult);
     } catch (error) {
       console.error('Failed to submit assessment:', error);
     } finally {

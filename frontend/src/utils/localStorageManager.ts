@@ -205,10 +205,6 @@ export class LocalStorageManager {
       };
 
       localStorage.setItem(this.STORAGE_KEYS.AUTO_SAVE, JSON.stringify(autoSaveData));
-      console.log('Schema auto-saved', {
-        schemaName: schema.name,
-        timestamp: autoSaveData.timestamp,
-      });
     } catch (error) {
       console.error('Failed to auto-save schema:', error);
     }
@@ -349,10 +345,6 @@ export class LocalStorageManager {
       localStorage.setItem(this.STORAGE_KEYS.SCHEMA_LIST, JSON.stringify(limitedSchemas));
 
       const removedCount = schemaList.length - limitedSchemas.length;
-
-      if (removedCount > 0) {
-        console.log(`Cleaned up ${removedCount} old schemas`);
-      }
 
       return removedCount;
     } catch (error) {

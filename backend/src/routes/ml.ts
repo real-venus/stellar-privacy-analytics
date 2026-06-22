@@ -293,12 +293,10 @@ router.post(
       const { modelId, encryptedInput, inferenceId, userId } = req.body;
 
       if (!modelId || !encryptedInput || !inferenceId || !userId) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "ModelId, encryptedInput, inferenceId, and userId are required",
-          });
+        return res.status(400).json({
+          error:
+            "ModelId, encryptedInput, inferenceId, and userId are required",
+        });
       }
 
       const result = await homomorphicEncryption.performEncryptedInference({

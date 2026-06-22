@@ -138,14 +138,7 @@ export class AnonymizationWorker {
       },
     });
 
-    // Queue scheduler for delayed jobs
-    this.scheduler = new (any as any)("anonymization", {
-      connection: {
-        host: process.env.REDIS_HOST || "localhost",
-        port: parseInt(process.env.REDIS_PORT || "6379"),
-        password: process.env.REDIS_PASSWORD,
-      },
-    });
+    // QueueScheduler removed in BullMQ v4 — scheduling is built into Workers
 
     // Dead letter queue for failed jobs
     this.deadLetterQueue = new DeadLetterQueue("anonymization-dead-letter");
@@ -196,8 +189,6 @@ export class AnonymizationWorker {
           password: process.env.REDIS_PASSWORD,
         },
         concurrency: workerConfig.concurrency || 5,
-        attempts: workerConfig.maxRetries || 3,
-        retryDelay: workerConfig.retryDelay || 2000,
       },
     );
 
@@ -230,7 +221,6 @@ export class AnonymizationWorker {
           jobId: job.id!,
           originalJob: job.data,
           error: err.message,
-          failedAt: new Date(),
           attempts: job.attemptsMade,
         });
       }
@@ -351,7 +341,7 @@ export class AnonymizationWorker {
       datasetId,
       originalMetadata: metadata,
       sanitizedMetadata,
-      piiDetected,
+      piiDetected: piiDetections,
       success: true,
     };
   }
@@ -367,14 +357,14 @@ export class AnonymizationWorker {
     if (this.piiMasker.isRegexEnabled()) {
       const regexResult = this.piiMasker.maskWithRegex(fieldValue);
       sanitizedValue = regexResult.maskedText;
-      detections.push(...regexResult.detections);
+      detections.push(...(regexResult.detections as PIIDetection[]));
     }
 
     // NER-based PII detection and masking
     if (this.nerProcessor.isEnabled()) {
       const nerResult = await this.nerProcessor.maskWithNER(fieldValue);
       sanitizedValue = nerResult.maskedText;
-      detections.push(...nerResult.detections);
+      detections.push(...(nerResult.detections as PIIDetection[]));
     }
 
     return { sanitizedValue, detections };
@@ -522,7 +512,6 @@ export class AnonymizationWorker {
 
         // Close queues
         await this.queue.close();
-        await this.scheduler.close();
         await this.deadLetterQueue.close();
 
         // Close components

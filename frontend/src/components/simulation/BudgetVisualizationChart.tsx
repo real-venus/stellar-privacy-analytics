@@ -21,7 +21,7 @@ import {
   PolarRadiusAxis,
   Radar,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, DollarSign, Shield, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 import { BudgetAllocation, SimulationResult, ScenarioImpact } from '../../types/privacyBudget';
 

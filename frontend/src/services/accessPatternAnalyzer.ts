@@ -2,7 +2,7 @@
  * Data Access Pattern Analyzer
  */
 
-import { DataAccessEvent, AccessPattern, PrivacyMetric } from '../types/privacyMetrics';
+import { DataAccessEvent, AccessPattern } from '../types/privacyMetrics';
 
 export interface PatternAnalysisConfig {
   timeWindow: number; // minutes

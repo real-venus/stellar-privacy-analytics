@@ -1,14 +1,14 @@
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::crypto::sha256;
-use soroban_sdk::symbol;
-use soroban_sdk::symbol_short;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
+use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
 use soroban_sdk::Env;
 use soroban_sdk::Map;
 use soroban_sdk::String;
+use soroban_sdk::Symbol;
 use soroban_sdk::Vec;
 
 // Contract state storage keys
@@ -102,13 +102,21 @@ pub struct DataSovereigntyAccessControl;
 impl DataSovereigntyAccessControl {
     /// Initialize the contract with an admin
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&symbol!("initialized")) {
+        if env
+            .storage()
+            .instance()
+            .has(&Symbol::new(&env, "initialized"))
+        {
             return; // Already initialized
         }
 
         // Set admin
-        env.storage().instance().set(&symbol!("admin"), &admin);
-        env.storage().instance().set(&symbol!("initialized"), &true);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "admin"), &admin);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     /// Register a new resource with an owner
@@ -125,7 +133,7 @@ impl DataSovereigntyAccessControl {
         let admin: Address = env
             .storage()
             .instance()
-            .get(&symbol!("admin"))
+            .get(&Symbol::new(&env, "admin"))
             .unwrap_or_else(|| caller);
 
         if env.current_contract_address() != admin && !Self::is_authorized(&env, &owner) {
@@ -146,7 +154,7 @@ impl DataSovereigntyAccessControl {
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
-            .get(&symbol!(RESOURCE_OWNERS_KEY))
+            .get(&Symbol::new(&env, RESOURCE_OWNERS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         if resources.contains_key(resource_id) {
@@ -165,14 +173,14 @@ impl DataSovereigntyAccessControl {
 
         // Store resource owner
         let mut updated_resources = resources;
-        updated_resources.set(resource_id, &resource_owner);
+        updated_resources.set(resource_owner.resource_id.clone(), resource_owner);
         env.storage()
             .instance()
-            .set(&symbol!(RESOURCE_OWNERS_KEY), &updated_resources);
+            .set(&Symbol::new(&env, RESOURCE_OWNERS_KEY), &updated_resources);
 
         // Emit event for resource registration
         env.events().publish(
-            (symbol!("resource_registered"), resource_id),
+            (Symbol::new(&env, "resource_registered"), resource_id),
             (owner, requires_multi_sig, multi_sig_threshold),
         );
 
@@ -191,7 +199,7 @@ impl DataSovereigntyAccessControl {
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
-            .get(&symbol!(RESOURCE_OWNERS_KEY))
+            .get(&Symbol::new(&env, RESOURCE_OWNERS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let resource_owner = resources
@@ -214,6 +222,9 @@ impl DataSovereigntyAccessControl {
             None
         };
 
+        // Clone resource_id before moving into struct
+        let resource_id_for_event = resource_id.clone();
+
         // Create access permission
         let permission = AccessPermission {
             user: user.clone(),
@@ -229,7 +240,7 @@ impl DataSovereigntyAccessControl {
         let mut permissions: Map<Address, Vec<AccessPermission>> = env
             .storage()
             .instance()
-            .get(&symbol!(USER_PERMISSIONS_KEY))
+            .get(&Symbol::new(&env, USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let user_permissions = permissions
@@ -238,14 +249,14 @@ impl DataSovereigntyAccessControl {
         let mut updated_permissions = user_permissions;
         updated_permissions.push_back(permission);
 
-        permissions.set(user, &updated_permissions);
+        permissions.set(user.clone(), updated_permissions);
         env.storage()
             .instance()
-            .set(&symbol!(USER_PERMISSIONS_KEY), &permissions);
+            .set(&Symbol::new(&env, USER_PERMISSIONS_KEY), &permissions);
 
         // Emit event for access grant
         env.events().publish(
-            (symbol!("access_granted"), resource_id),
+            (Symbol::new(&env, "access_granted"), resource_id_for_event),
             (user, permission_type, expires_at),
         );
 
@@ -262,7 +273,7 @@ impl DataSovereigntyAccessControl {
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
-            .get(&symbol!(RESOURCE_OWNERS_KEY))
+            .get(&Symbol::new(&env, RESOURCE_OWNERS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let resource_owner = resources
@@ -279,7 +290,7 @@ impl DataSovereigntyAccessControl {
         let mut permissions: Map<Address, Vec<AccessPermission>> = env
             .storage()
             .instance()
-            .get(&symbol!(USER_PERMISSIONS_KEY))
+            .get(&Symbol::new(&env, USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let user_permissions = permissions
@@ -303,10 +314,10 @@ impl DataSovereigntyAccessControl {
             return Err(AccessControlError::PermissionDenied);
         }
 
-        permissions.set(user, &updated_permissions);
+        permissions.set(user.clone(), updated_permissions);
         env.storage()
             .instance()
-            .set(&symbol!(USER_PERMISSIONS_KEY), &permissions);
+            .set(&Symbol::new(&env, USER_PERMISSIONS_KEY), &permissions);
 
         // Log the revocation
         Self::log_access(
@@ -320,7 +331,7 @@ impl DataSovereigntyAccessControl {
 
         // Emit event for access revocation
         env.events().publish(
-            (symbol!("access_revoked"), resource_id),
+            (Symbol::new(&env, "access_revoked"), resource_id),
             (user, env.ledger().timestamp()),
         );
 
@@ -339,7 +350,7 @@ impl DataSovereigntyAccessControl {
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
-            .get(&symbol!(RESOURCE_OWNERS_KEY))
+            .get(&Symbol::new(&env, RESOURCE_OWNERS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let resource_owner = resources
@@ -363,14 +374,25 @@ impl DataSovereigntyAccessControl {
         };
 
         // Generate unique key ID
-        let key_data = format!(
-            "{}{}{}{}",
-            resource_id,
-            holder,
-            env.ledger().timestamp(),
-            permissions.len()
-        );
-        let key_id = BytesN::from_array(&env, &sha256(key_data.as_bytes()).to_array());
+        let mut key_data = soroban_sdk::Bytes::new(&env);
+        key_data.append(&resource_id.to_xdr(&env));
+        key_data.append(&holder.to_xdr(&env));
+        key_data.append(&Bytes::from_slice(
+            &env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        key_data.append(&Bytes::from_slice(
+            &env,
+            &(permissions.len() as u32).to_be_bytes(),
+        ));
+        let key_id = env.crypto().sha256(&key_data);
+        let key_id = BytesN::from_array(&env, &key_id_hash.to_array());
+
+        // Clone values before moving into struct
+        let key_id_for_set = key_id.clone();
+        let resource_id_for_event = resource_id.clone();
+        let holder_for_event = holder.clone();
+        let key_id_for_event = key_id.clone();
 
         // Create access key
         let access_key = AccessKey {
@@ -387,18 +409,21 @@ impl DataSovereigntyAccessControl {
         let mut access_keys: Map<BytesN<32>, AccessKey> = env
             .storage()
             .instance()
-            .get(&symbol!(ACCESS_KEYS_KEY))
+            .get(&Symbol::new(&env, ACCESS_KEYS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
-        access_keys.set(key_id, &access_key);
+        access_keys.set(key_id_for_set, access_key);
         env.storage()
             .instance()
-            .set(&symbol!(ACCESS_KEYS_KEY), &access_keys);
+            .set(&Symbol::new(&env, ACCESS_KEYS_KEY), &access_keys);
 
         // Emit event for key creation
         env.events().publish(
-            (symbol!("access_key_created"), resource_id),
-            (key_id, holder, expires_at),
+            (
+                Symbol::new(&env, "access_key_created"),
+                resource_id_for_event,
+            ),
+            (key_id_for_event, holder_for_event, expires_at),
         );
 
         Ok(key_id)
@@ -415,7 +440,7 @@ impl DataSovereigntyAccessControl {
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
-            .get(&symbol!(RESOURCE_OWNERS_KEY))
+            .get(&Symbol::new(&env, RESOURCE_OWNERS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let resource_owner = resources
@@ -431,7 +456,7 @@ impl DataSovereigntyAccessControl {
         let permissions: Map<Address, Vec<AccessPermission>> = env
             .storage()
             .instance()
-            .get(&symbol!(USER_PERMISSIONS_KEY))
+            .get(&Symbol::new(&env, USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         if let Some(user_permissions) = permissions.get(user.clone()) {
@@ -468,7 +493,7 @@ impl DataSovereigntyAccessControl {
         let access_keys: Map<BytesN<32>, AccessKey> = env
             .storage()
             .instance()
-            .get(&symbol!(ACCESS_KEYS_KEY))
+            .get(&Symbol::new(&env, ACCESS_KEYS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let current_time = env.ledger().timestamp();
@@ -532,7 +557,7 @@ impl DataSovereigntyAccessControl {
         let admin: Address = env
             .storage()
             .instance()
-            .get(&symbol!("admin"))
+            .get(&Symbol::new(&env, "admin"))
             .unwrap_or_else(|| env.current_contract_address());
         address == &admin
     }
@@ -558,26 +583,34 @@ impl DataSovereigntyAccessControl {
         let mut access_log: Vec<AccessLogEntry> = env
             .storage()
             .instance()
-            .get(&symbol!(ACCESS_LOG_KEY))
-            .unwrap_or_else(|| Vec::new(env));
+            .get(&Symbol::new(&env, ACCESS_LOG_KEY))
+            .unwrap_or_else(|| Vec::new(&env));
 
         access_log.push_back(log_entry);
 
         // Keep only last 1000 log entries to prevent storage bloat
         if access_log.len() > 1000 {
-            access_log = access_log.slice(access_log.len() - 1000..access_log.len());
+            let end_idx = access_log.len();
+            let start_idx = end_idx.saturating_sub(1000);
+            let mut _new_log = Vec::new(&env);
+            for _i in start_idx..end_idx {
+                if let Some(_entry) = access_log.get(_i) {
+                    _new_log.push_back(_entry);
+                }
+            }
+            access_log = _new_log;
         }
 
         env.storage()
             .instance()
-            .set(&symbol!(ACCESS_LOG_KEY), &access_log);
+            .set(&Symbol::new(&env, ACCESS_LOG_KEY), &access_log);
     }
 
     /// Get access log for debugging/auditing
     pub fn get_access_log(env: Env) -> Vec<AccessLogEntry> {
         env.storage()
             .instance()
-            .get(&symbol!(ACCESS_LOG_KEY))
+            .get(&Symbol::new(&env, ACCESS_LOG_KEY))
             .unwrap_or_else(|| Vec::new(&env))
     }
 
@@ -590,7 +623,7 @@ impl DataSovereigntyAccessControl {
         let mut permissions: Map<Address, Vec<AccessPermission>> = env
             .storage()
             .instance()
-            .get(&symbol!(USER_PERMISSIONS_KEY))
+            .get(&Symbol::new(&env, USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let mut updated_permissions = Map::new(&env);
@@ -613,19 +646,20 @@ impl DataSovereigntyAccessControl {
             }
 
             if !active_permissions.is_empty() {
-                updated_permissions.set(user, &active_permissions);
+                updated_permissions.set(user.clone(), active_permissions);
             }
         }
 
-        env.storage()
-            .instance()
-            .set(&symbol!(USER_PERMISSIONS_KEY), &updated_permissions);
+        env.storage().instance().set(
+            &Symbol::new(&env, USER_PERMISSIONS_KEY),
+            &updated_permissions,
+        );
 
         // Clean up expired access keys
         let mut access_keys: Map<BytesN<32>, AccessKey> = env
             .storage()
             .instance()
-            .get(&symbol!(ACCESS_KEYS_KEY))
+            .get(&Symbol::new(&env, ACCESS_KEYS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
         let mut updated_keys = Map::new(&env);
@@ -638,7 +672,7 @@ impl DataSovereigntyAccessControl {
             };
 
             if !is_expired && access_key.active {
-                updated_keys.set(key_id, &access_key);
+                updated_keys.set(key_id, access_key);
             } else if is_expired {
                 cleaned_count += 1;
             }
@@ -646,7 +680,7 @@ impl DataSovereigntyAccessControl {
 
         env.storage()
             .instance()
-            .set(&symbol!(ACCESS_KEYS_KEY), &updated_keys);
+            .set(&Symbol::new(&env, ACCESS_KEYS_KEY), &updated_keys);
 
         Ok(cleaned_count)
     }

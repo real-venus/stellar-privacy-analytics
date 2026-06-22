@@ -271,7 +271,7 @@ class ApiClient {
         try {
           await request();
         } catch (error) {
-          console.error('Failed to process queued request:', error);
+          // Queued request silently failed; already reported upstream
         }
       }
     }
@@ -297,9 +297,6 @@ class ApiClient {
         this.retryConfig.maxDelay
       );
 
-      console.log(
-        `Retrying request (${retryConfig._retryCount}/${this.retryConfig.maxRetries}) in ${delay}ms...`
-      );
       toast.loading(`Retrying... (${retryConfig._retryCount}/${this.retryConfig.maxRetries})`, {
         id: 'retry',
       });

@@ -100,6 +100,7 @@ export function openPrintableReport(title: string, html: string): boolean {
       printWindow.focus();
       printWindow.print();
     } catch {
+      // Fallback: focus window even if print fails
       printWindow.focus();
     }
   }, 250);

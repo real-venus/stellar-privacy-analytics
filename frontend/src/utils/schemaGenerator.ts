@@ -1,5 +1,11 @@
 import { SchemaConfig, SchemaField, ZKConstraint } from '../components/SchemaBuilder/SchemaBuilder';
 
+// Rust type aliases used in generated code interfaces
+type bool = boolean;
+type u64 = number;
+type f64 = number;
+type Vec<T> = T[];
+
 export interface RustSchemaOutput {
   name: string;
   description?: string;
@@ -69,7 +75,7 @@ export class SchemaGenerator {
    * Generate JSON schema configuration
    */
   static generateJSONSchema(schema: SchemaConfig): string {
-    const jsonSchema = {
+    const jsonSchema: Record<string, any> = {
       $schema: 'https://json-schema.org/draft/2020-12',
       type: 'object',
       properties: {},
@@ -191,8 +197,8 @@ export class SchemaGenerator {
       required: field.required,
     }));
 
-    const rustConstraints: RustConstraint[] = schema.constraints.map((constraint) => ({
-      id: constraint.id,
+    const rustConstraints: RustConstraint[] = schema.constraints.map((constraint, index) => ({
+      id: `constraint_${index}`,
       constraint_type: this.mapConstraintType(constraint),
       field_id: constraint.fieldId,
       parameters: this.mapConstraintParameters(constraint),
@@ -225,8 +231,6 @@ export class SchemaGenerator {
    * Generate Rust struct code
    */
   static generateRustStruct(schema: SchemaConfig): string {
-    const rustSchema = this.generateRustSchema(schema);
-
     let rustCode = `// Auto-generated Rust schema for ZK proofs
 // Generated on: ${new Date().toISOString()}
 // Schema: ${schema.name}
@@ -459,8 +463,6 @@ fn main() {
    * Generate Rust test code
    */
   static generateRustTests(schema: SchemaConfig): string {
-    const rustSchema = this.generateRustSchema(schema);
-
     return `// Auto-generated Rust tests for ZK schema validation
 // Generated on: ${new Date().toISOString()}
 // Schema: ${schema.name}

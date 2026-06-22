@@ -68,7 +68,6 @@ export class MetadataRepository {
         isReadReplica: this.isReadReplica,
         totalCount: this.pool.totalCount,
         idleCount: this.pool.idleCount,
-        totalCount: this.pool.totalCount,
       });
     });
 

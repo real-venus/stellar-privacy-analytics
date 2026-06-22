@@ -32,7 +32,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
     const initializeServices = async () => {
       try {
         // Initialize simulation engine
-        const simulationEngine = PrivacyBudgetSimulation.getInstance({
+        const _simulationEngine = PrivacyBudgetSimulation.getInstance({
           maxIterations: 1000,
           convergenceThreshold: 0.001,
           monteCarloRuns: 1000,
@@ -42,7 +42,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
         });
 
         // Initialize what-if modeling
-        const whatIfModeling = WhatIfScenarioModeling.getInstance({
+        const _whatIfModeling = WhatIfScenarioModeling.getInstance({
           maxScenarios: 50,
           defaultTimeHorizon: 365,
           confidenceLevels: [0.8, 0.9, 0.95],
@@ -51,7 +51,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
         });
 
         // Initialize optimization engine
-        const optimizationEngine = OptimizationRecommendationEngine.getInstance({
+        const _optimizationEngine = OptimizationRecommendationEngine.getInstance({
           maxRecommendations: 10,
           minImpactThreshold: 0.05,
           confidenceThreshold: 0.7,
@@ -61,7 +61,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
         });
 
         // Initialize export sharing
-        const exportSharing = SimulationExportSharing.getInstance(
+        const _exportSharing = SimulationExportSharing.getInstance(
           {
             defaultFormat: 'json',
             includeMetadata: true,
@@ -83,7 +83,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
         );
 
         // Initialize historical comparison
-        const historicalComparison = HistoricalScenarioComparison.getInstance({
+        const _historicalComparison = HistoricalScenarioComparison.getInstance({
           maxHistoricalScenarios: 100,
           timeRange: 365,
           comparisonMetrics: [
@@ -459,10 +459,10 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
 
     try {
       const exportSharing = SimulationExportSharing.getInstance();
-      const exportData = await exportSharing.exportSimulationResult(simulationResult, format);
+      const _exportData = await exportSharing.exportSimulationResult(simulationResult, format);
 
       // In a real implementation, this would trigger a download
-      console.log('Export data:', exportData);
+      // Export data ready
       toast.success(`Results exported as ${format.toUpperCase()}`);
     } catch (error) {
       console.error('Export failed:', error);
@@ -486,7 +486,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
 
       const recommendations = optimizationEngine.generateRecommendations(context);
 
-      console.log('Generated recommendations:', recommendations);
+      // Generated recommendations
       toast.success(`Generated ${recommendations.length} recommendations`);
       return recommendations;
     } catch (error) {
@@ -506,7 +506,7 @@ const PrivacyBudgetSimulationDemo: React.FC = () => {
         simulationResult
       );
 
-      console.log('Historical analysis:', analysis);
+      // Historical analysis completed
       toast.success('Historical analysis completed');
       return analysis;
     } catch (error) {

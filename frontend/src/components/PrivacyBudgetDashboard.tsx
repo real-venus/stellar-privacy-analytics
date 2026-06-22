@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
-import { format, subDays, startOfDay, differenceInDays } from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
 
 interface PrivacyBudget {
   datasetId: string;
@@ -342,7 +342,7 @@ const PrivacyBudgetDashboard: React.FC<{ datasetId: string }> = ({ datasetId }) 
     toast.success('Budget report exported');
   };
 
-  const allocateBudget = (allocation: BudgetAllocation, newAmount: number) => {
+  const _allocateBudget = (allocation: BudgetAllocation, newAmount: number) => {
     setAllocations((prev) =>
       prev.map((a) => (a.id === allocation.id ? { ...a, currentEpsilon: newAmount } : a))
     );

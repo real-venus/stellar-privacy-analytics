@@ -2,8 +2,6 @@
  * Stellar wallet integration for transaction signing and blockchain operations
  */
 
-import { WebCryptoService } from './webCrypto';
-
 export interface StellarAccount {
   publicKey: string;
   secretKey?: string;

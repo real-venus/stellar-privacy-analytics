@@ -814,8 +814,8 @@ function privateAverage(data, epsilon) {
             options: [
               { id: "a", text: "1 year", isCorrect: false },
               { id: "b", text: "3 years", isCorrect: false },
-              { id: "c", text: "5 years" },
-              { id: "d", text: "Depends on the data type and purpose" },
+              { id: "c", text: "5 years", isCorrect: false },
+              { id: "d", text: "Depends on the data type and purpose", isCorrect: true },
             ],
             correctAnswer: "d",
             explanation:
@@ -962,13 +962,14 @@ function privateAverage(data, epsilon) {
             question:
               "What information must be included in a breach notification to the supervisory authority?",
             options: [
-              { id: "a", text: "Only the number of affected individuals" },
+              { id: "a", text: "Only the number of affected individuals", isCorrect: false },
               {
                 id: "b",
                 text: "Nature of breach, categories and approximate number of individuals, DPO contact, consequences, measures taken",
+                isCorrect: true,
               },
-              { id: "c", text: "Only technical details of the breach" },
-              { id: "d", text: "Names of all affected individuals" },
+              { id: "c", text: "Only technical details of the breach", isCorrect: false },
+              { id: "d", text: "Names of all affected individuals", isCorrect: false },
             ],
             correctAnswer: "b",
             explanation:

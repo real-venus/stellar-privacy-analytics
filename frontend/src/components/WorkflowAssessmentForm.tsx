@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, X, Shield, Database, Lock, Globe } from 'lucide-react';
+import { Plus, X, Shield, Lock, Globe } from 'lucide-react';
 
 interface ProcessingStep {
   id: string;
@@ -125,7 +125,7 @@ const WorkflowAssessmentForm: React.FC<WorkflowAssessmentFormProps> = ({
     't_closeness',
   ];
 
-  const securityMeasureOptions = [
+  const _securityMeasureOptions = [
     'encryption',
     'pseudonymization',
     'access_controls',

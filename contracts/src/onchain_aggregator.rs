@@ -1,14 +1,14 @@
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::crypto::sha256;
-use soroban_sdk::symbol;
-use soroban_sdk::symbol_short;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
+use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
 use soroban_sdk::Env;
 use soroban_sdk::Map;
 use soroban_sdk::String;
+use soroban_sdk::Symbol;
 use soroban_sdk::Vec;
 
 // Contract state storage keys
@@ -37,7 +37,7 @@ pub enum AggregationOperation {
 #[contracttype]
 pub struct EncryptedDataPoint {
     pub data_id: BytesN<32>,
-    pub encrypted_value: Vec<u8>,
+    pub encrypted_value: Bytes,
     pub provider_id: Address,
     pub timestamp: u64,
     pub data_hash: BytesN<32>,
@@ -62,7 +62,7 @@ pub struct AggregationRequest {
 #[contracttype]
 pub struct AggregationResult {
     pub request_id: BytesN<32>,
-    pub encrypted_result: Vec<u8>,
+    pub encrypted_result: Bytes,
     pub result_hash: BytesN<32>,
     pub privacy_certificate_id: BytesN<32>,
     pub timestamp: u64,
@@ -80,7 +80,7 @@ pub struct PrivacyCertificate {
     pub epsilon_used: i128,
     pub delta_used: i128,
     pub timestamp: u64,
-    pub signature: Vec<u8>,
+    pub signature: Bytes,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,23 +116,31 @@ pub struct OnChainAggregator;
 impl OnChainAggregator {
     /// Initialize the aggregator contract
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&symbol!("initialized")) {
+        if env
+            .storage()
+            .instance()
+            .has(&Symbol::new(&env, "initialized"))
+        {
             return; // Already initialized
         }
 
         // Set admin
-        env.storage().instance().set(&symbol!("admin"), &admin);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "admin"), &admin);
 
         // Initialize default compute credit prices
         let mut credit_prices = Map::new(&env);
-        credit_prices.set(symbol_short!("sum"), &MIN_CREDITS_FOR_SUM);
-        credit_prices.set(symbol_short!("avg"), &MIN_CREDITS_FOR_AVG);
-        credit_prices.set(symbol_short!("count"), &MIN_CREDITS_FOR_COUNT);
+        credit_prices.set(Symbol::new(&env, "sum"), MIN_CREDITS_FOR_SUM);
+        credit_prices.set(Symbol::new(&env, "avg"), MIN_CREDITS_FOR_AVG);
+        credit_prices.set(Symbol::new(&env, "count"), MIN_CREDITS_FOR_COUNT);
         env.storage()
             .instance()
-            .set(&symbol!("credit_prices"), &credit_prices);
+            .set(&Symbol::new(&env, "credit_prices"), &credit_prices);
 
-        env.storage().instance().set(&symbol!("initialized"), &true);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     /// Submit a new aggregation request
@@ -202,7 +210,7 @@ impl OnChainAggregator {
         let admin = env
             .storage()
             .instance()
-            .get(&symbol!("admin"))
+            .get(&Symbol::new(&env, "admin"))
             .ok_or(AggregatorError::NotAuthorized)?;
         if processor != admin {
             return Err(AggregatorError::NotAuthorized);
@@ -250,7 +258,7 @@ impl OnChainAggregator {
             epsilon_used: total_epsilon_spent,
             delta_used: total_epsilon_spent / 1000, // Simplified delta calculation
             timestamp: env.ledger().timestamp(),
-            signature: Vec::new(&env), // Would be signed by oracle
+            signature: soroban_sdk::Bytes::new(&env), // Would be signed by oracle
         };
 
         // Store privacy certificate
@@ -259,7 +267,7 @@ impl OnChainAggregator {
             .set(&certificate_id, &privacy_certificate);
 
         // Create result
-        let result_hash = sha256(&encrypted_result);
+        let result_hash = env.crypto().sha256(&encrypted_result);
         let result = AggregationResult {
             request_id: request_id.clone(),
             encrypted_result: encrypted_result.clone(),
@@ -273,7 +281,7 @@ impl OnChainAggregator {
         // Store result
         env.storage()
             .persistent()
-            .set(&symbol!("result_").concat(&request_id), &result);
+            .set(&(Symbol::new(&env, "result_"), request_id.clone()), &result);
 
         // Update request status
         request.status = String::from_str(&env, "completed");
@@ -292,7 +300,7 @@ impl OnChainAggregator {
         let admin = env
             .storage()
             .instance()
-            .get(&symbol!("admin"))
+            .get(&Symbol::new(&env, "admin"))
             .ok_or(AggregatorError::NotAuthorized)?;
         if processor != admin {
             return Err(AggregatorError::NotAuthorized);
@@ -346,7 +354,7 @@ impl OnChainAggregator {
         let admin = env
             .storage()
             .instance()
-            .get(&symbol!("admin"))
+            .get(&Symbol::new(&env, "admin"))
             .ok_or(AggregatorError::NotAuthorized)?;
         admin.require_auth();
 
@@ -363,7 +371,7 @@ impl OnChainAggregator {
     pub fn get_aggregation_result(env: Env, request_id: BytesN<32>) -> Option<AggregationResult> {
         env.storage()
             .persistent()
-            .get(&symbol!("result_").concat(&request_id))
+            .get(&(Symbol::new(&env, "result_"), request_id.clone()))
     }
 
     /// Get privacy certificate
@@ -381,34 +389,41 @@ impl OnChainAggregator {
         requester: &Address,
         operation: &AggregationOperation,
     ) -> BytesN<32> {
-        let mut combined = Vec::new(env);
-        combined.append(&requester.to_contract_id().to_array());
-        combined.append(
-            &match operation {
-                AggregationOperation::Sum => "sum",
-                AggregationOperation::Average => "avg",
-                AggregationOperation::Count => "count",
-            }
-            .to_array(),
-        );
-        combined.append(&env.ledger().timestamp().to_be_bytes());
-        sha256(&combined)
+        let mut combined = soroban_sdk::Bytes::new(env);
+        combined.append(&requester.to_xdr(env));
+        let op_str = match operation {
+            AggregationOperation::Sum => String::from_str(env, "sum"),
+            AggregationOperation::Average => String::from_str(env, "avg"),
+            AggregationOperation::Count => String::from_str(env, "count"),
+        };
+        combined.append(&op_str.to_xdr(env));
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined)
     }
 
     fn generate_certificate_id(env: &Env, request_id: &BytesN<32>) -> BytesN<32> {
-        let mut combined = Vec::new(env);
-        combined.append(request_id);
-        combined.append(&"certificate".to_array());
-        combined.append(&env.ledger().timestamp().to_be_bytes());
-        sha256(&combined)
+        let mut combined = soroban_sdk::Bytes::new(env);
+        combined.append(&request_id.to_xdr(env));
+        combined.append(&String::from_str(env, "certificate").to_xdr(env));
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined)
     }
 
     fn generate_batch_id(env: &Env, processor: &Address) -> BytesN<32> {
-        let mut combined = Vec::new(env);
-        combined.append(&processor.to_contract_id().to_array());
-        combined.append(&"batch".to_array());
-        combined.append(&env.ledger().timestamp().to_be_bytes());
-        sha256(&combined)
+        let mut combined = soroban_sdk::Bytes::new(env);
+        combined.append(&processor.to_xdr(env));
+        combined.append(&String::from_str(env, "batch").to_xdr(env));
+        combined.append(&Bytes::from_slice(
+            env,
+            &env.ledger().timestamp().to_be_bytes(),
+        ));
+        env.crypto().sha256(&combined)
     }
 
     fn get_aggregation_request(env: &Env, request_id: &BytesN<32>) -> Option<AggregationRequest> {
@@ -437,46 +452,42 @@ impl OnChainAggregator {
     fn get_user_credits(env: &Env, user: &Address) -> i128 {
         env.storage()
             .persistent()
-            .get(&symbol!("credits_").concat(&user.to_contract_id()))
+            .get(&(Symbol::new(&env, "credits_"), user.clone()))
             .unwrap_or(0i128)
     }
 
     fn update_user_credits(env: &Env, user: &Address, delta: i128) {
         let current_credits = Self::get_user_credits(env, user);
         let new_credits = current_credits + delta;
-        env.storage().persistent().set(
-            &symbol!("credits_").concat(&user.to_contract_id()),
-            &new_credits,
-        );
+        env.storage()
+            .persistent()
+            .set(&(Symbol::new(&env, "credits_"), user.clone()), &new_credits);
     }
 
-    fn perform_sum(env: &Env, encrypted_values: &Vec<Vec<u8>>) -> Result<Vec<u8>, AggregatorError> {
+    fn perform_sum(env: &Env, encrypted_values: &Vec<Bytes>) -> Result<Bytes, AggregatorError> {
         // Simplified homomorphic addition (in production, use proper homomorphic encryption)
-        let mut result = Vec::new(env);
+        let mut result = soroban_sdk::Bytes::new(env);
         let mut sum = 0i128;
 
         for value in encrypted_values.iter() {
             // This is a placeholder - real implementation would use homomorphic encryption
             if value.len() >= 16 {
                 let mut bytes = [0u8; 16];
-                for i in 0..16 {
-                    if i < value.len() {
-                        bytes[i] = value.get(i).unwrap_or(&0);
-                    }
+                let mut i = 0u32;
+                while i < 16u32 && i < value.len() {
+                    bytes[i as usize] = value.get(i).unwrap_or(0);
+                    i += 1;
                 }
                 let val = i128::from_le_bytes(bytes);
                 sum = sum.checked_add(val).ok_or(AggregatorError::OverflowError)?;
             }
         }
 
-        result.append(&sum.to_le_bytes().to_vec());
+        result.append(&Bytes::from_slice(env, &sum.to_le_bytes()));
         Ok(result)
     }
 
-    fn perform_average(
-        env: &Env,
-        encrypted_values: &Vec<Vec<u8>>,
-    ) -> Result<Vec<u8>, AggregatorError> {
+    fn perform_average(env: &Env, encrypted_values: &Vec<Bytes>) -> Result<Bytes, AggregatorError> {
         // Simplified average calculation
         let sum_result = Self::perform_sum(env, encrypted_values)?;
         let count = encrypted_values.len() as i128;
@@ -487,27 +498,24 @@ impl OnChainAggregator {
 
         // Extract sum from result
         let mut sum_bytes = [0u8; 16];
-        for i in 0..16 {
-            if i < sum_result.len() {
-                sum_bytes[i] = sum_result.get(i).unwrap_or(&0);
-            }
+        let mut i = 0u32;
+        while i < 16u32 && i < sum_result.len() {
+            sum_bytes[i as usize] = sum_result.get(i).unwrap_or(0);
+            i += 1;
         }
         let sum = i128::from_le_bytes(sum_bytes);
 
         let average = sum / count;
 
-        let mut result = Vec::new(env);
-        result.append(&average.to_le_bytes().to_vec());
+        let mut result = soroban_sdk::Bytes::new(env);
+        result.append(&Bytes::from_slice(env, &average.to_le_bytes()));
         Ok(result)
     }
 
-    fn perform_count(
-        env: &Env,
-        encrypted_values: &Vec<Vec<u8>>,
-    ) -> Result<Vec<u8>, AggregatorError> {
+    fn perform_count(env: &Env, encrypted_values: &Vec<Bytes>) -> Result<Bytes, AggregatorError> {
         let count = encrypted_values.len() as i128;
-        let mut result = Vec::new(env);
-        result.append(&count.to_le_bytes().to_vec());
+        let mut result = soroban_sdk::Bytes::new(env);
+        result.append(&Bytes::from_slice(env, &count.to_le_bytes()));
         Ok(result)
     }
 
@@ -516,23 +524,23 @@ impl OnChainAggregator {
 
         match operation {
             AggregationOperation::Sum => {
-                params.set(String::from_str(env, "epsilon"), &1000i128);
-                params.set(String::from_str(env, "delta"), &1i128);
+                params.set(String::from_str(&env, "epsilon"), 1000i128);
+                params.set(String::from_str(&env, "delta"), 1i128);
             }
             AggregationOperation::Average => {
-                params.set(String::from_str(env, "epsilon"), &2000i128);
-                params.set(String::from_str(env, "delta"), &2i128);
+                params.set(String::from_str(&env, "epsilon"), 2000i128);
+                params.set(String::from_str(&env, "delta"), 2i128);
             }
             AggregationOperation::Count => {
-                params.set(String::from_str(env, "epsilon"), &500i128);
-                params.set(String::from_str(env, "delta"), &1i128);
+                params.set(String::from_str(&env, "epsilon"), 500i128);
+                params.set(String::from_str(&env, "delta"), 1i128);
             }
         }
 
         params
     }
 
-    fn calculate_noise(env: &Env, participants_count: u32) -> i128 {
+    fn calculate_noise(_env: &Env, participants_count: u32) -> i128 {
         // Simplified noise calculation based on participant count
         let base_noise = 1000i128;
         let scaling_factor = 1000i128 / (participants_count as i128);

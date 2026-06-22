@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { X, Download, Share2, Eye, Settings, Award } from 'lucide-react';
+import { X, Download, Share2, Award } from 'lucide-react';
 import { Certification } from '../../services/certificationService';
 
 interface BadgeDisplayProps {

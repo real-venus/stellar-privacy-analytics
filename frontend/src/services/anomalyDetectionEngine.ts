@@ -431,7 +431,7 @@ export class AnomalyDetectionEngine {
   private buildUserBehaviorProfiles(events: DataAccessEvent[]): Map<string, any> {
     const profiles = new Map<string, any>();
 
-    const userEvents = this.groupEventsByUser(events);
+    const _userEvents = this.groupEventsByUser(events);
 
     for (const [userId, userEvents] of userEvents) {
       const profile = {
@@ -538,7 +538,7 @@ export class AnomalyDetectionEngine {
         }
       }
 
-      console.log('Anomaly detection model training completed');
+      // Anomaly detection model training completed
     } finally {
       this.isTraining = false;
     }

@@ -35,7 +35,6 @@ export const Login: React.FC = () => {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
       login('mock-jwt-token');
       toast.success('Logged in successfully');
       navigate('/dashboard');

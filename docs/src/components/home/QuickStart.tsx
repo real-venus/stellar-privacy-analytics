@@ -50,7 +50,7 @@ export function QuickStart() {
       </h2>
       <p className="text-gray-600 text-center mb-8 max-w-2xl mx-auto">
         Get up and running with Stellar Privacy Analytics in just a few simple
-        steps. Whether you're a beginner or an experienced developer, we have a
+        steps. Whether you&apos;re a beginner or an experienced developer, we have a
         path for you.
       </p>
 

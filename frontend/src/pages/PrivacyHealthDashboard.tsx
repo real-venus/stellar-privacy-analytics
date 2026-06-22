@@ -212,7 +212,6 @@ const PrivacyHealthDashboard: React.FC = () => {
 
   const handleTopUp = () => {
     // Open top-up modal or navigate to payment page
-    console.log('Navigate to top-up page');
   };
 
   const handleExportReport = () => {

@@ -17,7 +17,7 @@ export const NetworkErrorTest: React.FC = () => {
     setIsLoading(true);
     try {
       addResult('Testing successful request...');
-      const result = await api.get('/test-endpoint');
+      const _result = await api.get('/test-endpoint');
       addResult('✅ Success: Request completed');
       toast.success('Test request successful');
     } catch (error) {
@@ -50,7 +50,7 @@ export const NetworkErrorTest: React.FC = () => {
     try {
       addResult('Testing timeout handling...');
       // Create a custom request with very short timeout
-      const result = await api.get('/slow-endpoint', { timeout: 1 });
+      const _result = await api.get('/slow-endpoint', { timeout: 1 });
       addResult('❌ Unexpected: Request should have timed out');
     } catch (error) {
       addResult(

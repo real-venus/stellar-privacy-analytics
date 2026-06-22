@@ -2,7 +2,6 @@
 mod tests {
     use super::*;
     use soroban_sdk::{
-        symbol_short,
         testutils::{Address as TestAddress, BytesN as TestBytesN},
         Env,
     };
@@ -14,7 +13,11 @@ mod tests {
 
         DataSovereigntyAccessControl::initialize(env.clone(), admin.clone());
 
-        let stored_admin: Address = env.storage().instance().get(&symbol!("admin")).unwrap();
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "admin"))
+            .unwrap();
         assert_eq!(stored_admin, admin);
     }
 

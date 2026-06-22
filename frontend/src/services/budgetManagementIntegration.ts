@@ -240,14 +240,12 @@ export class BudgetManagementIntegration {
 
   private async syncBudget(budget: PrivacyBudget): Promise<void> {
     // This would make an API call to sync budget with external system
-    // For now, simulate the sync
-    console.log(`Syncing budget ${budget.id} with budget management system`);
+    // Syncing budget ${budget.id} with budget management system
   }
 
   private async syncAllocation(allocation: BudgetAllocation): Promise<void> {
     // This would make an API call to sync allocation with external system
-    // For now, simulate the sync
-    console.log(`Syncing allocation ${allocation.id} with budget management system`);
+    // Syncing allocation ${allocation.id} with budget management system
   }
 
   // Budget creation and modification
@@ -539,8 +537,7 @@ export class BudgetManagementIntegration {
 
   private async applyApproval(approval: BudgetApproval): Promise<void> {
     // Apply the approved changes to the budget
-    // This would update the budget in the system
-    console.log(`Applying approval ${approval.id} for budget ${approval.budgetId}`);
+    // Applying approval ${approval.id} for budget ${approval.budgetId}
   }
 
   private async createWorkflowForApproval(approval: BudgetApproval): Promise<void> {

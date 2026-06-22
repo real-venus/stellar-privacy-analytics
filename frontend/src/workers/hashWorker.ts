@@ -9,7 +9,7 @@ self.addEventListener('message', async (e) => {
       const hash = await calculateFileHash(file);
       self.postMessage({ type: 'complete', hash });
     } catch (error) {
-      self.postMessage({ type: 'error', error: error.message });
+      self.postMessage({ type: 'error', error: (error as Error).message });
     }
   }
 });

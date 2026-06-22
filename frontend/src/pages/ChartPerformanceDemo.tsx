@@ -36,7 +36,7 @@ const ChartPerformanceDemo: React.FC = () => {
   }, [datasetSize]);
 
   const handlePerformanceMetrics = (metrics: any) => {
-    console.log('Chart Performance Metrics:', metrics);
+    // Chart Performance Metrics collected
 
     if (metrics.memoryPressure === 'critical') {
       toast.error('Critical memory pressure detected!');
@@ -188,7 +188,9 @@ const ChartPerformanceDemo: React.FC = () => {
               height={400}
               maxPoints={3000}
               enableProgressiveLoading={true}
-              onPerformanceMetrics={(metrics) => console.log('Secondary chart metrics:', metrics)}
+              onPerformanceMetrics={(metrics) => {
+                // Secondary chart metrics collected
+              }}
               fallbackMode="simplified"
               memoryThreshold={0.7}
             />
