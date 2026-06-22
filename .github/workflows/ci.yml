@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────
 #  Stellar Privacy Analytics — CI/CD Pipeline
-#  Path-filtered: each job triggers only on relevant changes
-#  On main/master/develop branches, all checks run regardless
+#  All jobs always run on every push/PR to ensure full coverage.
+#  Deploy only on push to main.
 # ─────────────────────────────────────────────────────────────
 name: CI/CD Pipeline
 
@@ -77,12 +77,6 @@ jobs:
   shared:
     name: Shared Library
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.shared == 'true' ||
-        needs.changes.outputs.ci == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -110,12 +104,6 @@ jobs:
   frontend:
     name: Frontend
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.frontend == 'true' ||
-        needs.changes.outputs.ci == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -148,12 +136,6 @@ jobs:
   backend:
     name: Backend
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.backend == 'true' ||
-        needs.changes.outputs.ci == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -186,12 +168,6 @@ jobs:
   contracts:
     name: Smart Contracts
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.contracts == 'true' ||
-        needs.changes.outputs.rust == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -228,12 +204,6 @@ jobs:
   rust-extras:
     name: Rust Extras
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.rust-root == 'true' ||
-        needs.changes.outputs.rust == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -259,11 +229,6 @@ jobs:
   service-discovery:
     name: Service Discovery
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.service-discovery == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -285,11 +250,6 @@ jobs:
   docs:
     name: Documentation
     needs: [changes]
-    if: |
-      always() && !cancelled() && (
-        needs.changes.outputs.docs == 'true' ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
