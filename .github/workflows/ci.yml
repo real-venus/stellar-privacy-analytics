@@ -109,7 +109,7 @@ jobs:
   # ── Frontend: lint, type-check, test, build ───────────────
   frontend:
     name: Frontend
-    needs: [changes, shared]
+    needs: [changes]
     if: |
       always() && !cancelled() && (
         needs.changes.outputs.frontend == 'true' ||
@@ -129,10 +129,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - name: Restore shared dist cache
+        id: shared-cache
         uses: actions/cache@v4
         with:
           path: shared/dist
           key: shared-dist-${{ hashFiles('shared/src/**/*.ts', 'shared/tsconfig.json') }}
+      - name: Build shared from source (cache miss)
+        if: steps.shared-cache.outputs.cache-hit != 'true'
+        run: npm ci && npm run build
+        working-directory: shared
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
@@ -142,7 +147,7 @@ jobs:
   # ── Backend: lint, type-check, test, build ────────────────
   backend:
     name: Backend
-    needs: [changes, shared]
+    needs: [changes]
     if: |
       always() && !cancelled() && (
         needs.changes.outputs.backend == 'true' ||
@@ -162,10 +167,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
       - name: Restore shared dist cache
+        id: shared-cache
         uses: actions/cache@v4
         with:
           path: shared/dist
           key: shared-dist-${{ hashFiles('shared/src/**/*.ts', 'shared/tsconfig.json') }}
+      - name: Build shared from source (cache miss)
+        if: steps.shared-cache.outputs.cache-hit != 'true'
+        run: npm ci && npm run build
+        working-directory: shared
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
