@@ -150,10 +150,7 @@ export class APIKeyManager {
         if (k.keyHash.length !== inputHash.length) {
           return false;
         }
-        return timingSafeEqual(
-          Buffer.from(inputHash),
-          Buffer.from(k.keyHash),
-        );
+        return timingSafeEqual(Buffer.from(inputHash), Buffer.from(k.keyHash));
       });
 
       if (!keyInfo) {

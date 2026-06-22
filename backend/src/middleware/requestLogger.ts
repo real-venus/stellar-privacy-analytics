@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { logger } from "../utils/logger";
 
 export const requestLogger = (
   req: Request,
@@ -9,7 +10,7 @@ export const requestLogger = (
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    console.log(
+    logger.info(
       `${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`,
     );
   });

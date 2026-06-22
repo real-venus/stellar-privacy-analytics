@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import toast from 'react-hot-toast';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -30,7 +29,7 @@ export const Login: React.FC = () => {
 
       type LoginErrors = { email?: string; password?: string };
 
-      export const Login: React.FC = () => {
+      export const _Login: React.FC = () => {
         const [email, setEmail] = useState('');
         const [password, setPassword] = useState('');
         const [showPassword, setShowPassword] = useState(false);

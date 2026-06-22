@@ -237,7 +237,7 @@ export const DataAnonymization: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const getAlgorithmDescription = (algorithm: string) => {
+  const _getAlgorithmDescription = (algorithm: string) => {
     return algorithms[algorithm]?.description || '';
   };
 

@@ -89,7 +89,7 @@ const PrivacyHealthDashboard: React.FC = () => {
   };
 
   const handleTopUp = () => {
-    console.log('Navigate to top-up page');
+    // Navigate to top-up page
   };
 
   const getPrivacyScoreColor = (score: number) => {

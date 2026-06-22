@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Database, Activity, Lock, Eye, AlertCircle } from 'lucide-react';
+import { Shield, Database, Activity, Lock, Eye} from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const stats = [

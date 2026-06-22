@@ -38,13 +38,11 @@ router.post(
         size: size || 0,
       })
       .returning("*");
-    return res
-      .status(201)
-      .json({
-        datasetId: dataset.id,
-        status: "uploaded",
-        message: "Data uploaded and encrypted successfully",
-      });
+    return res.status(201).json({
+      datasetId: dataset.id,
+      status: "uploaded",
+      message: "Data uploaded and encrypted successfully",
+    });
   }),
 );
 
@@ -58,6 +56,49 @@ router.get(
       .select("*")
       .orderBy("created_at", "desc");
     return res.json({ datasets, message: "Datasets retrieved successfully" });
+  }),
+);
+
+// Export datasets (must be before /:id to avoid route conflict)
+router.get(
+  "/export",
+  asyncHandler(async (req: Request, res: Response) => {
+    const db = getDb();
+    const datasets = await db("datasets")
+      .select(
+        "id",
+        "name",
+        "encrypted",
+        "mime_type",
+        "size",
+        "created_at",
+        "updated_at",
+      )
+      .orderBy("created_at", "desc");
+
+    const format = (req.query.format as string) || "json";
+
+    if (format === "csv") {
+      const headers = [
+        "id",
+        "name",
+        "encrypted",
+        "mime_type",
+        "size",
+        "created_at",
+        "updated_at",
+      ];
+      const rows = datasets.map((d: any) =>
+        headers.map((h) => JSON.stringify(d[h] ?? "")).join(","),
+      );
+      const csv = [headers.join(","), ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=datasets.csv");
+      return res.send(csv);
+    }
+
+    res.setHeader("Content-Disposition", "attachment; filename=datasets.json");
+    return res.json({ count: datasets.length, datasets });
   }),
 );
 

@@ -98,7 +98,6 @@ export const useSocketIO = (options: UseSocketIOOptions = {}): UseSocketIOReturn
       setConnectionState('connected');
       setReconnectAttempts(0);
       setLastError(null);
-      console.log('Socket.IO connected');
 
       // Process offline queue
       if (enableOfflineQueue && offlineQueueRef.current.length > 0) {
@@ -109,8 +108,8 @@ export const useSocketIO = (options: UseSocketIOOptions = {}): UseSocketIOReturn
       }
     });
 
-    newSocket.on('disconnect', (reason) => {
-      console.log('Socket.IO disconnected:', reason);
+    newSocket.on('disconnect', (_reason) => {
+      // Socket.IO disconnected
       setConnectionState('disconnected');
 
       // Attempt reconnection if not intentional disconnect
@@ -156,8 +155,6 @@ export const useSocketIO = (options: UseSocketIOOptions = {}): UseSocketIOReturn
     const attempt = reconnectAttempts + 1;
     setReconnectAttempts(attempt);
     const delay = getReconnectDelay(attempt - 1);
-
-    console.log(`Scheduling reconnection attempt ${attempt}/${maxReconnectAttempts} in ${delay}ms`);
 
     reconnectTimeoutRef.current = setTimeout(() => {
       if (socket && isOnline) {

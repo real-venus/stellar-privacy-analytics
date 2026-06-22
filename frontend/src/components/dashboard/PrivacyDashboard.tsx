@@ -111,7 +111,7 @@ const PrivacyDashboard: React.FC<PrivacyDashboardProps> = ({ config = {} }) => {
     []
   );
 
-  const complianceMonitor = useMemo(() => ComplianceMonitor.getInstance(), []);
+  const _complianceMonitor = useMemo(() => ComplianceMonitor.getInstance(), []);
 
   // Data fetching
   const fetchDashboardData = useCallback(async () => {

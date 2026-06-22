@@ -980,7 +980,7 @@ export class AccessControlIntegration {
     switch (step.type) {
       case 'approval':
         // Would create approval task for assignee
-        console.log(`Creating approval task for ${step.assignee}`);
+        // Creating approval task for ${step.assignee}
         break;
       case 'notification':
         // Would send notification
@@ -990,7 +990,7 @@ export class AccessControlIntegration {
         break;
       case 'verification':
         // Would perform verification
-        console.log(`Performing verification for step ${step.id}`);
+        // Performing verification for step ${step.id}
         break;
     }
   }
@@ -1002,19 +1002,19 @@ export class AccessControlIntegration {
   ): void {
     switch (action.type) {
       case 'send_email':
-        console.log(`Sending email with parameters:`, action.parameters);
+        // Sending email with parameters: action.parameters
         break;
       case 'send_notification':
-        console.log(`Sending notification with parameters:`, action.parameters);
+        // Sending notification with parameters: action.parameters
         break;
       case 'create_ticket':
-        console.log(`Creating ticket with parameters:`, action.parameters);
+        // Creating ticket with parameters: action.parameters
         break;
       case 'update_permission':
-        console.log(`Updating permission with parameters:`, action.parameters);
+        // Updating permission with parameters: action.parameters
         break;
       case 'log_audit':
-        console.log(`Logging audit with parameters:`, action.parameters);
+        // Logging audit with parameters: action.parameters
         break;
     }
   }
@@ -1269,7 +1269,7 @@ export class AccessControlIntegration {
   }
 
   private async syncWithSystem(system: ExternalSystemConfig): Promise<void> {
-    console.log(`Syncing with ${system.name}...`);
+    // Syncing with ${system.name}...
 
     // Implementation would depend on system type
     switch (system.type) {
@@ -1283,23 +1283,20 @@ export class AccessControlIntegration {
         await this.syncWithSAML(system);
         break;
       default:
-        console.log(`Sync not implemented for ${system.type}`);
+        // Sync not implemented for ${system.type}
     }
   }
 
   private async syncWithLDAP(system: ExternalSystemConfig): Promise<void> {
     // LDAP synchronization implementation
-    console.log('LDAP sync implementation');
   }
 
   private async syncWithOAuth(system: ExternalSystemConfig): Promise<void> {
     // OAuth synchronization implementation
-    console.log('OAuth sync implementation');
   }
 
   private async syncWithSAML(system: ExternalSystemConfig): Promise<void> {
     // SAML synchronization implementation
-    console.log('SAML sync implementation');
   }
 
   // Permission management

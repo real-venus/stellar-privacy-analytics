@@ -279,7 +279,7 @@ class SettingsSyncService {
         const localMetadata = secureSettingsStorage.getMetadata(key);
 
         if (localValue !== null) {
-          const remoteTimestamp = new Date(remoteData.lastModified).getTime();
+          const _remoteTimestamp = new Date(remoteData.lastModified).getTime();
           const localTimestamp = localMetadata?.timestamp || 0;
 
           if (JSON.stringify(localValue) !== JSON.stringify(remoteData.value)) {

@@ -1190,20 +1190,19 @@ export class MetadataManagementSearch {
 
   private async indexMetadata(metadata: DatasetMetadata): Promise<boolean> {
     // This would integrate with the actual search engine (Elasticsearch, etc.)
-    // For now, simulate successful indexing
-    console.log(`Indexing dataset: ${metadata.id}`);
+    // Indexing dataset: ${metadata.id}
     return true;
   }
 
   private async updateIndexedMetadata(metadata: DatasetMetadata): Promise<boolean> {
     // This would update the indexed document
-    console.log(`Updating indexed dataset: ${metadata.id}`);
+    // Updating indexed dataset: ${metadata.id}
     return true;
   }
 
   private async removeIndexedMetadata(datasetId: string): Promise<boolean> {
     // This would remove the document from the index
-    console.log(`Removing indexed dataset: ${datasetId}`);
+    // Removing indexed dataset: ${datasetId}
     return true;
   }
 

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { logger } from "../utils/logger";
 
 export enum PrivacyLevel {
   LOW = "low",
@@ -36,7 +37,7 @@ export const privacyMiddleware = (
 
   // Log privacy-related requests
   if (req.path.includes("/analytics") || req.path.includes("/data")) {
-    console.log(
+    logger.info(
       `Privacy request: ${req.method} ${req.path} - Level: ${req.privacyLevel}`,
     );
   }

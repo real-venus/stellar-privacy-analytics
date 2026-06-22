@@ -91,13 +91,11 @@ router.post(
         status: "pending",
       })
       .returning("*");
-    return res
-      .status(201)
-      .json({
-        analysisId: analysis.id,
-        status: analysis.status,
-        message: "X-Ray analysis created successfully",
-      });
+    return res.status(201).json({
+      analysisId: analysis.id,
+      status: analysis.status,
+      message: "X-Ray analysis created successfully",
+    });
   }),
 );
 

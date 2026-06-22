@@ -43,11 +43,12 @@ impl FixedPointMath {
         // Generate a uniform random value U in [-0.5, 0.5)
         // We use SHA256 of the seed to ensure determinism and resilience against reconstruction
         let hash = env.crypto().sha256(&seed);
+        let hash_array = hash.to_array();
         
-        let b0 = hash.get(0).unwrap_or(0) as u32;
-        let b1 = hash.get(1).unwrap_or(0) as u32;
-        let b2 = hash.get(2).unwrap_or(0) as u32;
-        let b3 = hash.get(3).unwrap_or(0) as u32;
+        let b0 = hash_array[0] as u32;
+        let b1 = hash_array[1] as u32;
+        let b2 = hash_array[2] as u32;
+        let b3 = hash_array[3] as u32;
         let raw_u = (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
         
         let u_scaled = (raw_u as i128 % Self::SCALE) - (Self::SCALE / 2);
@@ -125,7 +126,7 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
         
-        let contract_id = env.register_contract(None, DpAnalyticsContract);
+        let contract_id = env.register(DpAnalyticsContract, ());
         let client = DpAnalyticsContractClient::new(&env, &contract_id);
         
         let admin = Address::generate(&env);

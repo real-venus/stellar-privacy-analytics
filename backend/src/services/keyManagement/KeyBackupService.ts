@@ -150,7 +150,7 @@ export class KeyBackupService extends EventEmitter {
       // Compress if enabled
       let data = Buffer.from(serialized);
       if (this.config.compressionEnabled) {
-        data = await this.compress(data);
+        data = Buffer.from(await this.compress(data));
       }
 
       // Encrypt backup

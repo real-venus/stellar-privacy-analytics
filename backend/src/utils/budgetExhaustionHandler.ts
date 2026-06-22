@@ -1,4 +1,5 @@
 import { BudgetExhaustedException } from "@stellar/shared";
+import { logger } from "./logger";
 
 export class BudgetExhaustionHandler {
   private static instance: BudgetExhaustionHandler;
@@ -80,7 +81,7 @@ export class BudgetExhaustionHandler {
       message: "Privacy budget completely exhausted",
     };
 
-    console.error("PRIVACY_BUDGET_EXHAUSTED", JSON.stringify(logEntry));
+    logger.error("PRIVACY_BUDGET_EXHAUSTED", JSON.stringify(logEntry));
   }
 
   private logPartialExhaustion(
@@ -98,7 +99,7 @@ export class BudgetExhaustionHandler {
       message: "Partial privacy budget exhaustion",
     };
 
-    console.warn("PRIVACY_BUDGET_WARNING", JSON.stringify(logEntry));
+    logger.warn("PRIVACY_BUDGET_WARNING", JSON.stringify(logEntry));
   }
 
   private triggerAlerts(error: BudgetExhaustedException): void {
@@ -106,7 +107,7 @@ export class BudgetExhaustionHandler {
       try {
         callback(error);
       } catch (callbackError) {
-        console.error(
+        logger.error(
           "Error in budget exhaustion alert callback:",
           callbackError,
         );
@@ -208,7 +209,7 @@ export class BudgetExhaustionHandler {
   ): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        console.log(
+        logger.info(
           `Budget reset notification sent for user ${error.userId}, dataset ${error.datasetId}`,
         );
         resolve();
@@ -234,6 +235,6 @@ export class BudgetExhaustionHandler {
   }
 
   resetExhaustionStats(): void {
-    console.log("Budget exhaustion statistics reset");
+    logger.info("Budget exhaustion statistics reset");
   }
 }

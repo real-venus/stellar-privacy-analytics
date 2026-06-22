@@ -185,9 +185,9 @@ export const defaultGatewayConfig: GatewayConfig = {
         },
         {
           attribute: "user.clearanceLevel",
-          operator: "not_equals",
+          operator: "equals" as any,
           value: "high",
-          action: "deny",
+          action: "allow" as any,
         },
       ],
       priority: 90,

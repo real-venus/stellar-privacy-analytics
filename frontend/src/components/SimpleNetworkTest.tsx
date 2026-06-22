@@ -17,7 +17,7 @@ export const SimpleNetworkTest: React.FC = () => {
     try {
       addResult('Testing successful request...');
       // Test with a real endpoint that should work
-      const result = await api.get('/api/health');
+      const _result = await api.get('/api/health');
       addResult('✅ Success: Request completed');
       toast.success('Test request successful');
     } catch (error) {

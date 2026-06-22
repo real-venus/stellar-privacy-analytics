@@ -1,4 +1,3 @@
-import React from 'react';
 import { Skeleton, SkeletonStatCard, SkeletonProgress } from '@/components/ui/skeleton';
 
 /**

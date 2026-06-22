@@ -42,7 +42,7 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
   private burstMap: Map<string, { count: number; lastReset: number }> =
     new Map();
   private adaptiveMultipliers: Map<string, number> = new Map();
-  private metrics: RateLimitMetrics = {
+  private _enhancedMetrics: RateLimitMetrics = {
     totalRequests: 0,
     blockedRequests: 0,
     bypassedRequests: 0,
@@ -87,25 +87,25 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
     ): Promise<void> => {
       try {
         const config = {
-          ...this.defaultConfig,
+          ...(this as any).defaultConfig,
           ...customConfig,
         } as EnhancedRateLimitConfig;
 
         // Update metrics
-        this.metrics.totalRequests++;
+        this._enhancedMetrics.totalRequests++;
 
         // Check whitelist first
         if (
           config.enableWhitelist &&
           this.isWhitelisted(req, config.whitelist || [])
         ) {
-          this.metrics.bypassedRequests++;
+          this._enhancedMetrics.bypassedRequests++;
           return next();
         }
 
         // Check for emergency bypass
-        if (this.checkEmergencyBypass(req)) {
-          this.metrics.bypassedRequests++;
+        if ((this as any).checkEmergencyBypass(req)) {
+          this._enhancedMetrics.bypassedRequests++;
           logger.warn("Emergency bypass used", {
             ip: (req as any).ip,
             userAgent: (req as any).get("User-Agent"),
@@ -126,20 +126,20 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
 
         if (!user) {
           // Check for API key rate limiting
-          const apiKey = this.extractApiKey(req);
+          const apiKey = (this as any).extractApiKey(req);
           if (apiKey) {
-            key = this.apiKeyKeyGenerator(req, apiKey);
+            key = (this as any).apiKeyKeyGenerator(req, apiKey);
             type = "apikey";
-            tier = await this.getApiKeyTier(apiKey);
+            tier = await (this as any).getApiKeyTier(apiKey);
           } else {
             // IP-based rate limiting
-            key = this.ipKeyGenerator(req);
+            key = (this as any).ipKeyGenerator(req);
             type = "ip";
           }
         } else {
           // User-based rate limiting
           tier = user.rateLimitTier || "basic";
-          key = this.userKeyGenerator(req, config);
+          key = (this as any).userKeyGenerator(req, config);
           type = "user";
         }
 
@@ -151,7 +151,7 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
           );
           if (collisionDetected) {
             logger.warn("Rate limit collision detected", { key, type, tier });
-            this.metrics.collisionCount++;
+            this._enhancedMetrics.collisionCount++;
 
             // Apply stricter limits for potential abuse
             const stricterConfig = {
@@ -246,12 +246,13 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
     tier: "basic" | "premium" | "enterprise",
   ): Promise<void> {
     // Use the parent class's applyRateLimit method with enhanced features
-    await super.applyRateLimit(
+    // eslint-disable-next-line @typescript-eslint/dot-notation
+    await super['applyRateLimit'](
       req,
       res,
       (error?: any) => {
         if (error) {
-          this.metrics.blockedRequests++;
+          this._enhancedMetrics.blockedRequests++;
         } else {
           next();
         }
@@ -310,7 +311,7 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
     const newMultiplier = Math.max(0.5, currentMultiplier * adaptiveMultiplier);
     this.adaptiveMultipliers.set(key, newMultiplier);
 
-    this.metrics.adaptiveAdjustments++;
+    this._enhancedMetrics.adaptiveAdjustments++;
 
     return {
       ...config,
@@ -361,7 +362,7 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
     res: Response,
     config: EnhancedRateLimitConfig,
   ): Promise<void> {
-    this.metrics.blockedRequests++;
+    this._enhancedMetrics.blockedRequests++;
 
     logger.warn("Burst protection exceeded", {
       ip: (req as any).ip,
@@ -387,7 +388,7 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
    */
   private shouldTriggerAlert(config: EnhancedRateLimitConfig): boolean {
     const alertThreshold = config.alertThreshold || 0.8;
-    const blockRate = this.metrics.blockedRequests / this.metrics.totalRequests;
+    const blockRate = this._enhancedMetrics.blockedRequests / this._enhancedMetrics.totalRequests;
 
     return blockRate > alertThreshold;
   }
@@ -400,7 +401,7 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
     config: EnhancedRateLimitConfig,
   ): Promise<void> {
     logger.error("Rate limit alert triggered", {
-      metrics: this.metrics,
+      metrics: this._enhancedMetrics,
       config: {
         alertThreshold: config.alertThreshold,
         maxRequests: config.maxRequests,
@@ -451,14 +452,14 @@ export class EnhancedRateLimiter extends RateLimiterMiddleware {
    * Get comprehensive rate limiting metrics
    */
   getEnhancedMetrics(): RateLimitMetrics {
-    return { ...this.metrics };
+    return { ...this._enhancedMetrics };
   }
 
   /**
    * Reset enhanced metrics
    */
   resetEnhancedMetrics(): void {
-    this.metrics = {
+    this._enhancedMetrics = {
       totalRequests: 0,
       blockedRequests: 0,
       bypassedRequests: 0,

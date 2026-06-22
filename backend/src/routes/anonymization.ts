@@ -127,11 +127,9 @@ router.post(
         !anonymizedData ||
         !Array.isArray(anonymizedData)
       ) {
-        return res
-          .status(400)
-          .json({
-            error: "Both original and anonymized data arrays are required",
-          });
+        return res.status(400).json({
+          error: "Both original and anonymized data arrays are required",
+        });
       }
 
       if (!quasiIdentifiers || !Array.isArray(quasiIdentifiers)) {

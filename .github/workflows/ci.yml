@@ -31,6 +31,8 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       contracts: ${{ steps.filter.outputs.contracts }}
       service-discovery: ${{ steps.filter.outputs.service-discovery }}
+      docs: ${{ steps.filter.outputs.docs }}
+      rust-root: ${{ steps.filter.outputs.rust-root }}
       rust: ${{ steps.filter.outputs.rust }}
       ci: ${{ steps.filter.outputs.ci }}
     steps:
@@ -55,6 +57,9 @@ jobs:
             service-discovery:
               - 'service-discovery-dashboard/**'
               - 'package.json'
+            rust-root:
+              - 'src/**'
+              - 'Cargo.toml'
             rust:
               - 'src/**'
               - 'contracts/**'
@@ -63,6 +68,8 @@ jobs:
               - 'Cargo.toml'
               - '**/Cargo.toml'
               - '**/*.rs'
+            docs:
+              - 'docs/**'
             ci:
               - '.github/workflows/**'
               - '.github/actions/**'
@@ -225,7 +232,8 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-       (needs.changes.outputs.rust == 'true' ||
+       (needs.changes.outputs.rust-root == 'true' ||
+        needs.changes.outputs.rust == 'true' ||
         needs.changes.outputs.ci == 'true' ||
         (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
     runs-on: ubuntu-latest
@@ -242,13 +250,13 @@ jobs:
           workspaces: .
           cache-on-failure: true
       - name: Format check (cargo fmt)
-        run: cargo fmt --check
+        run: cargo fmt --check --manifest-path Cargo.toml
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features --manifest-path Cargo.toml -- -D warnings
       - name: Test
-        run: cargo test
+        run: cargo test --manifest-path Cargo.toml
       - name: Build WASM (release)
-        run: cargo build --target wasm32-unknown-unknown --release
+        run: cargo build --target wasm32-unknown-unknown --release --manifest-path Cargo.toml
 
   # ── Service Discovery Dashboard ──────────────────────────
   service-discovery:
@@ -288,7 +296,8 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-       (needs.changes.outputs.ci == 'true' ||
+       (needs.changes.outputs.docs == 'true' ||
+        needs.changes.outputs.ci == 'true' ||
         (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')))
     runs-on: ubuntu-latest
     timeout-minutes: 15

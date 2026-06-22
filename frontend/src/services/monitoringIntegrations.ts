@@ -689,8 +689,8 @@ export class MonitoringIntegrations {
   private generateSignature(payload: string, secret: string): string {
     // Simple HMAC-like signature (in production, use crypto library)
     const encoder = new TextEncoder();
-    const keyData = encoder.encode(secret);
-    const messageData = encoder.encode(payload);
+    const _keyData = encoder.encode(secret);
+    const _messageData = encoder.encode(payload);
 
     // This is a simplified version - use crypto.subtle.sign in production
     return btoa(payload + secret).slice(0, 64);

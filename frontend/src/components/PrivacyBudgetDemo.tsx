@@ -9,7 +9,6 @@ import {
   Settings,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
 
 // Mock data for demonstration
 const mockBudgetData = {
@@ -137,7 +136,7 @@ const PrivacyBudgetDemo: React.FC = () => {
   };
 
   // Prepare data for gauge chart
-  const gaugeData = [
+  const _gaugeData = [
     { name: 'Used', value: budget.percentageUsed, color: getBudgetColor(budget.percentageUsed) },
     { name: 'Remaining', value: 100 - budget.percentageUsed, color: '#e5e7eb' },
   ];

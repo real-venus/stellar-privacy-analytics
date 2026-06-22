@@ -257,9 +257,6 @@ describe("Encrypted Blob Storage", () => {
       const mockUpload = jest
         .spyOn(storageAdapter as any, "uploadToIPFS")
         .mockResolvedValue(mockCid);
-      const mockDownload = jest
-        .spyOn(storageAdapter as any, "downloadFromIPFS")
-        .mockResolvedValue(Buffer.from("mock encrypted data"));
 
       const testData = Buffer.from("End-to-end test data");
       const datasetId = "test-dataset-e2e";
@@ -273,10 +270,28 @@ describe("Encrypted Blob Storage", () => {
       expect(uploadResult.cid).toBe(mockCid);
       expect(uploadResult.integrityVerified).toBe(true);
 
+      // Re-encrypt with the stored key to produce a valid download blob
+      const key = await keyManager.retrieveKey(uploadResult.encryptionKeyId);
+      expect(key).not.toBeNull();
+      const realEncrypted = AESEncryption.encrypt(
+        testData,
+        key!,
+        uploadResult.encryptionKeyId,
+      );
+      const mockEncryptedBlob = Buffer.concat([
+        realEncrypted.iv,
+        realEncrypted.authTag,
+        realEncrypted.encryptedData,
+      ]);
+      const mockDownload = jest
+        .spyOn(storageAdapter as any, "downloadFromIPFS")
+        .mockResolvedValue(mockEncryptedBlob);
+
       // Download and decrypt data
       const downloadResult = await storageAdapter.downloadEncrypted(
         mockCid,
         uploadResult.encryptionKeyId,
+        false,
       );
 
       expect(downloadResult.integrity.verified).toBe(true);

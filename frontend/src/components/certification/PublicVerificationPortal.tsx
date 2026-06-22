@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { X, Search, CheckCircle, AlertTriangle, ExternalLink, Shield } from 'lucide-react';
+import { X, Search, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
 import { certificationService, Certification } from '../../services/certificationService';
 
 const PublicVerificationPortal: React.FC = () => {

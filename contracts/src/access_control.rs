@@ -5,8 +5,8 @@ use soroban_sdk::Address;
 use soroban_sdk::Env;
 use soroban_sdk::Vec;
 use soroban_sdk::String;
-use soroban_sdk::symbol;
 use soroban_sdk::Map;
+use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
 use soroban_sdk::Symbol;
 use soroban_sdk::Val;
@@ -97,11 +97,13 @@ pub struct DataSovereigntyAccessControl;
 #[contractimpl]
 impl DataSovereigntyAccessControl {
     pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&symbol!("initialized")) {
-            return;
+        if env.storage().instance().has(&Symbol::new(&env, "initialized")) {
+            return; // Already initialized
         }
-        env.storage().instance().set(&symbol!("admin"), &admin);
-        env.storage().instance().set(&symbol!("initialized"), &true);
+
+        // Set admin
+        env.storage().instance().set(&Symbol::new(&env, "admin"), &admin);
+        env.storage().instance().set(&Symbol::new(&env, "initialized"), &true);
     }
 
     pub fn register_resource(
@@ -113,7 +115,7 @@ impl DataSovereigntyAccessControl {
         authorized_signers: Vec<Address>,
     ) -> Result<(), AccessControlError> {
         let caller = env.current_contract_address();
-        let admin: Address = env.storage().instance().get(&symbol!("admin")).unwrap_or_else(|| caller);
+        let admin: Address = env.storage().instance().get(&Symbol::new(&env, "admin")).unwrap_or_else(|| caller);
 
         if env.current_contract_address() != admin && !Self::is_authorized(&env, &owner) {
             return Err(AccessControlError::Unauthorized);
@@ -148,13 +150,13 @@ impl DataSovereigntyAccessControl {
         };
 
         let mut updated_resources = resources;
-        updated_resources.set(resource_id.clone(), resource_owner);
+        updated_resources.set(resource_owner.resource_id.clone(), resource_owner);
         env.storage()
             .instance()
             .set(&Symbol::new(&env, RESOURCE_OWNERS_KEY), &updated_resources);
 
         env.events().publish(
-            (symbol!("resource_registered"), resource_id),
+            (Symbol::new(&env, "resource_registered"), resource_id),
             (owner, requires_multi_sig, multi_sig_threshold),
         );
 
@@ -218,7 +220,7 @@ impl DataSovereigntyAccessControl {
             .set(&Symbol::new(&env, USER_PERMISSIONS_KEY), &permissions);
 
         env.events().publish(
-            (symbol!("access_granted"), resource_id),
+            (Symbol::new(&env, "access_granted"), resource_id.clone()),
             (user, permission_type, expires_at),
         );
 
@@ -285,7 +287,7 @@ impl DataSovereigntyAccessControl {
         );
 
         env.events().publish(
-            (symbol!("access_revoked"), resource_id),
+            (Symbol::new(&env, "access_revoked"), resource_id),
             (user, env.ledger().timestamp()),
         );
 
@@ -352,7 +354,7 @@ impl DataSovereigntyAccessControl {
             .set(&Symbol::new(&env, ACCESS_KEYS_KEY), &access_keys);
 
         env.events().publish(
-            (symbol!("access_key_created"), resource_id),
+            (Symbol::new(&env, "access_key_created"), resource_id),
             (key_id.clone(), holder, expires_at),
         );
 
@@ -471,11 +473,7 @@ impl DataSovereigntyAccessControl {
     }
 
     fn is_authorized(env: &Env, address: &Address) -> bool {
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&symbol!("admin"))
-            .unwrap_or_else(|| env.current_contract_address());
+        let admin: Address = env.storage().instance().get(&Symbol::new(&env, "admin")).unwrap_or_else(|| env.current_contract_address());
         address == &admin
     }
 
@@ -499,8 +497,8 @@ impl DataSovereigntyAccessControl {
         let mut access_log: Vec<AccessLogEntry> = env
             .storage()
             .instance()
-            .get(&Symbol::new(env, ACCESS_LOG_KEY))
-            .unwrap_or_else(|| Vec::new(env));
+            .get(&Symbol::new(&env, ACCESS_LOG_KEY))
+            .unwrap_or_else(|| Vec::new(&env));
 
         access_log.push_back(log_entry);
 
@@ -517,7 +515,7 @@ impl DataSovereigntyAccessControl {
 
         env.storage()
             .instance()
-            .set(&Symbol::new(env, ACCESS_LOG_KEY), &access_log);
+            .set(&Symbol::new(&env, ACCESS_LOG_KEY), &access_log);
     }
 
     pub fn get_access_log(env: Env) -> Vec<AccessLogEntry> {
@@ -557,7 +555,7 @@ impl DataSovereigntyAccessControl {
             }
 
             if !active_permissions.is_empty() {
-                updated_permissions.set(user, active_permissions);
+                updated_permissions.set(user.clone(), active_permissions);
             }
         }
 

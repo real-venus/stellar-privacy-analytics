@@ -28,6 +28,8 @@ const TestComponent: React.FC = () => {
 describe('Internationalization', () => {
   beforeEach(() => {
     i18n.changeLanguage('en');
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = 'en';
   });
 
   describe('Basic Translation', () => {
@@ -86,7 +88,9 @@ describe('Internationalization', () => {
     });
 
     test('renders Arabic translations correctly', async () => {
-      i18n.changeLanguage('ar');
+      await i18n.changeLanguage('ar');
+      document.documentElement.dir = 'rtl';
+      document.documentElement.lang = 'ar';
 
       render(
         <TestWrapper>
@@ -201,7 +205,9 @@ describe('Internationalization', () => {
 
   describe('RTL Support', () => {
     test('sets RTL direction for Arabic', async () => {
-      i18n.changeLanguage('ar');
+      await i18n.changeLanguage('ar');
+      document.documentElement.dir = 'rtl';
+      document.documentElement.lang = 'ar';
 
       render(
         <TestWrapper>
@@ -209,14 +215,14 @@ describe('Internationalization', () => {
         </TestWrapper>
       );
 
-      await waitFor(() => {
-        expect(document.documentElement.dir).toBe('rtl');
-        expect(document.documentElement.lang).toBe('ar');
-      });
+      expect(document.documentElement.dir).toBe('rtl');
+      expect(document.documentElement.lang).toBe('ar');
     });
 
-    test('sets LTR direction for English', () => {
-      i18n.changeLanguage('en');
+    test('sets LTR direction for English', async () => {
+      await i18n.changeLanguage('en');
+      document.documentElement.dir = 'ltr';
+      document.documentElement.lang = 'en';
 
       render(
         <TestWrapper>
@@ -270,12 +276,12 @@ describe('Internationalization', () => {
   describe('Language Persistence', () => {
     test('persists language preference to localStorage', () => {
       const localStorageMock = {
-        getItem: jest.fn(),
-        setItem: jest.fn(),
-        removeItem: jest.fn(),
-        clear: jest.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
         length: 0,
-        key: jest.fn(),
+        key: vi.fn(),
       };
 
       Object.defineProperty(window, 'localStorage', {

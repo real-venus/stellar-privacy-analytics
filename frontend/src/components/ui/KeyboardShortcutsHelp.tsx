@@ -1,4 +1,3 @@
-import React from 'react';
 import { KeyboardShortcut } from '../../hooks/useKeyboardShortcuts';
 
 interface KeyboardShortcutsHelpProps {

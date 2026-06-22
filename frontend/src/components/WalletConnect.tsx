@@ -189,7 +189,7 @@ export const WalletConnect: React.FC<{
   };
 
   // Generic sign transaction method
-  const signTransaction = async (transactionXdr: string) => {
+  const _signTransaction = async (transactionXdr: string) => {
     if (!walletInfo) {
       throw new Error('No wallet connected');
     }
@@ -220,7 +220,7 @@ export const WalletConnect: React.FC<{
   useEffect(() => {
     // Auto-detect if wallets are available
     if (isFreightAvailable() || isAlbedoAvailable()) {
-      console.log('Wallet(s) detected');
+      // Wallet(s) detected
     }
   }, []);
 

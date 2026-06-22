@@ -78,7 +78,7 @@ function detectGpuAcceleration(): boolean {
   const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
 
   // Check for touch device (often indicates mobile)
-  const isTouchDevice = 'ontouchstart' in window;
+  const _isTouchDevice = 'ontouchstart' in window;
 
   // Check for low-power mode indicators
   const isLowPower = cores <= 2 || memory <= 2;
@@ -123,7 +123,9 @@ export function AnimationProvider({
         const prefs: StoredPreferences = JSON.parse(stored);
         return prefs.enabled;
       }
-    } catch {}
+    } catch {
+      /* Animation frame may be cancelled */
+    }
     return true;
   });
   const [animationSpeed, setAnimationSpeed] = useState(() => {
@@ -133,7 +135,9 @@ export function AnimationProvider({
         const prefs: StoredPreferences = JSON.parse(stored);
         return prefs.speed || defaultSpeed;
       }
-    } catch {}
+    } catch {
+      /* Animation frame may be cancelled */
+    }
     return defaultSpeed;
   });
   const [hasGpuAcceleration] = useState(detectGpuAcceleration);
@@ -363,7 +367,7 @@ export function useAnimatedTransition(
 export function useAnimationPerformance(animationId: string) {
   const { reportPerformanceIssue, animationsEnabled } = useAnimationContext();
   const frameTimesRef = useRef<number[]>([]);
-  const lastFrameTimeRef = useRef<number>(0);
+  const _lastFrameTimeRef = useRef<number>(0);
   const animationFrameRef = useRef<number>(0);
 
   const startMonitoring = useCallback(() => {

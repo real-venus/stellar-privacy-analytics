@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { X, CheckCircle, AlertCircle, Clock, ExternalLink, FileText } from 'lucide-react';
+import { X, CheckCircle, Clock, ExternalLink, FileText } from 'lucide-react';
 import { Certification } from '../../services/certificationService';
 
 interface ValidationWorkflowProps {
