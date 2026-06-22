@@ -1,7 +1,7 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -75,6 +75,7 @@ pub enum TtlStorageError {
     CleanupInProgress = 8,
 }
 
+#[contract]
 pub struct TtlStorage;
 
 #[contractimpl]
@@ -167,7 +168,7 @@ impl TtlStorage {
         let entry = DataEntry {
             entry_id: entry_id.clone(),
             owner: owner.clone(),
-            data_hash: env.crypto().sha256(&data),
+            data_hash: env.crypto().sha256(&data).into(),
             chunk_count: chunks.len() as u32,
             created_at: current_time,
             expires_at,
@@ -364,7 +365,7 @@ impl TtlStorage {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn get_data_entry(env: &Env, entry_id: &BytesN<32>) -> Option<DataEntry> {
@@ -394,7 +395,7 @@ impl TtlStorage {
 
             let chunk_data = data.slice(start as u32, (end - start) as u32);
             let chunk_id = Self::generate_chunk_id(env, entry_id, i);
-            let checksum = env.crypto().sha256(&chunk_data);
+            let checksum: BytesN<32> = env.crypto().sha256(&chunk_data).into();
 
             if chunk_data.len() > MAX_ENTRY_SIZE as usize {
                 return Err(TtlStorageError::ChunkTooLarge);
@@ -418,7 +419,7 @@ impl TtlStorage {
         let mut combined = soroban_sdk::Bytes::new(env);
         combined.append(&entry_id.to_xdr(env));
         combined.append(&Bytes::from_slice(env, &chunk_index.to_be_bytes()));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn reconstruct_data(env: &Env, entry: &DataEntry) -> Result<Bytes, TtlStorageError> {
@@ -428,7 +429,7 @@ impl TtlStorage {
             let chunk_id = Self::generate_chunk_id(env, &entry.entry_id, i);
             if let Some(chunk) = env.storage().temporary().get::<_, DataChunk>(&chunk_id) {
                 // Verify checksum
-                let calculated_checksum = env.crypto().sha256(&chunk.data);
+                let calculated_checksum: BytesN<32> = env.crypto().sha256(&chunk.data).into();
                 if calculated_checksum != chunk.checksum {
                     return Err(TtlStorageError::InvalidChecksum);
                 }

@@ -1,3 +1,4 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
@@ -36,6 +37,7 @@ pub enum InvariantTestingError {
     InvalidInput = 2,
 }
 
+#[contract]
 pub struct InvariantTesting;
 
 #[contractimpl]

@@ -3,7 +3,7 @@ mod tests {
     use super::*;
     use soroban_sdk::{
         testutils::{Address as TestAddress, BytesN as TestBytesN},
-        Env,
+        Env, Vec,
     };
 
     #[test]

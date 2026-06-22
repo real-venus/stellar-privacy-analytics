@@ -1,7 +1,7 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -110,6 +110,7 @@ pub enum AggregatorError {
     RequestAlreadyCompleted = 10,
 }
 
+#[contract]
 pub struct OnChainAggregator;
 
 #[contractimpl]
@@ -267,7 +268,7 @@ impl OnChainAggregator {
             .set(&certificate_id, &privacy_certificate);
 
         // Create result
-        let result_hash = env.crypto().sha256(&encrypted_result);
+        let result_hash: BytesN<32> = env.crypto().sha256(&encrypted_result).into();
         let result = AggregationResult {
             request_id: request_id.clone(),
             encrypted_result: encrypted_result.clone(),
@@ -401,7 +402,7 @@ impl OnChainAggregator {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn generate_certificate_id(env: &Env, request_id: &BytesN<32>) -> BytesN<32> {
@@ -412,7 +413,7 @@ impl OnChainAggregator {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn generate_batch_id(env: &Env, processor: &Address) -> BytesN<32> {
@@ -423,7 +424,7 @@ impl OnChainAggregator {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn get_aggregation_request(env: &Env, request_id: &BytesN<32>) -> Option<AggregationRequest> {

@@ -3,8 +3,9 @@ mod tests {
     use super::*;
     use soroban_sdk::{
         testutils::{Address as TestAddress, BytesN as TestBytesN},
-        Env,
+        Address, Env, Symbol, Vec,
     };
+    use crate::access_control::PermissionType;
 
     #[test]
     fn test_initialize() {

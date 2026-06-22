@@ -1,3 +1,4 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
@@ -39,6 +40,7 @@ pub enum ProxyError {
     NotInitialized = 8,
 }
 
+#[contract]
 pub struct UpgradeableProxy;
 
 #[contractimpl]

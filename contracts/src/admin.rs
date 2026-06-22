@@ -1,9 +1,11 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
 use soroban_sdk::Address;
 use soroban_sdk::BytesN;
 use soroban_sdk::Env;
+use soroban_sdk::IntoVal;
 use soroban_sdk::Map;
 use soroban_sdk::String;
 use soroban_sdk::Vec;
@@ -57,6 +59,7 @@ pub enum MultiSigError {
     AlreadyInitialized = 13,
 }
 
+#[contract]
 pub struct MultiSigAdmin;
 
 #[contractimpl]
@@ -531,6 +534,6 @@ impl MultiSigAdmin {
         data.push_back(transaction.executed.into_val(&env));
 
         let xdr = env.to_xdr(&data);
-        env.crypto().sha256(&xdr)
+        env.crypto().sha256(&xdr).into()
     }
 }

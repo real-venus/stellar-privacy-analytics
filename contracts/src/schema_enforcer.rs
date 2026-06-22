@@ -1,7 +1,7 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -117,6 +117,7 @@ pub enum SchemaValidationError {
     NotAuthorized = 12,
 }
 
+#[contract]
 pub struct SchemaEnforcer;
 
 #[contractimpl]
@@ -458,7 +459,7 @@ impl SchemaEnforcer {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn generate_log_id(env: &Env, payload_id: &BytesN<32>) -> BytesN<32> {
@@ -468,7 +469,7 @@ impl SchemaEnforcer {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn generate_rejection_id(env: &Env, payload_id: &BytesN<32>) -> BytesN<32> {
@@ -479,7 +480,7 @@ impl SchemaEnforcer {
             env,
             &env.ledger().timestamp().to_be_bytes(),
         ));
-        env.crypto().sha256(&combined)
+        env.crypto().sha256(&combined).into()
     }
 
     fn get_schema(env: &Env, schema_id: &BytesN<32>) -> Option<DataSchema> {

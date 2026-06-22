@@ -1,7 +1,7 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -96,6 +96,7 @@ pub enum AccessControlError {
     InvalidSigner = 10,
 }
 
+#[contract]
 pub struct DataSovereigntyAccessControl;
 
 #[contractimpl]
@@ -385,8 +386,7 @@ impl DataSovereigntyAccessControl {
             &env,
             &(permissions.len() as u32).to_be_bytes(),
         ));
-        let key_id = env.crypto().sha256(&key_data);
-        let key_id = BytesN::from_array(&env, &key_id_hash.to_array());
+        let key_id: BytesN<32> = env.crypto().sha256(&key_data).into();
 
         // Clone values before moving into struct
         let key_id_for_set = key_id.clone();

@@ -1,7 +1,7 @@
+use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
-use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -115,6 +115,7 @@ pub enum StellarAnalyticsError {
     InvalidInputRange = 16,
 }
 
+#[contract]
 pub struct StellarAnalytics;
 
 #[contractimpl]
@@ -246,7 +247,7 @@ impl StellarAnalytics {
             &env.ledger().sequence().to_be_bytes(),
         ));
 
-        let request_id = env.crypto().sha256(&hash_input);
+        let request_id: BytesN<32> = env.crypto().sha256(&hash_input).into();
 
         // Check user's privacy budget
         let user_budget: i128 = Self::get_user_privacy_budget(env.clone(), requester.clone());
