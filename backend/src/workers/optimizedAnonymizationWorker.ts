@@ -1,4 +1,4 @@
-import { Queue, Worker, Job, QueueScheduler, QueueEvents } from "bullmq";
+import { Queue, Worker, Job, QueueEvents } from "bullmq";
 import { createClient, RedisClientType } from "redis";
 import { logger } from "../utils/logger";
 import { PIIMasker } from "./piMasker";
@@ -103,7 +103,6 @@ export class OptimizedAnonymizationWorker {
   private queue: Queue;
   private priorityQueues: Map<string, Queue> = new Map();
   private worker: Worker;
-  private scheduler: QueueScheduler;
   private queueEvents: QueueEvents;
   private deadLetterQueue: DeadLetterQueue;
   private piiMasker: PIIMasker;
@@ -197,11 +196,6 @@ export class OptimizedAnonymizationWorker {
       this.priorityQueues.set(priority, priorityQueue);
     });
 
-    // Queue scheduler for delayed jobs
-    this.scheduler = new QueueScheduler("anonymization", {
-      connection: redisConnection,
-    });
-
     // Queue events for monitoring
     this.queueEvents = new QueueEvents("anonymization", {
       connection: redisConnection,
@@ -250,7 +244,7 @@ export class OptimizedAnonymizationWorker {
 
     // Metadata Repository with connection pooling
     this.metadataRepository = new MetadataRepository(
-      config.postgres.readReplica,
+      config.postgres.readReplica as any,
     );
 
     logger.info("Worker components initialized");
@@ -322,7 +316,6 @@ export class OptimizedAnonymizationWorker {
           jobId: job.id!,
           originalJob: job.data,
           error: err.message,
-          failedAt: new Date(),
           attempts: job.attemptsMade,
           stackTrace: err.stack,
           metadata: {
@@ -343,7 +336,7 @@ export class OptimizedAnonymizationWorker {
       this.metrics.recordJobStalled();
     });
 
-    this.worker.on("progress", (job: Job, progress: number) => {
+    this.worker.on("progress", (job: Job, progress: number | object) => {
       logger.debug("Job progress", {
         jobId: job.id,
         progress,
@@ -397,6 +390,9 @@ export class OptimizedAnonymizationWorker {
       await this.metadataRepository.storeSanitizedMetadata(
         datasetId,
         result.sanitizedMetadata,
+        metadata,
+        result.piiDetected,
+        Date.now() - startTime,
       );
 
       // Update job progress
@@ -421,7 +417,7 @@ export class OptimizedAnonymizationWorker {
       logger.error("Anonymization job failed", {
         jobId,
         datasetId,
-        error: error.message,
+        error: (error as Error).message,
         processingTime,
       });
 
@@ -566,13 +562,13 @@ export class OptimizedAnonymizationWorker {
     if (this.piiMasker.isRegexEnabled()) {
       const regexResult = this.piiMasker.maskWithRegex(fieldValue);
       sanitizedValue = regexResult.maskedText;
-      detections.push(...regexResult.detections);
+      detections.push(...(regexResult.detections as PIIDetection[]));
     }
 
     if (this.nerProcessor.isEnabled()) {
       const nerResult = await this.nerProcessor.maskWithNER(fieldValue);
       sanitizedValue = nerResult.maskedText;
-      detections.push(...nerResult.detections);
+      detections.push(...(nerResult.detections as PIIDetection[]));
     }
 
     return { sanitizedValue, detections };
@@ -624,7 +620,6 @@ export class OptimizedAnonymizationWorker {
         type: "exponential",
         delay: job.priority === "critical" ? 1000 : 2000,
       },
-      timeout: job.timeout || this.config.sandbox.timeoutMs,
     });
 
     this.metrics.recordJobAdded(job.priority);
@@ -855,7 +850,6 @@ export class OptimizedAnonymizationWorker {
         for (const queue of this.priorityQueues.values()) {
           await queue.close();
         }
-        await this.scheduler.close();
         await this.queueEvents.close();
         await this.deadLetterQueue.close();
         await this.connectionPool.close();
@@ -955,7 +949,7 @@ export class OptimizedAnonymizationWorker {
       return {
         status: "unhealthy",
         timestamp: new Date(),
-        error: error.message,
+        error: (error as Error).message,
       };
     }
   }

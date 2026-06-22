@@ -1,5 +1,4 @@
-import React from 'react';
-import { Skeleton, SkeletonStatCard, SkeletonTableRow } from '@/components/ui/skeleton';
+import { Skeleton, SkeletonStatCard} from '@/components/ui/skeleton';
 
 /**
  * Skeleton screen for CertificationDashboard loading state.

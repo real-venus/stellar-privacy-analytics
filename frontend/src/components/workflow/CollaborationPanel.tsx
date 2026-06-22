@@ -94,14 +94,12 @@ export const CollaborationPanel: React.FC = () => {
   const sendInvite = () => {
     if (!inviteEmail) return;
     // In real implementation, this would send an invite
-    console.log('Inviting:', inviteEmail, 'as', selectedRole);
     setInviteEmail('');
   };
 
   const addComment = () => {
     if (!newComment.trim()) return;
     // In real implementation, this would add the comment
-    console.log('Adding comment:', newComment);
     setNewComment('');
   };
 

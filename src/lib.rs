@@ -1,9 +1,12 @@
+#![allow(unexpected_cfgs)]
+
 pub mod data_sovereignty;
 pub mod laplace_noise;
 
 use soroban_sdk::{
-    contracterror, contractimpl, vec, Address, BytesN, Env, IntoVal, Map, Symbol, Vec,
+    contracterror, contractimpl, contract, Address, BytesN, Env, Map, Symbol, Vec,
 };
+use soroban_sdk::xdr::ToXdr;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -15,6 +18,7 @@ pub enum Error {
     UnknownCircuit = 4,
 }
 
+#[contract]
 pub struct ZkVerificationContract;
 
 #[contractimpl]
@@ -30,9 +34,9 @@ impl ZkVerificationContract {
         provider.require_auth();
 
         let expected_proof_data = (circuit_id.clone(), public_inputs.clone());
-        let expected_proof = env.crypto().sha256(&expected_proof_data.into_val(&env));
+        let expected_proof = env.crypto().sha256(&expected_proof_data.to_xdr(&env));
 
-        if expected_proof != proof {
+        if expected_proof.to_array() != proof.to_array() {
             return Err(Error::InvalidProof);
         }
 
@@ -42,7 +46,7 @@ impl ZkVerificationContract {
             .get(&user_id)
             .unwrap_or_else(|| Map::new(&env));
 
-        if user_verifications.has(circuit_id.clone()) {
+        if user_verifications.get(circuit_id.clone()).is_some() {
             return Err(Error::AlreadyVerified);
         }
 
@@ -78,16 +82,17 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ZkVerificationContract);
+        let contract_id = env.register(ZkVerificationContract, ());
         let client = ZkVerificationContractClient::new(&env, &contract_id);
 
         let provider = Address::generate(&env);
         let user_id = Address::generate(&env);
         let circuit_id = Symbol::new(&env, "age_gt_18");
-        let public_inputs = vec![&env, 18];
+        let public_inputs = soroban_sdk::vec![&env, 18];
 
         let proof_data = (circuit_id.clone(), public_inputs.clone());
-        let proof = env.crypto().sha256(&proof_data.into_val(&env));
+        let proof_hash = env.crypto().sha256(&proof_data.to_xdr(&env));
+        let proof = BytesN::from_array(&env, &proof_hash.to_array());
 
         client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs, &proof);
 
@@ -101,13 +106,13 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ZkVerificationContract);
+        let contract_id = env.register(ZkVerificationContract, ());
         let client = ZkVerificationContractClient::new(&env, &contract_id);
 
         let provider = Address::generate(&env);
         let user_id = Address::generate(&env);
         let circuit_id = Symbol::new(&env, "age_gt_18");
-        let public_inputs = vec![&env, 18];
+        let public_inputs = soroban_sdk::vec![&env, 18];
         let forged_proof = BytesN::random(&env);
 
         client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs, &forged_proof);
@@ -119,17 +124,18 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ZkVerificationContract);
+        let contract_id = env.register(ZkVerificationContract, ());
         let client = ZkVerificationContractClient::new(&env, &contract_id);
 
         let provider = Address::generate(&env);
         let user_id = Address::generate(&env);
         let circuit_id = Symbol::new(&env, "age_gt_18");
-        let public_inputs_for_proof = vec![&env, 18];
-        let public_inputs_for_call = vec![&env, 21];
+        let public_inputs_for_proof = soroban_sdk::vec![&env, 18];
+        let public_inputs_for_call = soroban_sdk::vec![&env, 21];
 
         let proof_data = (circuit_id.clone(), public_inputs_for_proof.clone());
-        let proof = env.crypto().sha256(&proof_data.into_val(&env));
+        let proof_hash = env.crypto().sha256(&proof_data.to_xdr(&env));
+        let proof = BytesN::from_array(&env, &proof_hash.to_array());
 
         client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs_for_call, &proof);
     }
@@ -140,16 +146,17 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ZkVerificationContract);
+        let contract_id = env.register(ZkVerificationContract, ());
         let client = ZkVerificationContractClient::new(&env, &contract_id);
 
         let provider = Address::generate(&env);
         let user_id = Address::generate(&env);
         let circuit_id = Symbol::new(&env, "age_gt_18");
-        let public_inputs = vec![&env, 18];
+        let public_inputs = soroban_sdk::vec![&env, 18];
 
         let proof_data = (circuit_id.clone(), public_inputs.clone());
-        let proof = env.crypto().sha256(&proof_data.into_val(&env));
+        let proof_hash = env.crypto().sha256(&proof_data.to_xdr(&env));
+        let proof = BytesN::from_array(&env, &proof_hash.to_array());
 
         client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs, &proof);
         client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs, &proof);
@@ -160,7 +167,7 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ZkVerificationContract);
+        let contract_id = env.register(ZkVerificationContract, ());
         let client = ZkVerificationContractClient::new(&env, &contract_id);
 
         let user_id = Address::generate(&env);

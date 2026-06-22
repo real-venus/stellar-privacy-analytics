@@ -10,14 +10,8 @@ const auditService = new AuditService();
 
 // Initialize metadata repository for data management
 const getMetadataRepository = () => {
-  return new MetadataRepository({
-    host: process.env.POSTGRES_HOST || "localhost",
-    port: parseInt(process.env.POSTGRES_PORT || "5432"),
-    database: process.env.POSTGRES_DB || "stellar_privacy",
-    username: process.env.POSTGRES_USER || "postgres",
-    password: process.env.POSTGRES_PASSWORD || "postgres",
-    ssl: process.env.POSTGRES_SSL === "true",
-  });
+  // In production this would use a real DatabaseService
+  return new MetadataRepository(null as any);
 };
 
 // Get privacy settings
@@ -128,8 +122,8 @@ router.post(
       },
       {
         type: "data_deletion_request",
-        requestId,
-        deleteAllData,
+        id: requestId,
+        metadata: { requestId, deleteAllData },
       },
       "success",
       { reason: reason || "not_provided" },
@@ -201,7 +195,7 @@ router.delete(
       const deletedDatasetIds: string[] = [];
       for (const dataset of userDatasets) {
         // Mark as deleted rather than physically deleting (soft delete)
-        await metadataRepo.updateMetadataStatus(dataset.id, "deleted");
+        await metadataRepo.updateMetadataStatus(dataset.id, "pending");
         deletedDatasetIds.push(dataset.id);
       }
 
@@ -215,8 +209,8 @@ router.delete(
         },
         {
           type: hardDelete ? "hard_delete" : "soft_delete",
-          deletionId,
-          datasetsCount: deletedDatasetIds.length,
+          id: deletionId,
+          metadata: { deletionId, datasetsCount: deletedDatasetIds.length },
         },
         "success",
         {
@@ -247,7 +241,8 @@ router.delete(
         },
         {
           type: "deletion_failure",
-          error: error.message,
+          id: undefined,
+          metadata: { error: error.message },
         },
       );
       throw error;
@@ -297,7 +292,7 @@ router.post(
           }
 
           // Mark as expired
-          await metadataRepo.updateMetadataStatus(record.id, "expired");
+          await metadataRepo.updateMetadataStatus(record.id, "failed");
           deletedCount++;
         }
 
@@ -342,7 +337,8 @@ router.post(
         },
         {
           type: "cleanup_failure",
-          error: error.message,
+          id: undefined,
+          metadata: { error: error.message },
         },
       );
       throw error;

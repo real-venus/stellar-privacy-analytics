@@ -147,7 +147,10 @@ describe("APIKeyManager", () => {
 
       const { keyPrefix } = (logger.warn as jest.Mock).mock.calls[0][1];
       const consoleMessage = consoleWarnSpy.mock.calls[0][0] as string;
-      const apiKey = consoleMessage.replace("[DEV] Default admin API key: ", "");
+      const apiKey = consoleMessage.replace(
+        "[DEV] Default admin API key: ",
+        "",
+      );
 
       expect(apiKey).toHaveLength(128);
       expect(apiKey.substring(0, 8)).toBe(keyPrefix);

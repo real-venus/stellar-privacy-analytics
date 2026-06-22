@@ -27,7 +27,6 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import MemoryMonitor from '../utils/memoryMonitor';
 import {
   DataPoint,
   memoryAwareSampling,
@@ -113,7 +112,7 @@ const lttbSampling = (data: DataPoint[], maxPoints: number): DataPoint[] => {
   return sampled;
 };
 
-const randomSampling = (data: DataPoint[], maxPoints: number): DataPoint[] => {
+const _randomSampling = (data: DataPoint[], maxPoints: number): DataPoint[] => {
   if (data.length <= maxPoints) return data;
 
   const indices = new Set<number>();
@@ -149,7 +148,7 @@ const LargeDatasetChart: React.FC<LargeDatasetChartProps> = ({
   const [config] = useState<ChartConfig>(defaultConfig);
   const [gpuEnabled, setGpuEnabled] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const _canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
 
   const processData = useCallback(

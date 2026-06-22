@@ -37,7 +37,7 @@ impl DataSovereigntyContract {
         owner.require_auth(); 
         
         let owner_key = DataKey::Owner(cid.clone());
-        if env.storage().instance().has(&owner_key) {
+        if env.storage().instance().get::<_, ()>(&owner_key).is_some() {
             return Err(SovereigntyError::AlreadyRegistered);
         }
         
@@ -141,12 +141,12 @@ mod test {
         let env = Env::default();
         env.mock_all_auths();
         
-        let contract_id = env.register_contract(None, DataSovereigntyContract);
+        let contract_id = env.register(DataSovereigntyContract, ());
         let client = DataSovereigntyContractClient::new(&env, &contract_id);
         
         let owner = Address::generate(&env);
         let cid = String::from_str(&env, "QmHash123...");
         
-        assert!(client.register_data(&owner, &cid).is_ok());
+        client.register_data(&owner, &cid);
     }
 }

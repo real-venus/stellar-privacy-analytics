@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { X, Plus, FileText, Shield } from 'lucide-react';
+import { X, Plus, Shield } from 'lucide-react';
 import { CertificationRequest } from '../../services/certificationService';
 
 interface CertificationGenerationFormProps {

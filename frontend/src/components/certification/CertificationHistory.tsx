@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { X, Calendar, FileText, CheckCircle, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
+import { X, FileText, CheckCircle, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
 import {
   Certification,
   ValidationRecord,

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Tooltip } from '../components/ui/enhanced-tooltip';
-import { Button } from '../components/ui/button';
 
 const TooltipTestPage: React.FC = () => {
   return (

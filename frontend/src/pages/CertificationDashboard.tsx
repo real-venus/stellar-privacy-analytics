@@ -45,12 +45,6 @@ import {
   CertificationRequest,
   BadgeConfig,
 } from '../services/certificationService';
-import { CertificationGenerationForm } from '../components/certification/CertificationGenerationForm';
-import { ValidationWorkflow } from '../components/certification/ValidationWorkflow';
-import { BadgeDisplay } from '../components/certification/BadgeDisplay';
-import { ComplianceChecker } from '../components/certification/ComplianceChecker';
-import { PublicVerificationPortal } from '../components/certification/PublicVerificationPortal';
-import { CertificationHistory } from '../components/certification/CertificationHistory';
 import { CertificationDashboardSkeleton } from '@/components/skeletons';
 
 const CertificationDashboard: React.FC = () => {
@@ -180,7 +174,7 @@ const CertificationDashboard: React.FC = () => {
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleGenerateCertification = (request: CertificationRequest) => {
+  const _handleGenerateCertification = (request: CertificationRequest) => {
     certificationService
       .createCertification(request)
       .then((newCertification) => {
@@ -198,22 +192,22 @@ const CertificationDashboard: React.FC = () => {
     setShowDetailsModal(true);
   };
 
-  const handleValidation = (certification: Certification) => {
+  const _handleValidation = (certification: Certification) => {
     setSelectedCertification(certification);
     setShowValidationModal(true);
   };
 
-  const handleComplianceCheck = (certification: Certification) => {
+  const _handleComplianceCheck = (certification: Certification) => {
     setSelectedCertification(certification);
     setShowComplianceModal(true);
   };
 
-  const handleViewHistory = (certification: Certification) => {
+  const _handleViewHistory = (certification: Certification) => {
     setSelectedCertification(certification);
     setShowHistoryModal(true);
   };
 
-  const handleRenewCertification = async (certificationId: string) => {
+  const _handleRenewCertification = async (certificationId: string) => {
     try {
       const renewedCert = await certificationService.renewCertification(certificationId);
       setCertifications((prev) =>

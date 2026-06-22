@@ -141,7 +141,7 @@ export function adaptiveSampling(data: DataPoint[], maxPoints: number): DataPoin
   );
 
   const sampled: DataPoint[] = [];
-  let dataIndex = 0;
+  let _dataIndex = 0;
 
   pointsPerBucket.forEach((points, bucketIndex) => {
     const bucketStart = bucketIndex * windowSize;
@@ -246,7 +246,7 @@ export function progressiveDataLoader(
   return new Promise((resolve) => {
     const result: DataPoint[] = [];
     let currentIndex = 0;
-    const totalChunks = Math.ceil(data.length / chunkSize);
+    const _totalChunks = Math.ceil(data.length / chunkSize);
 
     const loadChunk = () => {
       if (currentIndex >= data.length) {

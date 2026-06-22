@@ -64,7 +64,7 @@ export class PrivacyDataService {
         this.websocket = new WebSocket(this.config.wsEndpoint);
 
         this.websocket.onopen = () => {
-          console.log('Privacy metrics WebSocket connected');
+          // Privacy metrics WebSocket connected
           this.isConnecting = false;
           this.reconnectAttempts = 0;
           resolve();
@@ -74,8 +74,8 @@ export class PrivacyDataService {
           this.handleWebSocketMessage(event.data);
         };
 
-        this.websocket.onclose = (event) => {
-          console.log('Privacy metrics WebSocket disconnected', event);
+        this.websocket.onclose = (_event) => {
+          // Privacy metrics WebSocket disconnected
           this.isConnecting = false;
           this.handleReconnect();
         };
@@ -96,8 +96,6 @@ export class PrivacyDataService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-      console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
       setTimeout(() => {
         this.connectWebSocket().catch((error) => {

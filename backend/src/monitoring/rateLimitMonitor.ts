@@ -134,7 +134,7 @@ export class RateLimitMonitor {
     // Store metrics with timestamp
     this.metrics.push({
       ...aggregatedMetrics,
-      timestamp: timestamp.getTime() as any,
+      timestamp: timestamp.getTime(),
     });
 
     logger.debug("Rate limit metrics collected", aggregatedMetrics);
@@ -381,7 +381,7 @@ export class RateLimitMonitor {
 
     // Clean up old metrics
     this.metrics = this.metrics.filter(
-      (metric) => (metric.timestamp as any) > cutoffTime,
+      (metric) => (metric.timestamp || 0) > cutoffTime,
     );
 
     // Clean up old alerts (keep last 100)

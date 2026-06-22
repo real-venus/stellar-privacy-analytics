@@ -116,7 +116,7 @@ export class PerformanceOptimizer {
       this.cache.set(cacheKey, {
         data: response,
         timestamp: Date.now(),
-        ttl: ttl || this.cache.options.ttl,
+        ttl: ttl || 5 * 60 * 1000,
       });
 
       logger.debug("Response cached", { cacheKey });
@@ -283,7 +283,7 @@ export class PerformanceOptimizer {
 
     const cacheHitRate =
       this.cache.size > 0
-        ? (this.cache.hitCount / (this.cache.hitCount + this.cache.missCount)) *
+        ? ((this.cache as any).hits / ((this.cache as any).hits + (this.cache as any).misses)) *
           100
         : 0;
 
@@ -422,9 +422,9 @@ export class PerformanceOptimizer {
     return {
       size: this.cache.size,
       hitRate:
-        (this.cache.hitCount / (this.cache.hitCount + this.cache.missCount)) *
+        ((this.cache as any).hits / ((this.cache as any).hits + (this.cache as any).misses)) *
         100,
-      memoryUsage: this.cache.calculatedSize,
+      memoryUsage: (this.cache as any).calculatedSize || 0,
     };
   }
 
@@ -435,8 +435,8 @@ export class PerformanceOptimizer {
 
   public optimizeCache(): void {
     // Remove least recently used items if cache is full
-    if (this.cache.size >= this.cache.max * 0.9) {
-      const purgeCount = Math.floor(this.cache.max * 0.2);
+    if (this.cache.size >= (this.cache as any).max * 0.9) {
+      const purgeCount = Math.floor((this.cache as any).max * 0.2);
       this.cache.purgeStale();
       logger.debug(`Cache optimization: purged ${purgeCount} items`);
     }

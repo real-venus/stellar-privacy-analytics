@@ -64,11 +64,9 @@ router.post(
       });
     } catch (error) {
       logger.error("Error in IPFS upload:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -99,11 +97,9 @@ router.post(
       });
     } catch (error) {
       logger.error("Error pinning CID:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -138,11 +134,9 @@ router.get(
       });
     } catch (error) {
       logger.error("Error checking availability:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -179,11 +173,9 @@ router.get(
       res.send(fileBuffer);
     } catch (error) {
       logger.error("Error retrieving file:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -220,11 +212,9 @@ router.post(
       });
     } catch (error) {
       logger.error("Error in batch pinning:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -253,11 +243,9 @@ router.delete(
       });
     } catch (error) {
       logger.error("Error unpinning CID:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -288,11 +276,9 @@ router.get(
       });
     } catch (error) {
       logger.error("Error getting Filecoin deals:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -324,11 +310,9 @@ router.post(
       });
     } catch (error) {
       logger.error("Error verifying decryption key:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );
@@ -358,11 +342,9 @@ router.get(
       });
     } catch (error) {
       logger.error("Error getting gateway URL:", error);
-      res
-        .status(500)
-        .json({
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   },
 );

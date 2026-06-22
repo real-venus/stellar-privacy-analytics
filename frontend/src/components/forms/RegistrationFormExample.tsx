@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { User, Building, FileText, CheckCircle, ArrowRight } from 'lucide-react';
-import { MultiStepForm, ProgressIndicator, StepSummary } from './MultiStepForm';
+import { User, Building, FileText, CheckCircle} from 'lucide-react';
+import { MultiStepForm} from './MultiStepForm';
 import { FormField, FieldGroup, RadioOption } from './FormField';
 import { useFormPersistence, prefillFromProfile } from '../../hooks/useFormPersistence';
 import { validateFormData, rules, patterns } from '../../lib/formValidation';
@@ -197,11 +196,11 @@ export function RegistrationFormExample() {
       const allSchemas = { ...step1Schema, ...step2Schema, ...step3Schema, ...step4Schema };
       return validateFormData(data, allSchemas);
     },
-    onRecover: (data) => {
-      console.log('Form recovered:', data);
+    onRecover: (_data) => {
+      // Form recovered
     },
-    onAutoSave: (data) => {
-      console.log('Auto-saved:', data);
+    onAutoSave: (_data) => {
+      // Auto-saved
     },
     expiryMs: 24 * 60 * 60 * 1000, // 24 hours
   });
@@ -221,7 +220,7 @@ export function RegistrationFormExample() {
       try {
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        console.log('Form submitted:', values);
+        // Form submitted
         formActions.markSubmitted();
         alert('Registration submitted successfully!');
       } catch (error) {

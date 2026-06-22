@@ -28,13 +28,9 @@ export class ZKProofService {
     try {
       // In a real implementation, this would load the actual WASM module
       // For now, we'll simulate the initialization
-      console.log('Initializing ZK-proof WASM module...');
-
-      // Simulate WASM module loading
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       this.isInitialized = true;
-      console.log('ZK-proof WASM module initialized successfully');
     } catch (error) {
       console.error('Failed to initialize ZK-proof WASM module:', error);
       throw new Error('ZK-proof initialization failed');
@@ -151,8 +147,6 @@ export class ZKProofService {
     try {
       // In a real implementation, this would call the WASM verifier
       // For now, we'll simulate verification
-      console.log('Verifying ZK-proof...');
-
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Simulate successful verification

@@ -100,8 +100,8 @@ export const PrivacyMLDashboard: React.FC = () => {
         console.error('Federated learning connection error');
       });
 
-      socket.on('disconnect', () => {
-        console.log('Federated learning disconnected');
+      socket.on("disconnect", () => {
+        // Federated learning disconnected
       });
     }
 
@@ -166,7 +166,7 @@ export const PrivacyMLDashboard: React.FC = () => {
       );
 
       if (response.ok) {
-        console.log('Federated training started');
+        // Federated training started
       }
     } catch (error) {
       console.error('Failed to start federated training:', error);
@@ -183,7 +183,7 @@ export const PrivacyMLDashboard: React.FC = () => {
       );
 
       if (response.ok) {
-        console.log('Federated training stopped');
+        // Federated training stopped
       }
     } catch (error) {
       console.error('Failed to stop federated training:', error);
@@ -202,7 +202,7 @@ export const PrivacyMLDashboard: React.FC = () => {
       );
 
       if (response.ok) {
-        console.log('Privacy budget initialized');
+        // Privacy budget initialized
         fetchInitialData(); // Refresh data
       }
     } catch (error) {
@@ -225,7 +225,7 @@ export const PrivacyMLDashboard: React.FC = () => {
       );
 
       if (response.ok) {
-        console.log('Encryption keys generated');
+        // Encryption keys generated
         fetchInitialData(); // Refresh data
       }
     } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { signTransaction } from '@stellar/freighter-api';
-import { AlertTriangle, ShieldX, CheckCircle, Loader2, X } from 'lucide-react';
-import { Modal, ConfirmDialog } from './ui/Modal';
+import { AlertTriangle, ShieldX, CheckCircle, Loader2} from 'lucide-react';
+import { Modal} from './ui/Modal';
 
 interface Consumer {
   id: string;

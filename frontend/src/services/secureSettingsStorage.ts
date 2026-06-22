@@ -181,7 +181,7 @@ class SecureSettingsStorage {
         source,
       });
 
-      console.log(`Settings stored successfully for key: ${key}`);
+      // Settings stored successfully
     } catch (error) {
       console.error('Failed to store settings:', error);
       throw new Error('Failed to store settings securely');

@@ -1213,7 +1213,7 @@ export class DataQualityAssessment {
 
   private async sendQualityAlert(alert: QualityAlert): Promise<void> {
     // Implementation would send alert to notification system
-    console.log('Quality Alert:', alert);
+    // Quality Alert: ${alert}
   }
 
   // Quality improvement methods
@@ -1797,7 +1797,7 @@ export class DataQualityAssessment {
 
   private async triggerScheduledAssessment(profile: QualityProfile): Promise<void> {
     // Implementation would trigger assessment for relevant datasets
-    console.log(`Triggering scheduled assessment for profile: ${profile.name}`);
+    // Triggering scheduled assessment for profile: ${profile.name}
   }
 
   // Public API methods

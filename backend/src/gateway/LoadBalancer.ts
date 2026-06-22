@@ -1,5 +1,6 @@
 import { CircuitBreaker } from "./CircuitBreaker";
 import crypto from "crypto";
+import { logger } from "../utils/logger";
 
 interface ServiceNode {
   url: string;
@@ -72,7 +73,7 @@ export class LoadBalancer {
     selectedNode.activeRequests++;
     try {
       // Request tracing capability
-      console.log(
+      logger.debug(
         `[TRACE ${crypto.randomUUID()}] Routing request to ${selectedNode.url}${requestPath}`,
       );
       return await selectedNode.circuitBreaker.execute(() =>

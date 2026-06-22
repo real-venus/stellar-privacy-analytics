@@ -1,5 +1,6 @@
 import { rpc, Contract, xdr } from "@stellar/stellar-sdk";
 import axios from "axios";
+import { logger } from "../utils/logger";
 
 export interface IndexedEvent {
   id: string;
@@ -30,7 +31,7 @@ export class EventIndexer {
   public async start() {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log("Starting Soroban Event Indexer...");
+    logger.info("Starting Soroban Event Indexer...");
     this.pollEvents();
   }
 
