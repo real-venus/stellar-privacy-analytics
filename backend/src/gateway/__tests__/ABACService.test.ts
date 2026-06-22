@@ -23,6 +23,19 @@ import { AttributeResolver, ABACService, UserAttributes } from "../ABACService";
 // ---------------------------------------------------------------------------
 jest.mock("geoip-lite");
 
+// ---------------------------------------------------------------------------
+// Mock logger to suppress expected warn/error output during intentional
+// error-handling tests (empty IPs, null lookups, database read errors).
+// ---------------------------------------------------------------------------
+jest.mock("../../utils/logger", () => ({
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 const mockLookup = geoip.lookup as jest.MockedFunction<typeof geoip.lookup>;
 
 // ---------------------------------------------------------------------------
