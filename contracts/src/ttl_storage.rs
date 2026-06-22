@@ -379,25 +379,25 @@ impl TtlStorage {
     ) -> Result<Vec<DataChunk>, TtlStorageError> {
         let mut chunks = Vec::new(env);
         let data_len = data.len();
-        let chunk_count = if data_len <= MAX_ENTRY_SIZE as usize {
+        let chunk_count = if data_len <= MAX_ENTRY_SIZE {
             1
         } else {
-            ((data_len as u32 + MAX_ENTRY_SIZE - 1) / MAX_ENTRY_SIZE)
+            (data_len + MAX_ENTRY_SIZE - 1) / MAX_ENTRY_SIZE
         };
 
         for i in 0..chunk_count {
-            let start = (i as usize) * (MAX_ENTRY_SIZE as usize);
-            let end = std::cmp::min(start + (MAX_ENTRY_SIZE as usize), data_len);
+            let start = i * MAX_ENTRY_SIZE;
+            let end = std::cmp::min(start + MAX_ENTRY_SIZE, data_len);
 
             if start >= data_len {
                 break;
             }
 
-            let chunk_data = data.slice(start as u32, (end - start) as u32);
+            let chunk_data = data.slice(start, end - start);
             let chunk_id = Self::generate_chunk_id(env, entry_id, i);
             let checksum: BytesN<32> = env.crypto().sha256(&chunk_data).into();
 
-            if chunk_data.len() > MAX_ENTRY_SIZE as usize {
+            if chunk_data.len() > MAX_ENTRY_SIZE {
                 return Err(TtlStorageError::ChunkTooLarge);
             }
 

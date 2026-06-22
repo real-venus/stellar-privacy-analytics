@@ -155,13 +155,13 @@ impl SchemaEnforcer {
         org_id.require_auth();
 
         // Validate schema constraints
-        if fields.len() > MAX_SCHEMA_FIELDS as usize {
+        if fields.len() > MAX_SCHEMA_FIELDS {
             return Err(SchemaValidationError::MaxFieldsExceeded);
         }
 
         // Validate field names
         for field in fields.iter() {
-            if field.name.len() > MAX_FIELD_NAME_LENGTH as usize {
+            if field.name.len() > MAX_FIELD_NAME_LENGTH {
                 return Err(SchemaValidationError::FieldNameTooLong);
             }
         }
@@ -337,7 +337,7 @@ impl SchemaEnforcer {
         }
 
         // Validate new schema constraints
-        if new_fields.len() > MAX_SCHEMA_FIELDS as usize {
+        if new_fields.len() > MAX_SCHEMA_FIELDS {
             return Err(SchemaValidationError::MaxFieldsExceeded);
         }
 

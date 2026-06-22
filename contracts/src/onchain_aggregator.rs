@@ -156,13 +156,13 @@ impl OnChainAggregator {
         requester.require_auth();
 
         // Validate batch size
-        if data_point_ids.len() > MAX_BATCH_SIZE as usize {
+        if data_point_ids.len() > MAX_BATCH_SIZE {
             return Err(AggregatorError::BatchTooLarge);
         }
 
         // Check if requester has sufficient compute credits
         let required_credits =
-            Self::get_required_credits(&env, &operation, data_point_ids.len() as u32);
+            Self::get_required_credits(&env, &operation, data_point_ids.len());
         let user_credits = Self::get_user_credits(&env, &requester);
         if user_credits < required_credits {
             return Err(AggregatorError::InsufficientCredits);
@@ -308,7 +308,7 @@ impl OnChainAggregator {
         }
 
         // Validate batch size
-        if request_ids.len() > MAX_BATCH_SIZE as usize {
+        if request_ids.len() > MAX_BATCH_SIZE {
             return Err(AggregatorError::BatchTooLarge);
         }
 

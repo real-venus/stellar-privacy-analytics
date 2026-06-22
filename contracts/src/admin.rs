@@ -76,12 +76,12 @@ impl MultiSigAdmin {
         }
 
         // Validate owners
-        if owners.len() < MIN_OWNERS as usize || owners.len() > MAX_OWNERS as usize {
+        if owners.len() < MIN_OWNERS || owners.len() > MAX_OWNERS {
             return Err(MultiSigError::InvalidOwner);
         }
 
         // Validate threshold
-        if threshold < MIN_THRESHOLD || threshold > MAX_THRESHOLD || threshold > owners.len() as u32
+        if threshold < MIN_THRESHOLD || threshold > MAX_THRESHOLD || threshold > owners.len()
         {
             return Err(MultiSigError::InvalidThreshold);
         }
@@ -168,7 +168,7 @@ impl MultiSigAdmin {
         }
 
         // Check max owners
-        if owners.len() >= MAX_OWNERS as usize {
+        if owners.len() >= MAX_OWNERS {
             return Err(MultiSigError::InvalidOwner);
         }
 
@@ -215,7 +215,7 @@ impl MultiSigAdmin {
         }
 
         // Check minimum owners
-        if new_owners.len() < MIN_OWNERS as usize {
+        if new_owners.len() < MIN_OWNERS {
             return Err(MultiSigError::InvalidOwner);
         }
 
@@ -436,7 +436,7 @@ impl MultiSigAdmin {
 
         // Check if enough confirmations
         let threshold = Self::get_threshold(env.clone())?;
-        if tx_confirmations.len() < threshold as usize {
+        if tx_confirmations.len() < threshold {
             return Err(MultiSigError::InsufficientConfirmations);
         }
 

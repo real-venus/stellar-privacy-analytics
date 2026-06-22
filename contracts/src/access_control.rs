@@ -146,7 +146,7 @@ impl DataSovereigntyAccessControl {
             if multi_sig_threshold < MIN_MULTI_SIG || multi_sig_threshold > MAX_MULTI_SIG {
                 return Err(AccessControlError::InvalidMultiSigThreshold);
             }
-            if authorized_signers.len() < multi_sig_threshold as usize {
+            if authorized_signers.len() < multi_sig_threshold {
                 return Err(AccessControlError::InsufficientSignatures);
             }
         }
