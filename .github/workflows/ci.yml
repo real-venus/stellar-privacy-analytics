@@ -170,7 +170,7 @@ jobs:
       - run: npm run lint
       - run: npm run type-check
       - run: npm test
-      - run: npx tsc -p tsconfig.ci.json
+      - run: npm run build
 
   # ── Smart Contracts (Rust/Soroban) ────────────────────────
   contracts:
