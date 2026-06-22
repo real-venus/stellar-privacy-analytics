@@ -1,13 +1,13 @@
-use soroban_sdk::contracttype;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
-use soroban_sdk::Address;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
+use soroban_sdk::contracttype;
 use soroban_sdk::symbol_short;
-use soroban_sdk::Map;
+use soroban_sdk::Address;
 use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
+use soroban_sdk::Vec;
 
 #[cfg(any(test, feature = "clientgen"))]
 pub type StellarAnalyticsClient = ();
@@ -176,10 +176,18 @@ impl StellarAnalytics {
             },
         );
 
-        env.storage().instance().set(&symbol!("privacy_levels"), &privacy_levels);
-        env.storage().instance().set(&symbol!("total_analyses"), &0u64);
-        env.storage().instance().set(&symbol!("total_privacy_budget_used"), &0i128);
-        env.storage().instance().set(&symbol!("active_analyses"), &0u64);
+        env.storage()
+            .instance()
+            .set(&symbol!("privacy_levels"), &privacy_levels);
+        env.storage()
+            .instance()
+            .set(&symbol!("total_analyses"), &0u64);
+        env.storage()
+            .instance()
+            .set(&symbol!("total_privacy_budget_used"), &0i128);
+        env.storage()
+            .instance()
+            .set(&symbol!("active_analyses"), &0u64);
         env.storage().instance().set(&symbol!("initialized"), &true);
     }
 
@@ -255,7 +263,9 @@ impl StellarAnalytics {
             .unwrap_or_else(|| Map::new(&env));
 
         requests.set(request_id.clone(), request.clone());
-        env.storage().instance().set(&symbol!("analysis_requests"), &requests);
+        env.storage()
+            .instance()
+            .set(&symbol!("analysis_requests"), &requests);
 
         // Update user privacy budget
         let new_budget = user_budget - DEFAULT_PRIVACY_BUDGET;
@@ -276,9 +286,10 @@ impl StellarAnalytics {
             .instance()
             .get(&symbol!("total_privacy_budget_used"))
             .unwrap_or(0);
-        env.storage()
-            .instance()
-            .set(&symbol!("total_privacy_budget_used"), &(total_budget_used + DEFAULT_PRIVACY_BUDGET));
+        env.storage().instance().set(
+            &symbol!("total_privacy_budget_used"),
+            &(total_budget_used + DEFAULT_PRIVACY_BUDGET),
+        );
 
         let active_analyses: u64 = env
             .storage()
@@ -359,13 +370,17 @@ impl StellarAnalytics {
             .unwrap_or_else(|| Map::new(&env));
 
         results.set(request_id.clone(), result);
-        env.storage().instance().set(&symbol!("analysis_results"), &results);
+        env.storage()
+            .instance()
+            .set(&symbol!("analysis_results"), &results);
 
         // Update request status
         let mut updated_request = request;
         updated_request.completed = true;
         requests.set(request_id.clone(), updated_request);
-        env.storage().instance().set(&symbol!("analysis_requests"), &requests);
+        env.storage()
+            .instance()
+            .set(&symbol!("analysis_requests"), &requests);
 
         // Update active analyses count
         let active_analyses: u64 = env
@@ -421,11 +436,17 @@ impl StellarAnalytics {
         let mut updated_request = request;
         updated_request.cancelled = true;
         requests.set(request_id.clone(), updated_request);
-        env.storage().instance().set(&symbol!("analysis_requests"), &requests);
+        env.storage()
+            .instance()
+            .set(&symbol!("analysis_requests"), &requests);
 
         // Refund privacy budget
         let current_budget = Self::get_user_privacy_budget(env.clone(), request.requester);
-        Self::set_user_privacy_budget(env.clone(), request.requester, current_budget + request.privacy_budget);
+        Self::set_user_privacy_budget(
+            env.clone(),
+            request.requester,
+            current_budget + request.privacy_budget,
+        );
 
         // Update active analyses count
         let active_analyses: u64 = env
@@ -653,7 +674,9 @@ impl StellarAnalytics {
             .unwrap_or_else(|| Map::new(&env));
 
         datasets.set(cid.clone(), dataset);
-        env.storage().instance().set(&symbol!("ipfs_datasets"), &datasets);
+        env.storage()
+            .instance()
+            .set(&symbol!("ipfs_datasets"), &datasets);
 
         // Initialize data availability
         let availability = DataAvailability {
@@ -671,7 +694,9 @@ impl StellarAnalytics {
             .unwrap_or_else(|| Map::new(&env));
 
         availability_map.set(cid.clone(), availability);
-        env.storage().instance().set(&symbol!("data_availability"), &availability_map);
+        env.storage()
+            .instance()
+            .set(&symbol!("data_availability"), &availability_map);
 
         // Emit event
         env.events().publish(
@@ -740,7 +765,9 @@ impl StellarAnalytics {
         availability.filecoin_deal_id = filecoin_deal_id;
 
         availability_map.set(cid.clone(), availability);
-        env.storage().instance().set(&symbol!("data_availability"), &availability_map);
+        env.storage()
+            .instance()
+            .set(&symbol!("data_availability"), &availability_map);
 
         // Emit event
         env.events().publish(
@@ -776,13 +803,12 @@ impl StellarAnalytics {
 
         dataset.pinned = true;
         datasets.set(cid.clone(), dataset);
-        env.storage().instance().set(&symbol!("ipfs_datasets"), &datasets);
+        env.storage()
+            .instance()
+            .set(&symbol!("ipfs_datasets"), &datasets);
 
         // Emit event
-        env.events().publish(
-            (symbol!("dataset_pinned"), cid),
-            (),
-        );
+        env.events().publish((symbol!("dataset_pinned"), cid), ());
 
         Ok(())
     }
@@ -801,7 +827,10 @@ impl StellarAnalytics {
     }
 
     /// Get data availability information
-    pub fn get_data_availability(env: Env, cid: String) -> Result<DataAvailability, StellarAnalyticsError> {
+    pub fn get_data_availability(
+        env: Env,
+        cid: String,
+    ) -> Result<DataAvailability, StellarAnalyticsError> {
         let availability_map: Map<String, DataAvailability> = env
             .storage()
             .instance()
@@ -862,7 +891,9 @@ impl StellarAnalytics {
         };
 
         datasets.set(new_cid.clone(), new_dataset);
-        env.storage().instance().set(&symbol!("ipfs_datasets"), &datasets);
+        env.storage()
+            .instance()
+            .set(&symbol!("ipfs_datasets"), &datasets);
 
         // Initialize data availability for new version
         let availability = DataAvailability {
@@ -880,7 +911,9 @@ impl StellarAnalytics {
             .unwrap_or_else(|| Map::new(&env));
 
         availability_map.set(new_cid.clone(), availability);
-        env.storage().instance().set(&symbol!("data_availability"), &availability_map);
+        env.storage()
+            .instance()
+            .set(&symbol!("data_availability"), &availability_map);
 
         // Emit event
         env.events().publish(

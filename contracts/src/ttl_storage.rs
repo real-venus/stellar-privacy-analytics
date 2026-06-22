@@ -1,15 +1,15 @@
-use soroban_sdk::contracttype;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
-use soroban_sdk::Address;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
-use soroban_sdk::symbol_short;
-use soroban_sdk::symbol;
-use soroban_sdk::Map;
-use soroban_sdk::BytesN;
+use soroban_sdk::contracttype;
 use soroban_sdk::crypto::sha256;
+use soroban_sdk::symbol;
+use soroban_sdk::symbol_short;
+use soroban_sdk::Address;
+use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
+use soroban_sdk::Vec;
 
 // Contract state storage keys
 const DATA_ENTRIES_KEY: &str = "DATA_ENTRIES";
@@ -87,15 +87,19 @@ impl TtlStorage {
 
         // Set admin
         env.storage().instance().set(&symbol!("admin"), &admin);
-        
+
         // Initialize cleanup worker
-        env.storage().instance().set(&symbol!("cleanup_worker"), &admin);
-        
+        env.storage()
+            .instance()
+            .set(&symbol!("cleanup_worker"), &admin);
+
         // Set default storage fees
         let mut fees = Map::new(&env);
         fees.set(symbol_short!("permanent"), &10000000i128); // 0.01 XLM/hour
         fees.set(symbol_short!("temporary"), &5000000i128); // 0.005 XLM/hour
-        env.storage().instance().set(&symbol!("storage_fees"), &fees);
+        env.storage()
+            .instance()
+            .set(&symbol!("storage_fees"), &fees);
 
         env.storage().instance().set(&symbol!("initialized"), &true);
     }
@@ -114,7 +118,7 @@ impl TtlStorage {
 
         // Calculate entry ID
         let entry_id = Self::generate_entry_id(&env, &owner, &data);
-        
+
         // Check if entry already exists
         if Self::get_data_entry(&env, &entry_id).is_some() {
             return Err(TtlStorageError::InvalidEntryId);
@@ -126,7 +130,11 @@ impl TtlStorage {
         let expires_at = current_time + ttl_seconds;
 
         // Calculate storage fee
-        let fee_type = if is_temporary { "temporary" } else { "permanent" };
+        let fee_type = if is_temporary {
+            "temporary"
+        } else {
+            "permanent"
+        };
         let fee_per_hour = Self::get_storage_fee(&env, fee_type);
         let total_fee = fee_per_hour * (ttl_hours as i128);
 
@@ -141,7 +149,7 @@ impl TtlStorage {
 
         // Split data into chunks if necessary
         let chunks = Self::split_into_chunks(&env, &data, &entry_id)?;
-        
+
         // Store chunks
         for chunk in chunks {
             env.storage().temporary().set(&chunk.chunk_id, &chunk);
@@ -172,15 +180,20 @@ impl TtlStorage {
             paid_until: expires_at,
             auto_renew: !is_temporary,
         };
-        env.storage().persistent().set(&symbol!("fee_").concat(&entry_id), &fee_record);
+        env.storage()
+            .persistent()
+            .set(&symbol!("fee_").concat(&entry_id), &fee_record);
 
         Ok(entry_id)
     }
 
     /// Retrieve stored data by entry ID
-    pub fn retrieve_data(env: Env, entry_id: BytesN<32>, requester: Address) -> Result<Vec<u8>, TtlStorageError> {
-        let entry = Self::get_data_entry(&env, &entry_id)
-            .ok_or(TtlStorageError::EntryNotFound)?;
+    pub fn retrieve_data(
+        env: Env,
+        entry_id: BytesN<32>,
+        requester: Address,
+    ) -> Result<Vec<u8>, TtlStorageError> {
+        let entry = Self::get_data_entry(&env, &entry_id).ok_or(TtlStorageError::EntryNotFound)?;
 
         // Check if entry has expired
         if env.ledger().timestamp() > entry.expires_at {
@@ -204,8 +217,8 @@ impl TtlStorage {
         requester: Address,
         extension_hours: u32,
     ) -> Result<(), TtlStorageError> {
-        let mut entry = Self::get_data_entry(&env, &entry_id)
-            .ok_or(TtlStorageError::EntryNotFound)?;
+        let mut entry =
+            Self::get_data_entry(&env, &entry_id).ok_or(TtlStorageError::EntryNotFound)?;
 
         // Verify owner authorization
         if requester != entry.owner {
@@ -218,7 +231,11 @@ impl TtlStorage {
         }
 
         // Calculate extension fee
-        let fee_type = if entry.is_temporary { "temporary" } else { "permanent" };
+        let fee_type = if entry.is_temporary {
+            "temporary"
+        } else {
+            "permanent"
+        };
         let fee_per_hour = Self::get_storage_fee(&env, fee_type);
         let extension_fee = fee_per_hour * (extension_hours as i128);
 
@@ -251,7 +268,10 @@ impl TtlStorage {
     /// Cleanup expired temporary data (called by cleanup worker)
     pub fn cleanup_expired_data(env: Env, worker: Address) -> Result<u32, TtlStorageError> {
         // Verify cleanup worker authorization
-        let cleanup_worker = env.storage().instance().get(&symbol!("cleanup_worker"))
+        let cleanup_worker = env
+            .storage()
+            .instance()
+            .get(&symbol!("cleanup_worker"))
             .ok_or(TtlStorageError::NotAuthorized)?;
         if worker != cleanup_worker {
             return Err(TtlStorageError::NotAuthorized);
@@ -263,9 +283,13 @@ impl TtlStorage {
         // Get all data entries (this is a simplified approach)
         // In production, you'd want to maintain an index of temporary entries
         let entries_key = symbol!("data_entries");
-        if let Some(entries) = env.storage().persistent().get::<_, Vec<BytesN<32>>>(&entries_key) {
+        if let Some(entries) = env
+            .storage()
+            .persistent()
+            .get::<_, Vec<BytesN<32>>>(&entries_key)
+        {
             let mut remaining_entries = Vec::new(&env);
-            
+
             for entry_id in entries {
                 if let Some(entry) = Self::get_data_entry(&env, &entry_id) {
                     if entry.is_temporary && current_time > entry.expires_at {
@@ -277,18 +301,27 @@ impl TtlStorage {
                     }
                 }
             }
-            
+
             // Update entries list
-            env.storage().persistent().set(&entries_key, &remaining_entries);
+            env.storage()
+                .persistent()
+                .set(&entries_key, &remaining_entries);
         }
 
         Ok(cleaned_count)
     }
 
     /// Add storage credits to user balance
-    pub fn add_storage_credits(env: Env, user: Address, amount: i128) -> Result<(), TtlStorageError> {
+    pub fn add_storage_credits(
+        env: Env,
+        user: Address,
+        amount: i128,
+    ) -> Result<(), TtlStorageError> {
         // Verify admin authorization
-        let admin = env.storage().instance().get(&symbol!("admin"))
+        let admin = env
+            .storage()
+            .instance()
+            .get(&symbol!("admin"))
             .ok_or(TtlStorageError::NotAuthorized)?;
         admin.require_auth();
 
@@ -302,13 +335,15 @@ impl TtlStorage {
     }
 
     /// Get data entry information
-    pub fn get_data_entry_info(env: Env, entry_id: BytesN<32>) -> Result<DataEntry, TtlStorageError> {
-        Self::get_data_entry(&env, &entry_id)
-            .ok_or(TtlStorageError::EntryNotFound)
+    pub fn get_data_entry_info(
+        env: Env,
+        entry_id: BytesN<32>,
+    ) -> Result<DataEntry, TtlStorageError> {
+        Self::get_data_entry(&env, &entry_id).ok_or(TtlStorageError::EntryNotFound)
     }
 
     // Helper functions
-    
+
     fn generate_entry_id(env: &Env, owner: &Address, data: &Vec<u8>) -> BytesN<32> {
         let mut combined = Vec::new(env);
         combined.append(&owner.to_contract_id().to_array());
@@ -321,7 +356,11 @@ impl TtlStorage {
         env.storage().persistent().get(entry_id)
     }
 
-    fn split_into_chunks(env: &Env, data: &Vec<u8>, entry_id: &BytesN<32>) -> Result<Vec<DataChunk>, TtlStorageError> {
+    fn split_into_chunks(
+        env: &Env,
+        data: &Vec<u8>,
+        entry_id: &BytesN<32>,
+    ) -> Result<Vec<DataChunk>, TtlStorageError> {
         let mut chunks = Vec::new(env);
         let data_len = data.len();
         let chunk_count = if data_len <= MAX_ENTRY_SIZE as usize {
@@ -333,7 +372,7 @@ impl TtlStorage {
         for i in 0..chunk_count {
             let start = (i as usize) * (MAX_ENTRY_SIZE as usize);
             let end = std::cmp::min(start + (MAX_ENTRY_SIZE as usize), data_len);
-            
+
             if start >= data_len {
                 break;
             }
@@ -353,7 +392,7 @@ impl TtlStorage {
                 data: chunk_data,
                 checksum,
             };
-            
+
             chunks.push_back(chunk);
         }
 
@@ -369,7 +408,7 @@ impl TtlStorage {
 
     fn reconstruct_data(env: &Env, entry: &DataEntry) -> Result<Vec<u8>, TtlStorageError> {
         let mut reconstructed = Vec::new(env);
-        
+
         for i in 0..entry.chunk_count {
             let chunk_id = Self::generate_chunk_id(env, &entry.entry_id, i);
             if let Some(chunk) = env.storage().temporary().get::<_, DataChunk>(&chunk_id) {
@@ -390,11 +429,11 @@ impl TtlStorage {
     fn remove_entry(env: &Env, entry_id: &BytesN<32>) {
         // Remove entry
         env.storage().persistent().remove(entry_id);
-        
+
         // Remove fee record
         let fee_key = symbol!("fee_").concat(entry_id);
         env.storage().persistent().remove(&fee_key);
-        
+
         // Remove chunks (if they exist)
         if let Some(entry) = Self::get_data_entry(env, entry_id) {
             for i in 0..entry.chunk_count {
@@ -405,20 +444,24 @@ impl TtlStorage {
     }
 
     fn get_storage_fee(env: &Env, fee_type: &str) -> i128 {
-        let fees = env.storage().instance().get::<_, Map<symbol_short, i128>>(&symbol!("storage_fees"))
+        let fees = env
+            .storage()
+            .instance()
+            .get::<_, Map<symbol_short, i128>>(&symbol!("storage_fees"))
             .unwrap_or_else(|| Map::new(env));
-        
+
         let fee_symbol = match fee_type {
             "temporary" => symbol_short!("temporary"),
             "permanent" => symbol_short!("permanent"),
             _ => symbol_short!("permanent"), // default
         };
-        
+
         fees.get(fee_symbol).unwrap_or(MIN_STORAGE_FEE)
     }
 
     fn get_user_balance(env: &Env, user: &Address) -> i128 {
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&symbol!("balance_").concat(&user.to_contract_id()))
             .unwrap_or(0i128)
     }
@@ -426,7 +469,9 @@ impl TtlStorage {
     fn update_user_balance(env: &Env, user: &Address, delta: i128) {
         let current_balance = Self::get_user_balance(env, user);
         let new_balance = current_balance + delta;
-        env.storage().persistent()
-            .set(&symbol!("balance_").concat(&user.to_contract_id()), &new_balance);
+        env.storage().persistent().set(
+            &symbol!("balance_").concat(&user.to_contract_id()),
+            &new_balance,
+        );
     }
 }

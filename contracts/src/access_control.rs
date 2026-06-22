@@ -1,15 +1,15 @@
-use soroban_sdk::contracttype;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
-use soroban_sdk::Address;
-use soroban_sdk::Env;
-use soroban_sdk::Vec;
-use soroban_sdk::String;
-use soroban_sdk::symbol_short;
-use soroban_sdk::symbol;
-use soroban_sdk::Map;
-use soroban_sdk::BytesN;
+use soroban_sdk::contracttype;
 use soroban_sdk::crypto::sha256;
+use soroban_sdk::symbol;
+use soroban_sdk::symbol_short;
+use soroban_sdk::Address;
+use soroban_sdk::BytesN;
+use soroban_sdk::Env;
+use soroban_sdk::Map;
+use soroban_sdk::String;
+use soroban_sdk::Vec;
 
 // Contract state storage keys
 const USER_PERMISSIONS_KEY: &str = "USER_PERMISSIONS";
@@ -122,8 +122,12 @@ impl DataSovereigntyAccessControl {
     ) -> Result<(), AccessControlError> {
         // Check if caller is admin or resource owner
         let caller = env.current_contract_address();
-        let admin: Address = env.storage().instance().get(&symbol!("admin")).unwrap_or_else(|| caller);
-        
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&symbol!("admin"))
+            .unwrap_or_else(|| caller);
+
         if env.current_contract_address() != admin && !Self::is_authorized(&env, &owner) {
             return Err(AccessControlError::Unauthorized);
         }
@@ -228,7 +232,9 @@ impl DataSovereigntyAccessControl {
             .get(&symbol!(USER_PERMISSIONS_KEY))
             .unwrap_or_else(|| Map::new(&env));
 
-        let user_permissions = permissions.get(user.clone()).unwrap_or_else(|| Vec::new(&env));
+        let user_permissions = permissions
+            .get(user.clone())
+            .unwrap_or_else(|| Vec::new(&env));
         let mut updated_permissions = user_permissions;
         updated_permissions.push_back(permission);
 
@@ -357,7 +363,13 @@ impl DataSovereigntyAccessControl {
         };
 
         // Generate unique key ID
-        let key_data = format!("{}{}{}{}", resource_id, holder, env.ledger().timestamp(), permissions.len());
+        let key_data = format!(
+            "{}{}{}{}",
+            resource_id,
+            holder,
+            env.ledger().timestamp(),
+            permissions.len()
+        );
         let key_id = BytesN::from_array(&env, &sha256(key_data.as_bytes()).to_array());
 
         // Create access key
@@ -424,19 +436,19 @@ impl DataSovereigntyAccessControl {
 
         if let Some(user_permissions) = permissions.get(user.clone()) {
             let current_time = env.ledger().timestamp();
-            
+
             for permission in user_permissions.iter() {
-                if permission.resource_id == resource_id 
-                    && permission.active 
-                    && Self::has_permission_level(&permission.permission_type, &required_permission) {
-                    
+                if permission.resource_id == resource_id
+                    && permission.active
+                    && Self::has_permission_level(&permission.permission_type, &required_permission)
+                {
                     // Check if permission has expired
                     if let Some(expires_at) = permission.expires_at {
                         if current_time >= expires_at {
                             continue; // Skip expired permission
                         }
                     }
-                    
+
                     // Log successful access check
                     Self::log_access(
                         &env,
@@ -446,7 +458,7 @@ impl DataSovereigntyAccessControl {
                         true,
                         None,
                     );
-                    
+
                     return Ok(true);
                 }
             }
@@ -461,17 +473,17 @@ impl DataSovereigntyAccessControl {
 
         let current_time = env.ledger().timestamp();
         for (_, access_key) in access_keys.iter() {
-            if access_key.resource_id == resource_id 
-                && access_key.holder == user 
-                && access_key.active {
-                
+            if access_key.resource_id == resource_id
+                && access_key.holder == user
+                && access_key.active
+            {
                 // Check if key has expired
                 if let Some(expires_at) = access_key.expires_at {
                     if current_time >= expires_at {
                         continue; // Skip expired key
                     }
                 }
-                
+
                 // Check if key has required permission
                 for permission in access_key.permissions.iter() {
                     if Self::has_permission_level(permission, &required_permission) {
@@ -484,7 +496,7 @@ impl DataSovereigntyAccessControl {
                             true,
                             None,
                         );
-                        
+
                         return Ok(true);
                     }
                 }
@@ -517,7 +529,11 @@ impl DataSovereigntyAccessControl {
 
     /// Helper function to check if address is authorized
     fn is_authorized(env: &Env, address: &Address) -> bool {
-        let admin: Address = env.storage().instance().get(&symbol!("admin")).unwrap_or_else(|| env.current_contract_address());
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&symbol!("admin"))
+            .unwrap_or_else(|| env.current_contract_address());
         address == &admin
     }
 
@@ -546,7 +562,7 @@ impl DataSovereigntyAccessControl {
             .unwrap_or_else(|| Vec::new(env));
 
         access_log.push_back(log_entry);
-        
+
         // Keep only last 1000 log entries to prevent storage bloat
         if access_log.len() > 1000 {
             access_log = access_log.slice(access_log.len() - 1000..access_log.len());
@@ -578,10 +594,10 @@ impl DataSovereigntyAccessControl {
             .unwrap_or_else(|| Map::new(&env));
 
         let mut updated_permissions = Map::new(&env);
-        
+
         for (user, user_permissions) in permissions.iter() {
             let mut active_permissions = Vec::new(&env);
-            
+
             for permission in user_permissions.iter() {
                 let is_expired = if let Some(expires_at) = permission.expires_at {
                     current_time >= expires_at
@@ -595,7 +611,7 @@ impl DataSovereigntyAccessControl {
                     cleaned_count += 1;
                 }
             }
-            
+
             if !active_permissions.is_empty() {
                 updated_permissions.set(user, &active_permissions);
             }
@@ -613,7 +629,7 @@ impl DataSovereigntyAccessControl {
             .unwrap_or_else(|| Map::new(&env));
 
         let mut updated_keys = Map::new(&env);
-        
+
         for (key_id, access_key) in access_keys.iter() {
             let is_expired = if let Some(expires_at) = access_key.expires_at {
                 current_time >= expires_at
