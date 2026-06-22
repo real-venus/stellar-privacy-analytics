@@ -8,19 +8,9 @@ use soroban_sdk::String;
 use soroban_sdk::symbol;
 use soroban_sdk::Map;
 use soroban_sdk::BytesN;
-use soroban_sdk::crypto::sha256;
 
 #[cfg(any(test, feature = "clientgen"))]
 pub type PrivacyOracleClient = ();
-
-// Contract state storage keys
-const DATA_REQUESTS_KEY: &str = "DATA_REQUESTS";
-const DATA_RESPONSES_KEY: &str = "DATA_RESPONSES";
-const ORACLE_NODES_KEY: &str = "ORACLE_NODES";
-const DATA_SOURCE_FEES_KEY: &str = "DATA_SOURCE_FEES";
-const USER_DEPOSITS_KEY: &str = "USER_DEPOSITS";
-const PENDING_REQUESTS_KEY: &str = "PENDING_REQUESTS";
-const ACTIVE_ORACLE_NODES_KEY: &str = "ACTIVE_ORACLE_NODES";
 
 // Constants
 const MIN_FEE: i128 = 10000000; // 0.01 XLM (10^7 stroops)
@@ -153,7 +143,7 @@ impl PrivacyOracle {
         input_data.push_back(env.ledger().timestamp().into());
         input_data.push_back(env.ledger().sequence().into());
 
-        let request_id = sha256(&input_data.to_xdr(env));
+        let request_id = env.crypto().sha256(&input_data.to_xdr(env.clone()));
 
         // Create data request
         let request = DataRequest {

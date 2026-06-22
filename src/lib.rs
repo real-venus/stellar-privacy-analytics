@@ -2,7 +2,7 @@ pub mod data_sovereignty;
 pub mod laplace_noise;
 
 use soroban_sdk::{
-    contracterror, contractimpl, vec, Address, BytesN, Env, IntoVal, Map, Symbol, Vec,
+    contract, contracterror, contractimpl, vec, Address, BytesN, Env, IntoVal, Map, Symbol, Vec,
 };
 
 #[contracterror]
@@ -15,6 +15,7 @@ pub enum Error {
     UnknownCircuit = 4,
 }
 
+#[contract]
 pub struct ZkVerificationContract;
 
 #[contractimpl]

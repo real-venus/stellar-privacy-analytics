@@ -13,17 +13,6 @@ use soroban_sdk::BytesN;
 #[cfg(any(test, feature = "clientgen"))]
 pub type StellarAnalyticsClient = ();
 
-// Contract state storage keys
-const ANALYSIS_REQUESTS_KEY: &str = "ANALYSIS_REQUESTS";
-const ANALYSIS_RESULTS_KEY: &str = "ANALYSIS_RESULTS";
-const USER_PRIVACY_BUDGET_KEY: &str = "USER_PRIVACY_BUDGET";
-const PRIVACY_LEVELS_KEY: &str = "PRIVACY_LEVELS";
-const AUTHORIZED_ORACLES_KEY: &str = "AUTHORIZED_ORACLES";
-const TOTAL_ANALYSES_KEY: &str = "TOTAL_ANALYSES";
-const TOTAL_PRIVACY_BUDGET_USED_KEY: &str = "TOTAL_PRIVACY_BUDGET_USED";
-const ACTIVE_ANALYSES_KEY: &str = "ACTIVE_ANALYSES";
-const IPFS_DATASETS_KEY: &str = "IPFS_DATASETS";
-const DATA_AVAILABILITY_KEY: &str = "DATA_AVAILABILITY";
 
 // Constants
 const MAX_PRIVACY_BUDGET: i128 = 1000000000000000000; // 1e18 (1000 tokens)
