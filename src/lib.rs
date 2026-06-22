@@ -3,10 +3,8 @@
 pub mod data_sovereignty;
 pub mod laplace_noise;
 
-use soroban_sdk::{
-    contracterror, contractimpl, contract, Address, BytesN, Env, Map, Symbol, Vec,
-};
 use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::{contract, contracterror, contractimpl, Address, BytesN, Env, Map, Symbol, Vec};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
