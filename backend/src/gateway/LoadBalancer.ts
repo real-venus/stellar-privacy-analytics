@@ -18,6 +18,8 @@ export class LoadBalancer {
   private nodes: ServiceNode[] = [];
   private healthCheckTimeout: number;
 
+  private healthCheckIntervalId?: ReturnType<typeof setInterval>;
+
   constructor(urls: string[], options: LoadBalancerOptions = {}) {
     const { healthCheckInterval = 10000, healthCheckTimeout = 5000 } = options;
     this.healthCheckTimeout = healthCheckTimeout;
@@ -30,7 +32,28 @@ export class LoadBalancer {
     }));
 
     // Start routine health check polling
-    setInterval(() => this.healthCheck(), healthCheckInterval);
+    this.healthCheckIntervalId = setInterval(() => this.healthCheck(), healthCheckInterval);
+  }
+
+  public async getServicesHealth(): Promise<
+    Array<{ url: string; healthy: boolean; activeRequests: number }>
+  > {
+    return this.nodes.map((node) => ({
+      url: node.url,
+      healthy: node.isHealthy,
+      activeRequests: node.activeRequests,
+    }));
+  }
+
+  public async start(): Promise<void> {
+    await this.healthCheck();
+  }
+
+  public async stop(): Promise<void> {
+    if (this.healthCheckIntervalId) {
+      clearInterval(this.healthCheckIntervalId);
+      this.healthCheckIntervalId = undefined;
+    }
   }
 
   private async healthCheck() {

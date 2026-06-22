@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { List } from 'react-window';
+import { FixedSizeList as List } from 'react-window';
 import { Search, Download, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 

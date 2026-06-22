@@ -124,7 +124,7 @@ export function AnimationProvider({
         return prefs.enabled;
       }
     } catch {
-      /* Animation frame may be cancelled */
+      // Ignore invalid stored animation preferences
     }
     return true;
   });
@@ -136,7 +136,7 @@ export function AnimationProvider({
         return prefs.speed || defaultSpeed;
       }
     } catch {
-      /* Animation frame may be cancelled */
+      // Ignore invalid stored animation preferences
     }
     return defaultSpeed;
   });

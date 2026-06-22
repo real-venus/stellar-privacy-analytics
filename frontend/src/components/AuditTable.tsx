@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { List } from 'react-window';
+import { FixedSizeList as List } from 'react-window';
 import EmptyState from './ui/EmptyState';
 import {
   Search,

@@ -1,12 +1,11 @@
+#![no_std]
 #![allow(unexpected_cfgs)]
 
 pub mod data_sovereignty;
 pub mod laplace_noise;
 
-use soroban_sdk::{
-    contracterror, contractimpl, contract, Address, BytesN, Env, Map, Symbol, Vec,
-};
 use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::{contract, contracterror, contractimpl, Address, BytesN, Env, Map, Symbol, Vec};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -57,13 +56,11 @@ impl ZkVerificationContract {
         Ok(())
     }
 
-    pub fn get_verification(
-        env: Env,
-        user_id: Address,
-        circuit_id: Symbol,
-    ) -> Option<Vec<i128>> {
-        if let Some(user_verifications) =
-            env.storage().instance().get::<_, Map<Symbol, Vec<i128>>>(&user_id)
+    pub fn get_verification(env: Env, user_id: Address, circuit_id: Symbol) -> Option<Vec<i128>> {
+        if let Some(user_verifications) = env
+            .storage()
+            .instance()
+            .get::<_, Map<Symbol, Vec<i128>>>(&user_id)
         {
             user_verifications.get(circuit_id)
         } else {
@@ -115,7 +112,13 @@ mod test {
         let public_inputs = soroban_sdk::vec![&env, 18];
         let forged_proof = BytesN::random(&env);
 
-        client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs, &forged_proof);
+        client.verify_proof(
+            &provider,
+            &user_id,
+            &circuit_id,
+            &public_inputs,
+            &forged_proof,
+        );
     }
 
     #[test]
@@ -137,7 +140,13 @@ mod test {
         let proof_hash = env.crypto().sha256(&proof_data.to_xdr(&env));
         let proof = BytesN::from_array(&env, &proof_hash.to_array());
 
-        client.verify_proof(&provider, &user_id, &circuit_id, &public_inputs_for_call, &proof);
+        client.verify_proof(
+            &provider,
+            &user_id,
+            &circuit_id,
+            &public_inputs_for_call,
+            &proof,
+        );
     }
 
     #[test]

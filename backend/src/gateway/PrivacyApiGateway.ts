@@ -53,7 +53,7 @@ export interface PolicyConfig {
 
 export interface PolicyRule {
   attribute: string;
-  operator: "equals" | "contains" | "startsWith" | "endsWith" | "regex";
+  operator: "equals" | "contains" | "startsWith" | "endsWith" | "regex" | "not_equals";
   value: string;
   action: "allow" | "deny" | "transform" | "log";
   transformation?: TransformationRule;
@@ -109,7 +109,10 @@ export class PrivacyApiGateway {
     this.apiKeyManager = new APIKeyManager();
     this.requestTransformer = new RequestTransformer();
     this.privacyMetrics = new PrivacyMetrics(config.metrics);
-    this.loadBalancer = new LoadBalancer(config.loadBalancing, config.services);
+    this.loadBalancer = new LoadBalancer(
+      config.services.map((service) => service.baseUrl),
+      { healthCheckInterval: config.loadBalancing.healthCheckInterval }
+    );
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -186,7 +189,7 @@ export class PrivacyApiGateway {
         const limiter = new RateLimiterMemory({
           points: route.rateLimitOverride.maxRequests,
           duration: route.rateLimitOverride.windowMs / 1000,
-        });
+        } as any);
         middlewareChain.push(this.createRateLimitMiddleware(limiter));
       }
 
@@ -415,7 +418,7 @@ export class PrivacyApiGateway {
       if (keyInfo) {
         attributes.apiKeyId = keyInfo.id;
         attributes.apiKeyPermissions = keyInfo.permissions;
-        attributes.apiKeyOwner = (keyInfo as any).owner;
+        attributes.apiKeyOwner = keyInfo.metadata?.owner ?? (keyInfo as { owner?: string }).owner;
       }
     }
 

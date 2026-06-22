@@ -1,12 +1,8 @@
-import { Request, Response } from "express";
-import {
-  createHash,
-  randomBytes,
-  createCipheriv,
-  createDecipheriv,
-} from "crypto";
-import { TransformationRule } from "./PrivacyApiGateway";
-import { logger } from "../utils/logger";
+import { Request, Response } from 'express';
+import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { TransformationRule } from './PrivacyApiGateway';
+import { EncryptionKeyStore } from './EncryptionKeyStore';
+import { logger } from '../utils/logger';
 
 export interface TransformationContext {
   requestId: string;
@@ -25,23 +21,8 @@ export interface TransformationResult {
   appliedTransformations: string[];
 }
 
-export interface TransformedRequestData {
-  body?: any;
-  query?: any;
-  params?: any;
-  headers?: any;
-}
-
-export interface RequestWithTransformations extends Request {
-  transformedRequest?: TransformedRequestData;
-}
-
-interface ResponseWithData extends Response {
-  data?: any;
-}
-
 export interface MaskingConfig {
-  type: "partial" | "full" | "hash";
+  type: 'partial' | 'full' | 'hash';
   preserveLength?: boolean;
   visibleChars?: number;
   maskChar?: string;
@@ -66,45 +47,41 @@ export class RequestTransformer {
   private encryptionKeys: Map<string, Buffer>;
   private pseudonymizationSalts: Map<string, string>;
   private transformationCache: Map<string, any>;
+  private keyStore: EncryptionKeyStore;
+  private keysLoadedAtMtimeMs = 0;
 
-  constructor() {
+  constructor(keyStore?: EncryptionKeyStore) {
     this.encryptionKeys = new Map();
     this.pseudonymizationSalts = new Map();
     this.transformationCache = new Map();
+    this.keyStore = keyStore ?? new EncryptionKeyStore();
 
-    this.initializeDefaultKeys();
+    this.initializeEncryptionKeys();
+    this.initializeDefaultSalts();
   }
 
   async applyRequestTransformations(
     req: Request,
-    rules: TransformationRule[],
+    rules: TransformationRule[]
   ): Promise<TransformationResult> {
     const context: TransformationContext = {
-      requestId: (req as any).requestId || "unknown",
+      requestId: (req as any).requestId || 'unknown',
       userId: (req as any).userId,
-      privacyLevel: (req as any).privacyLevel || "high",
-      jurisdiction: (req.headers["x-jurisdiction"] as string) || "US",
-      purpose: (req.headers["x-purpose"] as string) || "analytics",
-      timestamp: new Date(),
+      privacyLevel: (req as any).privacyLevel || 'high',
+      jurisdiction: req.headers['x-jurisdiction'] as string || 'US',
+      purpose: req.headers['x-purpose'] as string || 'analytics',
+      timestamp: new Date()
     };
 
     const appliedTransformations: string[] = [];
     let transformed = false;
-    const transformedRequest: TransformedRequestData = {};
 
     try {
       // Transform request body
       if (req.body && Object.keys(req.body).length > 0) {
-        const bodyClone = this.deepClone(req.body);
-        const bodyResult = await this.transformData(
-          bodyClone,
-          rules,
-          context,
-          "request.body",
-        );
-        transformedRequest.body = bodyResult.data;
-
+        const bodyResult = await this.transformData(req.body, rules, context, 'request.body');
         if (bodyResult.transformed) {
+          req.body = bodyResult.data;
           transformed = true;
           appliedTransformations.push(...bodyResult.appliedTransformations);
         }
@@ -112,16 +89,9 @@ export class RequestTransformer {
 
       // Transform query parameters
       if (req.query && Object.keys(req.query).length > 0) {
-        const queryClone = this.deepClone(req.query);
-        const queryResult = await this.transformData(
-          queryClone,
-          rules,
-          context,
-          "request.query",
-        );
-        transformedRequest.query = queryResult.data;
-
+        const queryResult = await this.transformData(req.query, rules, context, 'request.query');
         if (queryResult.transformed) {
+          req.query = queryResult.data;
           transformed = true;
           appliedTransformations.push(...queryResult.appliedTransformations);
         }
@@ -129,58 +99,42 @@ export class RequestTransformer {
 
       // Transform path parameters
       if (req.params && Object.keys(req.params).length > 0) {
-        const paramsClone = this.deepClone(req.params);
-        const paramsResult = await this.transformData(
-          paramsClone,
-          rules,
-          context,
-          "request.params",
-        );
-        transformedRequest.params = paramsResult.data;
-
+        const paramsResult = await this.transformData(req.params, rules, context, 'request.params');
         if (paramsResult.transformed) {
+          req.params = paramsResult.data;
           transformed = true;
           appliedTransformations.push(...paramsResult.appliedTransformations);
         }
       }
 
       // Transform headers
-      const headerClone = this.deepClone(req.headers);
-      const headerResult = await this.transformHeaders(
-        headerClone,
-        rules,
-        context,
-      );
-      transformedRequest.headers = headerResult.data;
-
+      const headerResult = await this.transformHeaders(req.headers, rules, context);
       if (headerResult.transformed) {
+        req.headers = headerResult.data;
         transformed = true;
         appliedTransformations.push(...headerResult.appliedTransformations);
       }
 
-      (req as RequestWithTransformations).transformedRequest =
-        transformedRequest;
-
-      logger.info("Request transformations applied", {
+      logger.info('Request transformations applied', {
         requestId: context.requestId,
         transformations: appliedTransformations,
-        privacyLevel: context.privacyLevel,
+        privacyLevel: context.privacyLevel
       });
 
       return {
         success: true,
         transformed,
-        data: transformedRequest,
-        appliedTransformations,
+        appliedTransformations
       };
-    } catch (error) {
-      logger.error("Request transformation failed:", error);
 
+    } catch (error) {
+      logger.error('Request transformation failed:', error);
+      
       return {
         success: false,
         transformed: false,
         error: (error as Error).message,
-        appliedTransformations,
+        appliedTransformations
       };
     }
   }
@@ -188,63 +142,58 @@ export class RequestTransformer {
   async applyResponseTransformations(
     res: Response,
     rules: TransformationRule[],
-    context: TransformationContext,
+    context: TransformationContext
   ): Promise<TransformationResult> {
     const appliedTransformations: string[] = [];
-    const response = res as ResponseWithData;
 
     try {
       // Get response data
       let responseData: any;
-      if (response.locals && response.locals.responseData) {
-        responseData = response.locals.responseData;
-      } else if (response.data) {
-        responseData = response.data;
+      if (res.locals && res.locals.responseData) {
+        responseData = res.locals.responseData;
+      } else if ((res as any).data) {
+        responseData = (res as any).data;
       }
 
       if (!responseData) {
         return {
           success: true,
           transformed: false,
-          appliedTransformations,
+          appliedTransformations
         };
       }
 
-      const result = await this.transformData(
-        responseData,
-        rules,
-        context,
-        "response.data",
-      );
-
+      const result = await this.transformData(responseData, rules, context, 'response.data');
+      
       if (result.transformed) {
         // Update response data
-        if (response.locals) {
-          response.locals.responseData = result.data;
+        if (res.locals) {
+          res.locals.responseData = result.data;
         }
-        response.data = result.data;
+        (res as any).data = result.data;
       }
 
-      logger.info("Response transformations applied", {
+      logger.info('Response transformations applied', {
         requestId: context.requestId,
         transformations: result.appliedTransformations,
-        privacyLevel: context.privacyLevel,
+        privacyLevel: context.privacyLevel
       });
 
       return {
         success: true,
         transformed: result.transformed,
         data: result.data,
-        appliedTransformations: result.appliedTransformations,
+        appliedTransformations: result.appliedTransformations
       };
-    } catch (error) {
-      logger.error("Response transformation failed:", error);
 
+    } catch (error) {
+      logger.error('Response transformation failed:', error);
+      
       return {
         success: false,
         transformed: false,
         error: (error as Error).message,
-        appliedTransformations,
+        appliedTransformations
       };
     }
   }
@@ -253,7 +202,7 @@ export class RequestTransformer {
     data: any,
     rules: TransformationRule[],
     context: TransformationContext,
-    path: string,
+    path: string
   ): Promise<TransformationResult> {
     const appliedTransformations: string[] = [];
     let transformed = false;
@@ -261,17 +210,13 @@ export class RequestTransformer {
 
     try {
       // Apply rules that match this data path
-      const applicableRules = rules.filter((rule) =>
-        this.ruleMatchesPath(rule, path, result),
+      const applicableRules = rules.filter(rule => 
+        this.ruleMatchesPath(rule, path, result)
       );
 
       for (const rule of applicableRules) {
-        const transformationResult = await this.applyTransformation(
-          rule,
-          result,
-          context,
-        );
-
+        const transformationResult = await this.applyTransformation(rule, result, context);
+        
         if (transformationResult.transformed) {
           result = transformationResult.data;
           transformed = true;
@@ -280,18 +225,13 @@ export class RequestTransformer {
       }
 
       // Recursively transform nested objects
-      if (result && typeof result === "object" && !Array.isArray(result)) {
+      if (result && typeof result === 'object' && !Array.isArray(result)) {
         const transformedObj: any = {};
-
+        
         for (const [key, value] of Object.entries(result)) {
           const nestedPath = `${path}.${key}`;
-          const nestedResult = await this.transformData(
-            value,
-            rules,
-            context,
-            nestedPath,
-          );
-
+          const nestedResult = await this.transformData(value, rules, context, nestedPath);
+          
           if (nestedResult.transformed) {
             transformedObj[key] = nestedResult.data;
             transformed = true;
@@ -300,33 +240,26 @@ export class RequestTransformer {
             transformedObj[key] = value;
           }
         }
-
+        
         result = transformedObj;
       }
 
       // Transform arrays
       else if (Array.isArray(result)) {
         const transformedArray = [];
-
+        
         for (let i = 0; i < result.length; i++) {
           const itemPath = `${path}[${i}]`;
-          const itemResult = await this.transformData(
-            result[i],
-            rules,
-            context,
-            itemPath,
-          );
-
-          transformedArray.push(
-            itemResult.transformed ? itemResult.data : result[i],
-          );
-
+          const itemResult = await this.transformData(result[i], rules, context, itemPath);
+          
+          transformedArray.push(itemResult.data || result[i]);
+          
           if (itemResult.transformed) {
             transformed = true;
             appliedTransformations.push(...itemResult.appliedTransformations);
           }
         }
-
+        
         result = transformedArray;
       }
 
@@ -334,16 +267,17 @@ export class RequestTransformer {
         success: true,
         transformed,
         data: result,
-        appliedTransformations,
+        appliedTransformations
       };
+
     } catch (error) {
       logger.error(`Data transformation failed for path ${path}:`, error);
-
+      
       return {
         success: false,
         transformed: false,
         error: (error as Error).message,
-        appliedTransformations,
+        appliedTransformations
       };
     }
   }
@@ -351,41 +285,32 @@ export class RequestTransformer {
   private async applyTransformation(
     rule: TransformationRule,
     data: any,
-    context: TransformationContext,
+    context: TransformationContext
   ): Promise<TransformationResult> {
     try {
       let transformedData = data;
 
       switch (rule.type) {
-        case "mask":
-          transformedData = this.maskData(
-            data,
-            rule.parameters as MaskingConfig,
-          );
+        case 'mask':
+          transformedData = this.maskData(data, rule.parameters as MaskingConfig);
           break;
-
-        case "encrypt":
-          transformedData = await this.encryptData(
-            data,
-            rule.parameters as EncryptionConfig,
-          );
+          
+        case 'encrypt':
+          transformedData = await this.encryptData(data, rule.parameters as EncryptionConfig);
           break;
-
-        case "hash":
+          
+        case 'hash':
           transformedData = this.hashData(data, rule.parameters);
           break;
-
-        case "remove":
+          
+        case 'remove':
           transformedData = undefined;
           break;
-
-        case "pseudonymize":
-          transformedData = this.pseudonymizeData(
-            data,
-            rule.parameters as PseudonymizationConfig,
-          );
+          
+        case 'pseudonymize':
+          transformedData = this.pseudonymizeData(data, rule.parameters as PseudonymizationConfig);
           break;
-
+          
         default:
           throw new Error(`Unknown transformation type: ${rule.type}`);
       }
@@ -394,16 +319,17 @@ export class RequestTransformer {
         success: true,
         transformed: transformedData !== data,
         data: transformedData,
-        appliedTransformations: [`${rule.type}:${rule.field}`],
+        appliedTransformations: [`${rule.type}:${rule.field}`]
       };
+
     } catch (error) {
       logger.error(`Transformation ${rule.type} failed:`, error);
-
+      
       return {
         success: false,
         transformed: false,
         error: (error as Error).message,
-        appliedTransformations: [],
+        appliedTransformations: []
       };
     }
   }
@@ -414,55 +340,66 @@ export class RequestTransformer {
     }
 
     const str = String(data);
-    const maskChar = config.maskChar || "*";
-
+    const maskChar = config.maskChar || '*';
+    
     switch (config.type) {
-      case "full":
+      case 'full':
         return maskChar.repeat(str.length);
-
-      case "partial":
+        
+      case 'partial':
         const visible = config.visibleChars || 4;
         if (str.length <= visible) {
           return maskChar.repeat(str.length);
         }
-        return (
-          str.substring(0, visible) + maskChar.repeat(str.length - visible)
-        );
-
-      case "hash":
-        return createHash("sha256")
-          .update(str)
-          .digest("hex")
-          .substring(0, config.preserveLength ? str.length : 16);
-
+        return str.substring(0, visible) + maskChar.repeat(str.length - visible);
+        
+      case 'hash':
+        return createHash('sha256').update(str).digest('hex').substring(0, config.preserveLength ? str.length : 16);
+        
       default:
         return data;
     }
   }
 
-  private async encryptData(
-    data: any,
-    config: EncryptionConfig,
-  ): Promise<string> {
+  private async encryptData(data: any, config: EncryptionConfig): Promise<string> {
     if (data === null || data === undefined) {
       return data;
     }
 
-    const str = String(data);
-    const key = this.encryptionKeys.get(config.keyId);
+    return this.encryptValue(String(data), config);
+  }
 
-    if (!key) {
-      throw new Error(`Encryption key not found: ${config.keyId}`);
-    }
-
+  public encryptValue(data: string, config: EncryptionConfig): string {
+    const key = this.getEncryptionKey(config.keyId);
     const iv = randomBytes(config.ivLength || 16);
     const cipher = createCipheriv(config.algorithm, key, iv);
 
-    let encrypted = cipher.update(str, "utf8", "hex");
-    encrypted += cipher.final("hex");
+    let encrypted = cipher.update(data, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
 
-    // Combine IV and encrypted data
-    return iv.toString("hex") + ":" + encrypted;
+    return `${iv.toString('hex')}:${encrypted}`;
+  }
+
+  public decryptValue(encrypted: string, config: EncryptionConfig): string {
+    if (encrypted === null || encrypted === undefined) {
+      return encrypted;
+    }
+
+    const key = this.getEncryptionKey(config.keyId);
+
+    const separatorIndex = encrypted.indexOf(':');
+    if (separatorIndex === -1) {
+      throw new Error('Invalid encrypted payload format');
+    }
+
+    const iv = Buffer.from(encrypted.slice(0, separatorIndex), 'hex');
+    const encryptedHex = encrypted.slice(separatorIndex + 1);
+    const decipher = createDecipheriv(config.algorithm, key, iv);
+
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
   }
 
   private hashData(data: any, parameters?: any): string {
@@ -470,10 +407,10 @@ export class RequestTransformer {
       return data;
     }
 
-    const algorithm = parameters?.algorithm || "sha256";
+    const algorithm = parameters?.algorithm || 'sha256';
     const str = String(data);
-
-    return createHash(algorithm).update(str).digest("hex");
+    
+    return createHash(algorithm).update(str).digest('hex');
   }
 
   private pseudonymizeData(data: any, config: PseudonymizationConfig): string {
@@ -482,49 +419,45 @@ export class RequestTransformer {
     }
 
     const str = String(data);
-    const salt = config.salt || "default";
-    const algorithm = config.algorithm || "sha256";
-
+    const salt = config.salt || 'default';
+    const algorithm = config.algorithm || 'sha256';
+    
     if (config.deterministic) {
       // Deterministic pseudonymization - same input always produces same output
-      const hash = createHash(algorithm)
-        .update(salt + str)
-        .digest("hex");
-
+      const hash = createHash(algorithm).update(salt + str).digest('hex');
+      
       if (config.preserveFormat) {
         // Try to preserve original format (e.g., email structure)
         return this.preserveFormat(str, hash);
       }
-
+      
       return hash;
     } else {
       // Non-deterministic - random but reversible with salt
-      return createHash(algorithm)
-        .update(salt + str + randomBytes(8).toString("hex"))
-        .digest("hex");
+      return createHash(algorithm).update(salt + str + randomBytes(8).toString('hex')).digest('hex');
     }
   }
 
   private preserveFormat(original: string, pseudonym: string): string {
     // Simple format preservation for common patterns
-    if (original.includes("@")) {
+    if (original.includes('@')) {
       // Email format
-      const [local, domain] = original.split("@");
+      const [local, domain] = original.split('@');
       const pseudoLocal = pseudonym.substring(0, local.length);
       return `${pseudoLocal}@${domain}`;
     }
-
-    if (original.includes("-")) {
+    
+    if (original.includes('-')) {
       // Phone number or similar format
-      const parts = original.split("-");
+      const parts = original.split('-');
       const pseudoParts = parts.map((part, index) => {
         const start = index * (pseudonym.length / parts.length);
         const end = start + part.length;
         return pseudonym.substring(start, end);
       });
-      return pseudoParts.join("-");
+      return pseudoParts.join('-');
     }
-
+    
     // Default: return pseudonym with original length
     return pseudonym.substring(0, original.length);
   }
@@ -532,28 +465,23 @@ export class RequestTransformer {
   private async transformHeaders(
     headers: any,
     rules: TransformationRule[],
-    context: TransformationContext,
+    context: TransformationContext
   ): Promise<TransformationResult> {
     const appliedTransformations: string[] = [];
     let transformed = false;
 
     try {
-      const headerRules = rules.filter(
-        (rule) =>
-          rule.field.startsWith("headers.") || rule.field.startsWith("header."),
+      const headerRules = rules.filter(rule => 
+        rule.field.startsWith('headers.') || rule.field.startsWith('header.')
       );
 
       for (const rule of headerRules) {
-        const headerName = rule.field.replace(/^headers?\./, "");
+        const headerName = rule.field.replace(/^headers?\./, '');
         const headerValue = headers[headerName];
-
+        
         if (headerValue !== undefined) {
-          const result = await this.applyTransformation(
-            rule,
-            headerValue,
-            context,
-          );
-
+          const result = await this.applyTransformation(rule, headerValue, context);
+          
           if (result.transformed) {
             headers[headerName] = result.data;
             transformed = true;
@@ -566,90 +494,155 @@ export class RequestTransformer {
         success: true,
         transformed,
         data: headers,
-        appliedTransformations,
+        appliedTransformations
       };
-    } catch (error) {
-      logger.error("Header transformation failed:", error);
 
+    } catch (error) {
+      logger.error('Header transformation failed:', error);
+      
       return {
         success: false,
         transformed: false,
         error: (error as Error).message,
-        appliedTransformations,
+        appliedTransformations
       };
     }
   }
 
-  private ruleMatchesPath(
-    rule: TransformationRule,
-    path: string,
-    data: any,
-  ): boolean {
-    const normalizedField = this.normalizeRuleField(rule.field);
-
+  private ruleMatchesPath(rule: TransformationRule, path: string, data: any): boolean {
     // Simple field matching - can be enhanced with regex patterns
-    if (normalizedField === "*") {
+    if (rule.field === '*') {
       return true;
     }
-
-    if (normalizedField === path) {
+    
+    if (rule.field === path) {
       return true;
     }
-
+    
     // Check if field is a property in the current data
-    if (data && typeof data === "object" && normalizedField in data) {
+    if (data && typeof data === 'object' && rule.field in data) {
       return true;
     }
-
+    
     // Check for nested field matching
-    if (path.endsWith("." + normalizedField)) {
+    if (path.endsWith('.' + rule.field)) {
       return true;
     }
-
+    
     return false;
   }
 
-  private normalizeRuleField(field: string): string {
-    if (field.startsWith("req.")) {
-      return field.replace(/^req\./, "request.");
+  private initializeEncryptionKeys(): void {
+    const loadResult = this.keyStore.load();
+    this.keysLoadedAtMtimeMs = this.keyStore.getLastModifiedMs();
+
+    if (loadResult.status === 'recovered') {
+      this.encryptionKeys = loadResult.keys;
+      logger.info('Recovered encryption keys from durable store on startup', {
+        keyCount: loadResult.keys.size,
+        keyIds: Array.from(loadResult.keys.keys()),
+        storePath: this.keyStore.getFilePath()
+      });
+      return;
     }
 
-    return field;
+    if (loadResult.status === 'corrupted') {
+      logger.warn('Encryption key store is corrupted; regenerating fresh default key', {
+        storePath: this.keyStore.getFilePath()
+      });
+    } else if (loadResult.status === 'empty') {
+      logger.warn('Encryption key store exists but contains no valid keys; regenerating fresh default key', {
+        storePath: this.keyStore.getFilePath()
+      });
+    } else {
+      logger.warn('No encryption keys found in durable store; generating fresh default key', {
+        storePath: this.keyStore.getFilePath()
+      });
+    }
+
+    const defaultKey = randomBytes(32);
+    this.encryptionKeys.set('default', defaultKey);
+    this.persistEncryptionKeys();
+
+    logger.info('Fresh default encryption key generated and persisted', {
+      keyId: 'default',
+      storePath: this.keyStore.getFilePath(),
+      reason: loadResult.status
+    });
   }
 
-  private deepClone<T>(value: T): T {
-    if (value === null || value === undefined) {
-      return value;
+  private syncKeysFromStore(force = false): void {
+    if (!force && !this.keyStore.hasExternalChanges(this.keysLoadedAtMtimeMs)) {
+      return;
     }
 
-    if (typeof globalThis.structuredClone === "function") {
-      try {
-        return globalThis.structuredClone(value);
-      } catch {
-        // Fall through for values structuredClone cannot copy.
-      }
-    }
+    const loadResult = this.keyStore.load();
+    this.keysLoadedAtMtimeMs = this.keyStore.getLastModifiedMs();
 
-    return JSON.parse(JSON.stringify(value)) as T;
+    if (loadResult.status === 'recovered') {
+      this.encryptionKeys = loadResult.keys;
+      logger.info('Synchronized encryption keys from durable store', {
+        keyCount: loadResult.keys.size,
+        keyIds: Array.from(loadResult.keys.keys()),
+        storePath: this.keyStore.getFilePath()
+      });
+    }
   }
 
-  private initializeDefaultKeys(): void {
-    // Initialize default encryption key for development
-    const defaultKey = randomBytes(32); // 256-bit key
-    this.encryptionKeys.set("default", defaultKey);
+  private getEncryptionKey(keyId: string): Buffer {
+    this.syncKeysFromStore();
 
-    // Initialize default pseudonymization salt
-    this.pseudonymizationSalts.set("default", "stellar_privacy_salt_2024");
+    const key = this.encryptionKeys.get(keyId);
+    if (!key) {
+      throw new Error(`Encryption key not found: ${keyId}`);
+    }
+
+    return key;
+  }
+
+  private initializeDefaultSalts(): void {
+    this.pseudonymizationSalts.set('default', 'stellar_privacy_salt_2024');
+  }
+
+  private persistEncryptionKeys(): void {
+    try {
+      this.keyStore.save(this.encryptionKeys);
+      this.keysLoadedAtMtimeMs = this.keyStore.getLastPersistedMtimeMs();
+    } catch (error) {
+      logger.error('Failed to persist encryption keys', {
+        storePath: this.keyStore.getFilePath(),
+        error: (error as Error).message
+      });
+      throw error;
+    }
   }
 
   public addEncryptionKey(keyId: string, key: Buffer): void {
+    if (!keyId || key.length === 0) {
+      throw new Error('Encryption key id and material are required');
+    }
+
     this.encryptionKeys.set(keyId, key);
-    logger.info(`Encryption key added: ${keyId}`);
+    this.persistEncryptionKeys();
+    logger.info(`Encryption key added: ${keyId}`, {
+      storePath: this.keyStore.getFilePath()
+    });
   }
 
   public removeEncryptionKey(keyId: string): void {
+    if (!this.encryptionKeys.has(keyId)) {
+      throw new Error(`Encryption key not found: ${keyId}`);
+    }
+
+    if (this.encryptionKeys.size <= 1) {
+      throw new Error('Cannot remove the last remaining encryption key');
+    }
+
     this.encryptionKeys.delete(keyId);
-    logger.info(`Encryption key removed: ${keyId}`);
+    this.persistEncryptionKeys();
+    logger.info(`Encryption key removed: ${keyId}`, {
+      storePath: this.keyStore.getFilePath()
+    });
   }
 
   public addPseudonymizationSalt(saltId: string, salt: string): void {
@@ -667,7 +660,7 @@ export class RequestTransformer {
       totalTransformations: this.transformationCache.size,
       cacheSize: this.transformationCache.size,
       encryptionKeys: this.encryptionKeys.size,
-      pseudonymizationSalts: this.pseudonymizationSalts.size,
+      pseudonymizationSalts: this.pseudonymizationSalts.size
     };
   }
 }

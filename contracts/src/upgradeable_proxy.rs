@@ -1,9 +1,9 @@
-use soroban_sdk::contracttype;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
+use soroban_sdk::contracttype;
 use soroban_sdk::Address;
-use soroban_sdk::Env;
 use soroban_sdk::BytesN;
+use soroban_sdk::Env;
 use soroban_sdk::String;
 
 // Contract state storage keys
@@ -44,9 +44,17 @@ pub struct UpgradeableProxy;
 #[contractimpl]
 impl UpgradeableProxy {
     /// Initialize the proxy with an implementation contract and admin
-    pub fn initialize(env: Env, implementation: BytesN<32>, admin: Address) -> Result<(), ProxyError> {
+    pub fn initialize(
+        env: Env,
+        implementation: BytesN<32>,
+        admin: Address,
+    ) -> Result<(), ProxyError> {
         // Check if already initialized
-        if env.storage().instance().has(&String::from_str(&env, IMPLEMENTATION_KEY)) {
+        if env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, IMPLEMENTATION_KEY))
+        {
             return Err(ProxyError::AlreadyInitialized);
         }
 
@@ -56,16 +64,14 @@ impl UpgradeableProxy {
         }
 
         // Set implementation
-        env.storage().instance().set(
-            &String::from_str(&env, IMPLEMENTATION_KEY),
-            &implementation,
-        );
+        env.storage()
+            .instance()
+            .set(&String::from_str(&env, IMPLEMENTATION_KEY), &implementation);
 
         // Set admin
-        env.storage().instance().set(
-            &String::from_str(&env, ADMIN_KEY),
-            &admin,
-        );
+        env.storage()
+            .instance()
+            .set(&String::from_str(&env, ADMIN_KEY), &admin);
 
         // Set default upgrade delay
         env.storage().instance().set(
@@ -78,11 +84,16 @@ impl UpgradeableProxy {
 
     /// Get the current implementation address
     pub fn implementation(env: Env) -> Result<BytesN<32>, ProxyError> {
-        if !env.storage().instance().has(&String::from_str(&env, IMPLEMENTATION_KEY)) {
+        if !env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, IMPLEMENTATION_KEY))
+        {
             return Err(ProxyError::NotInitialized);
         }
 
-        Ok(env.storage()
+        Ok(env
+            .storage()
             .instance()
             .get(&String::from_str(&env, IMPLEMENTATION_KEY))
             .unwrap())
@@ -90,11 +101,16 @@ impl UpgradeableProxy {
 
     /// Get the admin address
     pub fn admin(env: Env) -> Result<Address, ProxyError> {
-        if !env.storage().instance().has(&String::from_str(&env, ADMIN_KEY)) {
+        if !env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, ADMIN_KEY))
+        {
             return Err(ProxyError::NotInitialized);
         }
 
-        Ok(env.storage()
+        Ok(env
+            .storage()
             .instance()
             .get(&String::from_str(&env, ADMIN_KEY))
             .unwrap())
@@ -118,12 +134,17 @@ impl UpgradeableProxy {
         }
 
         // Check if upgrade already initiated
-        if env.storage().instance().has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY)) {
+        if env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY))
+        {
             return Err(ProxyError::UpgradeAlreadyInitiated);
         }
 
         let current_implementation = Self::implementation(env.clone())?;
-        let upgrade_delay = env.storage()
+        let upgrade_delay = env
+            .storage()
             .instance()
             .get::<_, u64>(&String::from_str(&env, UPGRADE_DELAY_KEY))
             .unwrap_or(DEFAULT_UPGRADE_DELAY);
@@ -163,21 +184,28 @@ impl UpgradeableProxy {
         }
 
         // Check if there's a pending upgrade
-        if !env.storage().instance().has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY)) {
+        if !env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY))
+        {
             return Err(ProxyError::NoPendingUpgrade);
         }
 
-        let pending_implementation = env.storage()
+        let pending_implementation = env
+            .storage()
             .instance()
             .get::<_, BytesN<32>>(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY))
             .unwrap();
 
-        let upgrade_initiated = env.storage()
+        let upgrade_initiated = env
+            .storage()
             .instance()
             .get::<_, u64>(&String::from_str(&env, UPGRADE_INITIATED_KEY))
             .unwrap();
 
-        let upgrade_delay = env.storage()
+        let upgrade_delay = env
+            .storage()
             .instance()
             .get::<_, u64>(&String::from_str(&env, UPGRADE_DELAY_KEY))
             .unwrap_or(DEFAULT_UPGRADE_DELAY);
@@ -197,8 +225,12 @@ impl UpgradeableProxy {
         );
 
         // Clear pending upgrade data
-        env.storage().instance().remove(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY));
-        env.storage().instance().remove(&String::from_str(&env, UPGRADE_INITIATED_KEY));
+        env.storage()
+            .instance()
+            .remove(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY));
+        env.storage()
+            .instance()
+            .remove(&String::from_str(&env, UPGRADE_INITIATED_KEY));
 
         // Emit upgrade completed event
         env.events().publish(
@@ -223,13 +255,21 @@ impl UpgradeableProxy {
         }
 
         // Check if there's a pending upgrade
-        if !env.storage().instance().has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY)) {
+        if !env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY))
+        {
             return Err(ProxyError::NoPendingUpgrade);
         }
 
         // Clear pending upgrade data
-        env.storage().instance().remove(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY));
-        env.storage().instance().remove(&String::from_str(&env, UPGRADE_INITIATED_KEY));
+        env.storage()
+            .instance()
+            .remove(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY));
+        env.storage()
+            .instance()
+            .remove(&String::from_str(&env, UPGRADE_INITIATED_KEY));
 
         // Emit upgrade cancelled event
         env.events().publish(
@@ -253,10 +293,9 @@ impl UpgradeableProxy {
             return Err(ProxyError::InvalidDelay);
         }
 
-        env.storage().instance().set(
-            &String::from_str(&env, UPGRADE_DELAY_KEY),
-            &new_delay,
-        );
+        env.storage()
+            .instance()
+            .set(&String::from_str(&env, UPGRADE_DELAY_KEY), &new_delay);
 
         // Emit delay changed event
         env.events().publish(
@@ -269,11 +308,16 @@ impl UpgradeableProxy {
 
     /// Get current upgrade delay
     pub fn upgrade_delay(env: Env) -> Result<u64, ProxyError> {
-        if !env.storage().instance().has(&String::from_str(&env, UPGRADE_DELAY_KEY)) {
+        if !env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, UPGRADE_DELAY_KEY))
+        {
             return Ok(DEFAULT_UPGRADE_DELAY);
         }
 
-        Ok(env.storage()
+        Ok(env
+            .storage()
             .instance()
             .get(&String::from_str(&env, UPGRADE_DELAY_KEY))
             .unwrap())
@@ -281,21 +325,28 @@ impl UpgradeableProxy {
 
     /// Get pending upgrade info
     pub fn pending_upgrade(env: Env) -> Result<Option<UpgradeInfo>, ProxyError> {
-        if !env.storage().instance().has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY)) {
+        if !env
+            .storage()
+            .instance()
+            .has(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY))
+        {
             return Ok(None);
         }
 
-        let pending_implementation = env.storage()
+        let pending_implementation = env
+            .storage()
             .instance()
             .get::<_, BytesN<32>>(&String::from_str(&env, PENDING_IMPLEMENTATION_KEY))
             .unwrap();
 
-        let upgrade_initiated = env.storage()
+        let upgrade_initiated = env
+            .storage()
             .instance()
             .get::<_, u64>(&String::from_str(&env, UPGRADE_INITIATED_KEY))
             .unwrap();
 
-        let upgrade_delay = env.storage()
+        let upgrade_delay = env
+            .storage()
             .instance()
             .get::<_, u64>(&String::from_str(&env, UPGRADE_DELAY_KEY))
             .unwrap_or(DEFAULT_UPGRADE_DELAY);
@@ -319,10 +370,9 @@ impl UpgradeableProxy {
         }
 
         // Set new admin
-        env.storage().instance().set(
-            &String::from_str(&env, ADMIN_KEY),
-            &new_admin,
-        );
+        env.storage()
+            .instance()
+            .set(&String::from_str(&env, ADMIN_KEY), &new_admin);
 
         // Emit admin transferred event
         env.events().publish(
