@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
-import { format, subDays, startOfDay} from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
 
 interface PrivacyBudget {
   datasetId: string;

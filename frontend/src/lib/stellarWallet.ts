@@ -2,7 +2,6 @@
  * Stellar wallet integration for transaction signing and blockchain operations
  */
 
-
 export interface StellarAccount {
   publicKey: string;
   secretKey?: string;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus} from 'lucide-react';
+import { Users, Plus } from 'lucide-react';
 import { InvitePartnerForm } from '../components/mpc/InvitePartnerForm';
 import { ParticipantsList } from '../components/mpc/ParticipantsList';
 import { LogTerminal } from '../components/mpc/LogTerminal';
@@ -69,7 +69,7 @@ export const MPCWorkspace: React.FC = () => {
         break;
 
       default:
-        // Unknown message type
+      // Unknown message type
     }
   };
 

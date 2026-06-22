@@ -100,7 +100,7 @@ export const PrivacyMLDashboard: React.FC = () => {
         console.error('Federated learning connection error');
       });
 
-      socket.on("disconnect", () => {
+      socket.on('disconnect', () => {
         // Federated learning disconnected
       });
     }

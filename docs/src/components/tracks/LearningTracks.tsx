@@ -84,7 +84,7 @@ export function LearningTracks() {
 
           <div className="mb-4">
             <h4 className="text-sm font-medium text-gray-700 mb-2">
-              What you'll learn:
+              What you&apos;ll learn:
             </h4>
             <ul className="space-y-1">
               {track.modules.map((module, idx) => (

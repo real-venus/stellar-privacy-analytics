@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { Modal } from './ui/Modal';
 
 import { WebCryptoService, EncryptedFile, UploadProgress } from '../lib/webCrypto';
-import { Service} from '../lib/zkProof';
+import { Service } from '../lib/zkProof';
 import { StellarWalletService, StellarAccount, UploadReceipt } from '../lib/stellarWallet';
 
 interface SecureDataUploadProps {

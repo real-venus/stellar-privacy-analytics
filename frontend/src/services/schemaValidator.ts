@@ -1,4 +1,4 @@
-import { SchemaConfig, SchemaField} from '../components/SchemaBuilder/SchemaBuilder';
+import { SchemaConfig, SchemaField } from '../components/SchemaBuilder/SchemaBuilder';
 
 export interface ValidationResult {
   success: boolean;
