@@ -403,7 +403,7 @@ impl StellarAnalytics {
             &(active_analyses - 1),
         );
 
-        // Refund unused privacy budget
+        // Refund unused privacy budget and update global counter
         let refund = privacy_budget_for_refund - privacy_budget_used;
         if refund > 0 {
             let current_budget =
@@ -412,6 +412,17 @@ impl StellarAnalytics {
                 env.clone(),
                 requester_for_refund,
                 current_budget + refund,
+            );
+
+            // Decrement global privacy budget used counter by the refund amount
+            let total_budget_used: i128 = env
+                .storage()
+                .instance()
+                .get(&Symbol::new(&env, "total_privacy_budget_used"))
+                .unwrap_or(0);
+            env.storage().instance().set(
+                &Symbol::new(&env, "total_privacy_budget_used"),
+                &(total_budget_used - refund),
             );
         }
 
@@ -462,13 +473,26 @@ impl StellarAnalytics {
             .instance()
             .set(&Symbol::new(&env, "analysis_requests"), &requests);
 
-        // Refund privacy budget
+        // Refund privacy budget and update global counter
         let current_budget = Self::get_user_privacy_budget(env.clone(), cancel_requester.clone());
         Self::set_user_privacy_budget(
             env.clone(),
             cancel_requester,
             current_budget + cancel_budget,
         );
+
+        // Decrement global privacy budget used counter by the refund amount
+        if cancel_budget > 0 {
+            let total_budget_used: i128 = env
+                .storage()
+                .instance()
+                .get(&Symbol::new(&env, "total_privacy_budget_used"))
+                .unwrap_or(0);
+            env.storage().instance().set(
+                &Symbol::new(&env, "total_privacy_budget_used"),
+                &(total_budget_used - cancel_budget),
+            );
+        }
 
         // Update active analyses count
         let active_analyses: u64 = env
@@ -949,5 +973,174 @@ impl StellarAnalytics {
         );
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+
+    #[test]
+    fn test_total_privacy_budget_decremented_on_complete_with_partial_usage() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let user = Address::generate(&env);
+        let oracle = Address::generate(&env);
+
+        StellarAnalytics::initialize(env.clone(), admin.clone());
+        StellarAnalytics::add_oracle(env.clone(), oracle.clone()).unwrap();
+        StellarAnalytics::add_privacy_budget(env.clone(), user.clone(), 100000000000000000)
+            .unwrap();
+
+        let cid = String::from_str(&env, "QmTest12345678901234567");
+        let dataset_hash = BytesN::<32>::from_array(&env, &[1u8; 32]);
+        StellarAnalytics::register_dataset(
+            env.clone(),
+            cid.clone(),
+            dataset_hash.clone(),
+            user.clone(),
+            1024,
+            false,
+            1,
+            None,
+        )
+        .unwrap();
+
+        let request_id = StellarAnalytics::request_analysis(
+            env.clone(),
+            user.clone(),
+            dataset_hash,
+            cid,
+            String::from_str(&env, "descriptive"),
+            String::from_str(&env, "standard"),
+        )
+        .unwrap();
+
+        // Verify total_privacy_budget_used was incremented
+        let (_total, budget_used, _active) = StellarAnalytics::get_stats(env.clone());
+        assert_eq!(budget_used, 100000000000000000);
+
+        // Complete with 50% usage — 50 tokens refunded, counter should decrement
+        let result_hash = BytesN::<32>::from_array(&env, &[3u8; 32]);
+        let privacy_proofs = Vec::new(&env);
+        StellarAnalytics::complete_analysis(
+            env.clone(),
+            request_id,
+            result_hash,
+            50000000000000000,
+            95,
+            privacy_proofs,
+        )
+        .unwrap();
+
+        let (_total, budget_used_after, _active) = StellarAnalytics::get_stats(env.clone());
+        assert_eq!(budget_used_after, 50000000000000000);
+    }
+
+    #[test]
+    fn test_total_privacy_budget_unchanged_on_complete_with_full_usage() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let user = Address::generate(&env);
+        let oracle = Address::generate(&env);
+
+        StellarAnalytics::initialize(env.clone(), admin.clone());
+        StellarAnalytics::add_oracle(env.clone(), oracle.clone()).unwrap();
+        StellarAnalytics::add_privacy_budget(env.clone(), user.clone(), 100000000000000000)
+            .unwrap();
+
+        let cid = String::from_str(&env, "QmTest12345678901234567");
+        let dataset_hash = BytesN::<32>::from_array(&env, &[1u8; 32]);
+        StellarAnalytics::register_dataset(
+            env.clone(),
+            cid.clone(),
+            dataset_hash.clone(),
+            user.clone(),
+            1024,
+            false,
+            1,
+            None,
+        )
+        .unwrap();
+
+        let request_id = StellarAnalytics::request_analysis(
+            env.clone(),
+            user.clone(),
+            dataset_hash,
+            cid,
+            String::from_str(&env, "descriptive"),
+            String::from_str(&env, "standard"),
+        )
+        .unwrap();
+
+        let (_total, budget_used, _active) = StellarAnalytics::get_stats(env.clone());
+        assert_eq!(budget_used, 100000000000000000);
+
+        // Complete with 100% usage — no refund, counter should be unchanged
+        let result_hash = BytesN::<32>::from_array(&env, &[3u8; 32]);
+        let privacy_proofs = Vec::new(&env);
+        StellarAnalytics::complete_analysis(
+            env.clone(),
+            request_id,
+            result_hash,
+            100000000000000000,
+            95,
+            privacy_proofs,
+        )
+        .unwrap();
+
+        let (_total, budget_used_after, _active) = StellarAnalytics::get_stats(env.clone());
+        assert_eq!(budget_used_after, 100000000000000000);
+    }
+
+    #[test]
+    fn test_total_privacy_budget_decremented_on_cancel() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let user = Address::generate(&env);
+
+        StellarAnalytics::initialize(env.clone(), admin.clone());
+        StellarAnalytics::add_privacy_budget(env.clone(), user.clone(), 100000000000000000)
+            .unwrap();
+
+        let cid = String::from_str(&env, "QmTest12345678901234567");
+        let dataset_hash = BytesN::<32>::from_array(&env, &[1u8; 32]);
+        StellarAnalytics::register_dataset(
+            env.clone(),
+            cid.clone(),
+            dataset_hash.clone(),
+            user.clone(),
+            1024,
+            false,
+            1,
+            None,
+        )
+        .unwrap();
+
+        let request_id = StellarAnalytics::request_analysis(
+            env.clone(),
+            user.clone(),
+            dataset_hash,
+            cid,
+            String::from_str(&env, "descriptive"),
+            String::from_str(&env, "standard"),
+        )
+        .unwrap();
+
+        let (_total, budget_used, _active) = StellarAnalytics::get_stats(env.clone());
+        assert_eq!(budget_used, 100000000000000000);
+
+        // Cancel the analysis — full refund, counter should go back to 0
+        StellarAnalytics::cancel_analysis(env.clone(), request_id).unwrap();
+
+        let (_total, budget_used_after, _active) = StellarAnalytics::get_stats(env.clone());
+        assert_eq!(budget_used_after, 0);
     }
 }
