@@ -1,7 +1,6 @@
 # ─────────────────────────────────────────────────────────────
 #  Stellar Privacy Analytics — CI/CD Pipeline
-#  All jobs always run on every push/PR to ensure full coverage.
-#  Deploy only on push to main.
+#  All jobs run on every push/PR to ensure full coverage.
 # ─────────────────────────────────────────────────────────────
 name: CI/CD Pipeline
 
@@ -22,58 +21,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Detect changed paths ──────────────────────────────────
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
-      shared: ${{ steps.filter.outputs.shared }}
-      service-discovery: ${{ steps.filter.outputs.service-discovery }}
-      docs: ${{ steps.filter.outputs.docs }}
-      rust-root: ${{ steps.filter.outputs.rust-root }}
-      rust: ${{ steps.filter.outputs.rust }}
-      ci: ${{ steps.filter.outputs.ci }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            frontend:
-              - 'frontend/**'
-              - 'package.json'
-            backend:
-              - 'backend/**'
-              - 'package.json'
-            shared:
-              - 'shared/**'
-              - 'package.json'
-            service-discovery:
-              - 'service-discovery-dashboard/**'
-            rust-root:
-              - 'src/**'
-              - 'Cargo.toml'
-            rust:
-              - 'src/**'
-              - 'contracts/**'
-              - 'backend/src/**/*.rs'
-              - 'backend/Cargo.toml'
-              - 'Cargo.toml'
-              - '**/Cargo.toml'
-              - '**/*.rs'
-            docs:
-              - 'docs/**'
-            ci:
-              - '.github/workflows/**'
-              - '.github/actions/**'
-
   # ── Shared library ────────────────────────────────────────
   shared:
     name: Shared Library
-    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -100,7 +50,6 @@ jobs:
   # ── Frontend: lint, type-check, test, build ───────────────
   frontend:
     name: Frontend
-    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -132,7 +81,6 @@ jobs:
   # ── Backend: lint, type-check, test, build ────────────────
   backend:
     name: Backend
-    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -164,7 +112,6 @@ jobs:
   # ── Root Soroban Extras ──────────────────────────────────
   rust-extras:
     name: Rust Extras
-    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -189,7 +136,6 @@ jobs:
   # ── Service Discovery Dashboard ──────────────────────────
   service-discovery:
     name: Service Discovery
-    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -210,7 +156,6 @@ jobs:
   # ── Documentation ────────────────────────────────────────
   docs:
     name: Documentation
-    needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
