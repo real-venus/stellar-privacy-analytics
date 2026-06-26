@@ -12,6 +12,8 @@ pub mod upgradeable_proxy;
 mod access_control_tests;
 #[cfg(test)]
 mod invariant_testing_tests;
+#[cfg(test)]
+mod upgradeable_proxy_tests;
 
 pub use access_control::DataSovereigntyAccessControl;
 pub use admin::MultiSigAdmin;

@@ -15,8 +15,8 @@ const UPGRADE_DELAY_KEY: &str = "UPGRADE_DELAY";
 const UPGRADE_INITIATED_KEY: &str = "UPGRADE_INITIATED";
 
 // Constants
-const MIN_UPGRADE_DELAY: u64 = 86400; // 24 hours in seconds
-const DEFAULT_UPGRADE_DELAY: u64 = 604800; // 7 days in seconds
+pub const MIN_UPGRADE_DELAY: u64 = 86400; // 24 hours in seconds
+pub const DEFAULT_UPGRADE_DELAY: u64 = 604800; // 7 days in seconds
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[contracttype]

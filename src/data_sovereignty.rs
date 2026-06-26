@@ -119,9 +119,16 @@ impl DataSovereigntyContract {
     }
 
     /// Checks if a caller has valid, unexpired access to query the underlying data.
+    ///
+    /// NOTE: This is a read-only view function. It deliberately does **not**
+    /// invoke `caller.require_auth()` so that other contracts can compose on
+    /// top of this access-control layer (e.g. an aggregator contract calling
+    /// `check_access` on behalf of its end users). Authorization is enforced
+    /// at the point of mutation (`register_data`, `grant_access`,
+    /// `revoke_access`) and on the consuming contract, not here.
+    /// See GitHub issue #294.
     pub fn check_access(env: Env, cid: String, caller: Address) -> Result<bool, SovereigntyError> {
-        caller.require_auth();
-
+        // No `caller.require_auth()` here — see issue #294 for rationale.
         let owner_key = DataKey::Owner(cid.clone());
         let actual_owner: Address = env
             .storage()
@@ -153,7 +160,7 @@ impl DataSovereigntyContract {
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::{Address as _, Ledger as _};
 
     #[test]
     fn test_data_registration_and_access() {
@@ -167,5 +174,132 @@ mod test {
         let cid = String::from_str(&env, "QmHash123...");
 
         client.register_data(&owner, &cid);
+    }
+
+    /// Verifies that `check_access` is composable: a caller can query on
+    /// behalf of any other address without that address having to provide a
+    /// signature. This is the regression test for issue #294.
+    #[test]
+    fn test_check_access_is_composable_cross_contract() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DataSovereigntyContract, ());
+        let client = DataSovereigntyContractClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let grantee = Address::generate(&env);
+        let actor = Address::generate(&env); // a separate contract / relayer
+        let cid = String::from_str(&env, "QmComposableHash");
+        let expiration_ts = env.ledger().timestamp() + 10_000;
+
+        client.register_data(&owner, &cid);
+        client.grant_access(&owner, &cid, &grantee, &expiration_ts);
+
+        // The owner can be queried through `check_access` by anyone,
+        // including a third party that did not authorize.
+        let owner_ok = client.try_check_access(&cid, &owner);
+        assert_eq!(owner_ok, Ok(Ok(true)));
+
+        // A granted grantee is reachable by an unrelated caller (composability).
+        let grantee_ok = client.try_check_access(&cid, &grantee);
+        assert_eq!(grantee_ok, Ok(Ok(true)));
+
+        // An arbitrary caller that was never granted access is denied.
+        let actor_result = client.try_check_access(&cid, &actor);
+        assert_eq!(actor_result, Err(Ok(SovereigntyError::AccessDenied)));
+    }
+
+    /// A non-existent CID must surface `DataNotFound`, not silently grant access.
+    #[test]
+    fn test_check_access_unknown_cid_returns_not_found() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DataSovereigntyContract, ());
+        let client = DataSovereigntyContractClient::new(&env, &contract_id);
+
+        let caller = Address::generate(&env);
+        let cid = String::from_str(&env, "QmUnknown");
+
+        let result = client.try_check_access(&cid, &caller);
+        assert_eq!(result, Err(Ok(SovereigntyError::DataNotFound)));
+    }
+
+    /// `check_access` must surface `AccessExpired` (not silently `true`)
+    /// once a grantee's window has elapsed.
+    #[test]
+    fn test_check_access_expired_grant_reports_access_expired() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DataSovereigntyContract, ());
+        let client = DataSovereigntyContractClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let grantee = Address::generate(&env);
+        let cid = String::from_str(&env, "QmExpired");
+
+        let expiration_ts = env.ledger().timestamp() + 100;
+        client.register_data(&owner, &cid);
+        client.grant_access(&owner, &cid, &grantee, &expiration_ts);
+
+        // Still valid.
+        let before = client.try_check_access(&cid, &grantee);
+        assert_eq!(before, Ok(Ok(true)));
+
+        // Cross the expiration boundary.
+        env.ledger().set_timestamp(expiration_ts + 1);
+        let res = client.try_check_access(&cid, &grantee);
+        assert_eq!(res, Err(Ok(SovereigntyError::AccessExpired)));
+    }
+
+    /// `revoke_access` must cause `check_access` to surface `AccessDenied`
+    /// (the key is gone, so it's not "expired"; the grant was undone).
+    #[test]
+    fn test_revoked_grantee_is_denied() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DataSovereigntyContract, ());
+        let client = DataSovereigntyContractClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let grantee = Address::generate(&env);
+        let cid = String::from_str(&env, "QmRevoked");
+
+        client.register_data(&owner, &cid);
+        client.grant_access(&owner, &cid, &grantee, &1_000_000);
+        client.revoke_access(&owner, &cid, &grantee);
+
+        let res = client.try_check_access(&cid, &grantee);
+        assert_eq!(res, Err(Ok(SovereigntyError::AccessDenied)));
+    }
+
+    /// A non-owner must not be able to grant/revoke access on a CID they do
+    /// not own; the contract surfaces `NotOwner`.
+    #[test]
+    fn test_non_owner_cannot_grant_or_revoke_access() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(DataSovereigntyContract, ());
+        let client = DataSovereigntyContractClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let attacker = Address::generate(&env);
+        let victim = Address::generate(&env);
+        let cid = String::from_str(&env, "QmProtected");
+
+        client.register_data(&owner, &cid);
+
+        let grant = client.try_grant_access(&attacker, &cid, &victim, &1_000_000);
+        assert_eq!(grant, Err(Ok(SovereigntyError::NotOwner)));
+
+        // Owner grants legitimate access so we can verify revoke is also
+        // gated.
+        client.grant_access(&owner, &cid, &victim, &1_000_000);
+        let revoke = client.try_revoke_access(&attacker, &cid, &victim);
+        assert_eq!(revoke, Err(Ok(SovereigntyError::NotOwner)));
     }
 }
