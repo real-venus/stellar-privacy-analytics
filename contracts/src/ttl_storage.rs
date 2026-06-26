@@ -214,7 +214,7 @@ impl TtlStorage {
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
-            .unwrap();
+            .ok_or(TtlStorageError::NotAuthorized)?;
         if requester != entry.owner && requester != admin {
             return Err(TtlStorageError::NotAuthorized);
         }
@@ -488,5 +488,66 @@ impl TtlStorage {
         env.storage()
             .persistent()
             .set(&(Symbol::new(&env, "balance_"), user.clone()), &new_balance);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+
+    #[test]
+    fn test_retrieve_data_from_uninitialized_contract_returns_error() {
+        let env = Env::default();
+        let requester = Address::generate(&env);
+        let entry_id = BytesN::<32>::from_array(&env, &[1u8; 32]);
+
+        // Attempting to retrieve data from an uninitialized contract
+        // should return Err (NotAuthorized) instead of panicking
+        let result = TtlStorage::retrieve_data(env, entry_id, requester);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_retrieve_data_from_initialized_contract_succeeds() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let owner = Address::generate(&env);
+        let stranger = Address::generate(&env);
+
+        // Initialize the contract
+        TtlStorage::initialize(env.clone(), admin.clone());
+
+        // Store some data
+        let data = Bytes::from_slice(&env, &[42u8; 100]);
+        let mut metadata = Map::new(&env);
+        metadata.set(
+            String::from_str(&env, "key"),
+            String::from_str(&env, "value"),
+        );
+
+        let entry_id = TtlStorage::store_data(
+            env.clone(),
+            owner.clone(),
+            data.clone(),
+            false,
+            24,
+            metadata,
+        )
+        .unwrap();
+
+        // Retrieve data as the owner — should succeed
+        let result = TtlStorage::retrieve_data(env.clone(), entry_id.clone(), owner);
+        assert!(result.is_ok());
+
+        // Retrieve data as admin — should succeed
+        let result = TtlStorage::retrieve_data(env.clone(), entry_id.clone(), admin);
+        assert!(result.is_ok());
+
+        // Retrieve data as a stranger (not owner, not admin) — should fail with NotAuthorized
+        let result = TtlStorage::retrieve_data(env.clone(), entry_id, stranger);
+        assert!(result.is_err());
     }
 }
