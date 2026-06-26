@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -342,8 +343,8 @@ impl DataSovereigntyAccessControl {
 
         // Generate unique key ID
         let mut key_data = soroban_sdk::Bytes::new(&env);
-        key_data.append(&resource_id.to_xdr(&env));
-        key_data.append(&holder.to_xdr(&env));
+        key_data.append(&resource_id.clone().to_xdr(&env));
+        key_data.append(&holder.clone().to_xdr(&env));
         key_data.append(&Bytes::from_slice(
             &env,
             &env.ledger().timestamp().to_be_bytes(),

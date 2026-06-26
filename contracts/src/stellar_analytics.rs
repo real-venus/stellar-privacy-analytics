@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -176,16 +177,16 @@ impl StellarAnalytics {
             .set(&Symbol::new(&env, "privacy_levels"), &privacy_levels);
         env.storage()
             .instance()
-            .set(&Symbol::new(&env, "total_analyses"), 0u64);
+            .set(&Symbol::new(&env, "total_analyses"), &0u64);
         env.storage()
             .instance()
-            .set(&Symbol::new(&env, "total_privacy_budget_used"), 0i128);
+            .set(&Symbol::new(&env, "total_privacy_budget_used"), &0i128);
         env.storage()
             .instance()
-            .set(&Symbol::new(&env, "active_analyses"), 0u64);
+            .set(&Symbol::new(&env, "active_analyses"), &0u64);
         env.storage()
             .instance()
-            .set(&Symbol::new(&env, "initialized"), true);
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     /// Request a new analysis with privacy protection
@@ -223,10 +224,10 @@ impl StellarAnalytics {
 
         // Generate request ID
         let mut hash_input = soroban_sdk::Bytes::new(&env);
-        hash_input.append(&requester.to_xdr(&env));
-        hash_input.append(&dataset_hash.to_xdr(&env));
-        hash_input.append(&ipfs_cid.to_xdr(&env));
-        hash_input.append(&analysis_type.to_xdr(&env));
+        hash_input.append(&requester.clone().to_xdr(&env));
+        hash_input.append(&dataset_hash.clone().to_xdr(&env));
+        hash_input.append(&ipfs_cid.clone().to_xdr(&env));
+        hash_input.append(&analysis_type.clone().to_xdr(&env));
         hash_input.append(&Bytes::from_slice(
             &env,
             &env.ledger().timestamp().to_be_bytes(),
@@ -577,13 +578,13 @@ impl StellarAnalytics {
             }
         }
 
-        oracles.push_back(oracle);
+        oracles.push_back(oracle.clone());
         env.storage()
             .instance()
             .set(&Symbol::new(&env, "authorized_oracles"), &oracles);
 
         env.events()
-            .publish((Symbol::new(&env, "oracle_added"), oracle.clone()), ());
+            .publish((Symbol::new(&env, "oracle_added"), oracle), ());
 
         Ok(())
     }

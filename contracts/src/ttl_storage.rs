@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -160,16 +161,17 @@ impl TtlStorage {
         let chunks = Self::split_into_chunks(&env, &data, &entry_id)?;
 
         // Store chunks
-        for chunk in chunks {
+        for chunk in &chunks {
             env.storage().temporary().set(&chunk.chunk_id, &chunk);
         }
 
         // Create data entry
+        let chunk_count = chunks.len() as u32;
         let entry = DataEntry {
             entry_id: entry_id.clone(),
             owner: owner.clone(),
             data_hash: env.crypto().sha256(&data).into(),
-            chunk_count: chunks.len() as u32,
+            chunk_count,
             created_at: current_time,
             expires_at,
             ttl_extension_count: 0,
@@ -210,7 +212,7 @@ impl TtlStorage {
         }
 
         // Verify requester authorization (owner or admin)
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
@@ -331,7 +333,7 @@ impl TtlStorage {
         amount: i128,
     ) -> Result<(), TtlStorageError> {
         // Verify admin authorization
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
@@ -393,7 +395,7 @@ impl TtlStorage {
                 break;
             }
 
-            let chunk_data = data.slice(start, end - start);
+            let chunk_data = data.slice(start..end);
             let chunk_id = Self::generate_chunk_id(env, entry_id, i);
             let checksum: BytesN<32> = env.crypto().sha256(&chunk_data).into();
 
