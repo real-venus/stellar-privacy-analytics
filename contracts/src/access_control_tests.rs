@@ -9,6 +9,7 @@ mod tests {
     #[test]
     fn test_initialize() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
 
         DataSovereigntyAccessControl::initialize(env.clone(), admin.clone());
@@ -24,6 +25,7 @@ mod tests {
     #[test]
     fn test_register_resource() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let owner = Address::generate(&env);
         let resource_id = BytesN::<32>::random(&env);
@@ -45,6 +47,7 @@ mod tests {
     #[test]
     fn test_grant_and_revoke_access() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let owner = Address::generate(&env);
         let user = Address::generate(&env);
@@ -62,6 +65,7 @@ mod tests {
 
         let grant_result = DataSovereigntyAccessControl::grant_access(
             env.clone(),
+            owner.clone(),
             resource_id.clone(),
             user.clone(),
             PermissionType::Read,
@@ -81,7 +85,7 @@ mod tests {
         assert!(has_access);
 
         let revoke_result =
-            DataSovereigntyAccessControl::revoke_access(env.clone(), resource_id, user.clone());
+            DataSovereigntyAccessControl::revoke_access(env.clone(), owner.clone(), resource_id, user.clone());
 
         assert!(revoke_result.is_ok());
     }
@@ -89,6 +93,7 @@ mod tests {
     #[test]
     fn test_access_key_creation() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let owner = Address::generate(&env);
         let holder = Address::generate(&env);
@@ -109,6 +114,7 @@ mod tests {
 
         let key_id = DataSovereigntyAccessControl::create_access_key(
             env.clone(),
+            owner.clone(),
             resource_id,
             holder.clone(),
             permissions,
@@ -122,6 +128,7 @@ mod tests {
     #[test]
     fn test_permission_hierarchy() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let owner = Address::generate(&env);
         let user = Address::generate(&env);
@@ -140,6 +147,7 @@ mod tests {
         // Grant write permission
         DataSovereigntyAccessControl::grant_access(
             env.clone(),
+            owner.clone(),
             resource_id.clone(),
             user.clone(),
             PermissionType::Write,
@@ -184,6 +192,7 @@ mod tests {
     #[test]
     fn test_ttl_expiration() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let owner = Address::generate(&env);
         let user = Address::generate(&env);
@@ -202,6 +211,7 @@ mod tests {
         // Grant access with 1 second TTL
         DataSovereigntyAccessControl::grant_access(
             env.clone(),
+            owner.clone(),
             resource_id.clone(),
             user.clone(),
             PermissionType::Read,

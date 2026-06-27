@@ -61,7 +61,9 @@ impl FixedPointMath {
         let ln_val = Self::ln_1_minus_x(two_abs_u);
 
         // -b * sgn(U) * ln(...)
-        (-b * sign * ln_val) / Self::SCALE
+        // Use saturating_mul to prevent integer overflow — extremes are clamped
+        // to i128::MAX / i128::MIN so that DP noise never panics.
+        (-b).saturating_mul(sign).saturating_mul(ln_val) / Self::SCALE
     }
 }
 
