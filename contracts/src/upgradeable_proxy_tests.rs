@@ -6,15 +6,19 @@
 //! the current accept/reject decisions so future refactors cannot silently
 //! weaken the upgrade flow.
 //!
-//! Note: the proxy contract itself guards mutating functions with an
-//! `if caller != admin` equality check on the caller-supplied `Address`
-//! parameter. **It does not call `caller.require_auth()`** (see the PR
-//! description for follow-up). Because these tests run under
-//! `env.mock_all_auths()`, they exercise the equality check but cannot
-//! test host-level signature verification. A future PR adding
-//! `caller.require_auth()` should add a complementary test that drops
-//! `mock_all_auths()` and verifies the unauthorized call is rejected by
-//! the host.
+//! The proxy contract now calls `caller.require_auth()` on every mutating
+//! function BEFORE the equality check against the stored admin. This prevents
+//! caller-spoofing: without host-level auth, any contract could pass the
+//! stored admin Address as the `caller` argument and the equality check
+//! alone would let it through.
+//!
+//! Tests fall into two categories:
+//! * Tests using `new_env()` (which calls `mock_all_auths()`) verify the
+//!   in-contract equality check and business logic — `require_auth()` is
+//!   satisfied automatically.
+//! * `#[should_panic]` tests use `MockAuth`/`MockAuthInvoke` to authorize
+//!   only prerequisite calls, then drop auths before the target call so
+//!   the host-level auth rejection is observed.
 
 #![cfg(test)]
 
@@ -23,12 +27,19 @@ use super::upgradeable_proxy::{
 };
 use soroban_sdk::testutils::Address as _;
 use soroban_sdk::testutils::Ledger;
-use soroban_sdk::{Address, BytesN, Env};
+use soroban_sdk::testutils::MockAuth;
+use soroban_sdk::testutils::MockAuthInvoke;
+use soroban_sdk::{Address, BytesN, Env, IntoVal, Val, Vec};
 
 fn new_env() -> Env {
     let env = Env::default();
     env.mock_all_auths();
     env
+}
+
+/// An uninitialized env without mock_all_auths for host-auth tests.
+fn raw_env() -> Env {
+    Env::default()
 }
 
 /// Initial implementation address baked into every test fixture below.
@@ -347,4 +358,217 @@ fn view_functions_reject_uninitialized_contract() {
     assert!(client.upgrade_delay() >= MIN_UPGRADE_DELAY);
     // pending_upgrade returns None when there is nothing pending.
     assert_eq!(client.pending_upgrade(), None);
+}
+
+// ---------------------------------------------------------------------------
+// Host-level auth rejection — #[should_panic] tests for issue #297
+// ---------------------------------------------------------------------------
+// These tests verify that the Soroban host rejects unsigned invocations of
+// the five mutating entry points, even when the supplied `caller` argument
+// equals the stored admin. The MockAuth / MockAuthInvoke pattern authorizes
+// only prerequisite calls, then drops auths before the target call.
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn initiate_upgrade_panics_when_admin_provides_no_signature() {
+    let env = raw_env();
+    let admin = Address::generate(&env);
+    let impl_addr = BytesN::from_array(&env, &TEST_IMPL);
+
+    let contract_id = env.register(UpgradeableProxy, ());
+    let client = UpgradeableProxyClient::new(&env, &contract_id);
+
+    // Authorize ONLY the initialize call.
+    let init_args: Vec<Val> = Vec::from_array(
+        &env,
+        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    env.mock_auths(&[MockAuth {
+        address: &admin,
+        invoke: &MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "initialize",
+            args: init_args,
+            sub_invokes: &[],
+        },
+    }]);
+    client.initialize(&impl_addr, &admin);
+
+    // Drop all auths — the next call has zero authorization.
+    env.mock_auths(&[]);
+
+    let new_impl = BytesN::from_array(&env, &[1u8; 32]);
+    // This MUST panic with a host auth error.
+    client.initiate_upgrade(&new_impl, &admin);
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn complete_upgrade_panics_when_admin_provides_no_signature() {
+    let env = raw_env();
+    let admin = Address::generate(&env);
+    let impl_addr = BytesN::from_array(&env, &TEST_IMPL);
+
+    let contract_id = env.register(UpgradeableProxy, ());
+    let client = UpgradeableProxyClient::new(&env, &contract_id);
+
+    // Authorize initialize + initiate_upgrade.
+    let init_args: Vec<Val> = Vec::from_array(
+        &env,
+        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    let new_impl = BytesN::from_array(&env, &[1u8; 32]);
+    let init_upg_args: Vec<Val> = Vec::from_array(
+        &env,
+        [new_impl.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    env.mock_auths(&[
+        MockAuth {
+            address: &admin,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "initialize",
+                args: init_args,
+                sub_invokes: &[],
+            },
+        },
+        MockAuth {
+            address: &admin,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "initiate_upgrade",
+                args: init_upg_args,
+                sub_invokes: &[],
+            },
+        },
+    ]);
+    client.initialize(&impl_addr, &admin);
+    client.initiate_upgrade(&new_impl, &admin);
+
+    // Advance past the upgrade delay.
+    let delay = client.upgrade_delay();
+    env.ledger().set_timestamp(env.ledger().timestamp() + delay + 1);
+
+    // Drop all auths.
+    env.mock_auths(&[]);
+
+    // This MUST panic with a host auth error.
+    client.complete_upgrade(&admin);
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn cancel_upgrade_panics_when_admin_provides_no_signature() {
+    let env = raw_env();
+    let admin = Address::generate(&env);
+    let impl_addr = BytesN::from_array(&env, &TEST_IMPL);
+
+    let contract_id = env.register(UpgradeableProxy, ());
+    let client = UpgradeableProxyClient::new(&env, &contract_id);
+
+    // Authorize initialize + initiate_upgrade.
+    let init_args: Vec<Val> = Vec::from_array(
+        &env,
+        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    let new_impl = BytesN::from_array(&env, &[1u8; 32]);
+    let init_upg_args: Vec<Val> = Vec::from_array(
+        &env,
+        [new_impl.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    env.mock_auths(&[
+        MockAuth {
+            address: &admin,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "initialize",
+                args: init_args,
+                sub_invokes: &[],
+            },
+        },
+        MockAuth {
+            address: &admin,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "initiate_upgrade",
+                args: init_upg_args,
+                sub_invokes: &[],
+            },
+        },
+    ]);
+    client.initialize(&impl_addr, &admin);
+    client.initiate_upgrade(&new_impl, &admin);
+
+    // Drop all auths.
+    env.mock_auths(&[]);
+
+    // This MUST panic with a host auth error.
+    client.cancel_upgrade(&admin);
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn set_upgrade_delay_panics_when_admin_provides_no_signature() {
+    let env = raw_env();
+    let admin = Address::generate(&env);
+    let impl_addr = BytesN::from_array(&env, &TEST_IMPL);
+
+    let contract_id = env.register(UpgradeableProxy, ());
+    let client = UpgradeableProxyClient::new(&env, &contract_id);
+
+    // Authorize ONLY the initialize call.
+    let init_args: Vec<Val> = Vec::from_array(
+        &env,
+        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    env.mock_auths(&[MockAuth {
+        address: &admin,
+        invoke: &MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "initialize",
+            args: init_args,
+            sub_invokes: &[],
+        },
+    }]);
+    client.initialize(&impl_addr, &admin);
+
+    // Drop all auths.
+    env.mock_auths(&[]);
+
+    // This MUST panic with a host auth error.
+    client.set_upgrade_delay(&(MIN_UPGRADE_DELAY + 60), &admin);
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+fn transfer_admin_panics_when_admin_provides_no_signature() {
+    let env = raw_env();
+    let admin = Address::generate(&env);
+    let new_admin = Address::generate(&env);
+    let impl_addr = BytesN::from_array(&env, &TEST_IMPL);
+
+    let contract_id = env.register(UpgradeableProxy, ());
+    let client = UpgradeableProxyClient::new(&env, &contract_id);
+
+    // Authorize ONLY the initialize call.
+    let init_args: Vec<Val> = Vec::from_array(
+        &env,
+        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+    );
+    env.mock_auths(&[MockAuth {
+        address: &admin,
+        invoke: &MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "initialize",
+            args: init_args,
+            sub_invokes: &[],
+        },
+    }]);
+    client.initialize(&impl_addr, &admin);
+
+    // Drop all auths.
+    env.mock_auths(&[]);
+
+    // This MUST panic with a host auth error.
+    client.transfer_admin(&new_admin, &admin);
 }

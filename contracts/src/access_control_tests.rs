@@ -76,12 +76,12 @@ mod tests {
         client.register_resource(&resource_id, &owner, &false, &1u32, &signers);
 
         let ttl: Option<u64> = Some(86400);
-        client.grant_access(&resource_id, &user, &PermissionType::Read, &ttl);
+        client.grant_access(&owner, &resource_id, &user, &PermissionType::Read, &ttl);
 
         let has_access = client.check_access(&user, &resource_id, &PermissionType::Read);
         assert!(has_access);
 
-        client.revoke_access(&resource_id, &user);
+        client.revoke_access(&owner, &resource_id, &user);
 
         let has_access_after = client.check_access(&user, &resource_id, &PermissionType::Read);
         assert!(!has_access_after);
@@ -110,7 +110,7 @@ mod tests {
         permissions.push_back(PermissionType::Read);
 
         let ttl: Option<u64> = Some(86400);
-        let key_id = client.create_access_key(&resource_id, &holder, &permissions, &ttl);
+        let key_id = client.create_access_key(&owner, &resource_id, &holder, &permissions, &ttl);
 
         assert_ne!(key_id, BytesN::<32>::from_array(&env, &[0u8; 32]));
     }
@@ -136,7 +136,7 @@ mod tests {
 
         // Grant write permission
         let no_ttl: Option<u64> = None;
-        client.grant_access(&resource_id, &user, &PermissionType::Write, &no_ttl);
+        client.grant_access(&owner, &resource_id, &user, &PermissionType::Write, &no_ttl);
 
         // Should have read access (write includes read)
         let has_read = client.check_access(&user, &resource_id, &PermissionType::Read);
@@ -172,7 +172,7 @@ mod tests {
 
         // Grant access with 1 second TTL
         let ttl: Option<u64> = Some(1);
-        client.grant_access(&resource_id, &user, &PermissionType::Read, &ttl);
+        client.grant_access(&owner, &resource_id, &user, &PermissionType::Read, &ttl);
 
         // Should have access immediately
         let has_access = client.check_access(&user, &resource_id, &PermissionType::Read);

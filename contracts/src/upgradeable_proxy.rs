@@ -124,6 +124,12 @@ impl UpgradeableProxy {
         new_implementation: BytesN<32>,
         caller: Address,
     ) -> Result<(), ProxyError> {
+        // Enforce host-level authorization to prevent caller-spoofing.
+        // Without this, any contract could pass the stored admin Address
+        // as the `caller` argument and the equality check alone would
+        // let it through. See GitHub issue #297.
+        caller.require_auth();
+
         // Check if caller is admin
         let admin = Self::admin(env.clone())?;
         if caller != admin {
@@ -179,6 +185,9 @@ impl UpgradeableProxy {
 
     /// Complete the upgrade after delay period
     pub fn complete_upgrade(env: Env, caller: Address) -> Result<(), ProxyError> {
+        // Enforce host-level authorization to prevent caller-spoofing.
+        caller.require_auth();
+
         // Check if caller is admin
         let admin = Self::admin(env.clone())?;
         if caller != admin {
@@ -250,6 +259,9 @@ impl UpgradeableProxy {
 
     /// Cancel pending upgrade
     pub fn cancel_upgrade(env: Env, caller: Address) -> Result<(), ProxyError> {
+        // Enforce host-level authorization to prevent caller-spoofing.
+        caller.require_auth();
+
         // Check if caller is admin
         let admin = Self::admin(env.clone())?;
         if caller != admin {
@@ -284,6 +296,9 @@ impl UpgradeableProxy {
 
     /// Set upgrade delay (only callable by admin)
     pub fn set_upgrade_delay(env: Env, new_delay: u64, caller: Address) -> Result<(), ProxyError> {
+        // Enforce host-level authorization to prevent caller-spoofing.
+        caller.require_auth();
+
         // Check if caller is admin
         let admin = Self::admin(env.clone())?;
         if caller != admin {
@@ -365,6 +380,9 @@ impl UpgradeableProxy {
 
     /// Transfer admin rights (only callable by current admin)
     pub fn transfer_admin(env: Env, new_admin: Address, caller: Address) -> Result<(), ProxyError> {
+        // Enforce host-level authorization to prevent caller-spoofing.
+        caller.require_auth();
+
         // Check if caller is admin
         let admin = Self::admin(env.clone())?;
         if caller != admin {
