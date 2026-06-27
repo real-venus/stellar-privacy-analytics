@@ -173,6 +173,19 @@ mod test {
 
     #[contractimpl]
     impl RelayContract {
+        /// Forwards a `check_access` query on behalf of an opaque end user.
+        ///
+        /// On soroban-sdk 22 the generated `try_check_access` returns
+        /// `Result<Result<bool, ConversionError>, Result<SE, InvokeError>>`
+        /// where:
+        /// * `Ok(Ok(b))`           = success
+        /// * `Err(Ok(contract_err))` = the contract returned our error enum
+        /// * `Ok(Err(_)) | Err(Err(_))` = unexpected (arg conversion /
+        ///   host invoke failure); not reachable in this test.
+        ///
+        /// We unwrap the outer layer and propagate the inner
+        /// `SovereigntyError` so the test can `assert_eq!` against a
+        /// flat `Result<bool, SovereigntyError>`.
         pub fn relay_check(
             env: Env,
             sovereignty_contract: Address,
@@ -180,8 +193,15 @@ mod test {
             end_user: Address,
         ) -> Result<bool, SovereigntyError> {
             let client = DataSovereigntyContractClient::new(&env, &sovereignty_contract);
-            // Use try_check_access so errors propagate, not panic.
-            client.try_check_access(&cid, &end_user)
+            // Explicit type annotations on each constructor pin the result type to
+            // `Result<bool, SovereigntyError>`, sidestepping the soroban-sdk
+            // `try_check_access` double-Result shape (it returns
+            // `Result<Result<bool, ConversionError>, Result<SE, InvokeError>>`).
+            match client.try_check_access(&cid, &end_user) {
+                Ok(Ok(b)) => Ok::<bool, SovereigntyError>(b),
+                Err(Ok(e)) => Err::<bool, SovereigntyError>(e),
+                _ => panic!("unexpected check_access error variant from relay"),
+            }
         }
     }
 
@@ -217,8 +237,7 @@ mod test {
         let env = Env::default();
 
         let sovereignty_id = env.register(DataSovereigntyContract, ());
-        let sovereignty_client =
-            DataSovereigntyContractClient::new(&env, &sovereignty_id);
+        let sovereignty_client = DataSovereigntyContractClient::new(&env, &sovereignty_id);
 
         let owner = Address::generate(&env);
         let grantee = Address::generate(&env);
@@ -246,7 +265,7 @@ mod test {
                 invoke: &MockAuthInvoke {
                     contract: &sovereignty_id,
                     fn_name: "register_data",
-                    args: &register_args,
+                    args: register_args,
                     sub_invokes: &[],
                 },
             },
@@ -255,7 +274,7 @@ mod test {
                 invoke: &MockAuthInvoke {
                     contract: &sovereignty_id,
                     fn_name: "grant_access",
-                    args: &grant_args,
+                    args: grant_args,
                     sub_invokes: &[],
                 },
             },
@@ -270,18 +289,23 @@ mod test {
         let relay_id = env.register(RelayContract, ());
         let relay_client = RelayContractClient::new(&env, &relay_id);
 
-        // Owner always has access.
-        let owner_ok = relay_client.relay_check(&sovereignty_id, &cid, &owner);
-        assert_eq!(owner_ok, true);
+        // The relay lives in a separate contract, so we use the
+        // `try_relay_check` helper which preserves the inner
+        // `Result<bool, SovereigntyError>` envelope. (The plain
+        // `relay_check` wrapper would unwrap it to `bool` and panic on
+        // the contract-error path.)
+        // Owner always has access: `Ok(Ok(true))`.
+        let owner_outcome = relay_client.try_relay_check(&sovereignty_id, &cid, &owner);
+        assert_eq!(owner_outcome, Ok(Ok(true)));
 
         // Granted grantee has access (composability).
-        let grantee_ok = relay_client.relay_check(&sovereignty_id, &cid, &grantee);
-        assert_eq!(grantee_ok, true);
+        let grantee_outcome = relay_client.try_relay_check(&sovereignty_id, &cid, &grantee);
+        assert_eq!(grantee_outcome, Ok(Ok(true)));
 
-        // Stranger is denied — check_access returns Err(AccessDenied), not Ok(false).
-        let stranger_result =
-            relay_client.relay_check(&sovereignty_id, &cid, &stranger);
-        assert_eq!(stranger_result, Err(SovereigntyError::AccessDenied));
+        // Stranger is denied — check_access returns Err(AccessDenied),
+        // not Ok(false). The relay must forward this error verbatim.
+        let stranger_outcome = relay_client.try_relay_check(&sovereignty_id, &cid, &stranger);
+        assert_eq!(stranger_outcome, Err(Ok(SovereigntyError::AccessDenied)));
     }
 
     /// A non-existent CID must surface `DataNotFound`, not silently grant access.

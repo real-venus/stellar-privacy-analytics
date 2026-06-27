@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Added a RelayContract inside the test suite that exercises `check_access` in a true
   contract-to-contract flow. If `caller.require_auth()` is ever re-introduced, the
   host-level auth panic fails the regression test. Fixes #294.
+- **UpgradeableProxy: refactor with shared `verify_admin` helper and front-running protection**
+  Centralized `caller.require_auth()` + stored-admin equality into a single
+  `Self::verify_admin(&env, &caller)` helper used by every mutating entry point
+  (`initiate_upgrade`, `complete_upgrade`, `cancel_upgrade`, `set_upgrade_delay`,
+  `transfer_admin`). This prevents future mutating methods from accidentally
+  omitting host-level auth.
+- **UpgradeableProxy: require admin auth on `initialize`**
+  Defense-in-depth against front-running between contract deployment and the
+  legitimate admin's setup transaction.
 
 ## [1.0.0] - 2024-03-16
 
