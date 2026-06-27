@@ -160,7 +160,50 @@ impl DataSovereigntyContract {
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::testutils::{Address as _, Ledger as _};
+    use soroban_sdk::testutils::{Address as _, Ledger as _, MockAuth, MockAuthInvoke};
+    use soroban_sdk::{contract, contractimpl, IntoVal, Val, Vec};
+
+    /// A relay contract that calls `check_access` on behalf of an opaque
+    /// end user. This is the contract-to-contract form that issue #294
+    /// asks for: the relay itself cannot sign for the end user, so any
+    /// `caller.require_auth()` inside `check_access` would cause the host
+    /// to panic with an auth error.
+    #[contract]
+    pub struct RelayContract;
+
+    #[contractimpl]
+    impl RelayContract {
+        /// Forwards a `check_access` query on behalf of an opaque end user.
+        ///
+        /// On soroban-sdk 22 the generated `try_check_access` returns
+        /// `Result<Result<bool, ConversionError>, Result<SE, InvokeError>>`
+        /// where:
+        /// * `Ok(Ok(b))`           = success
+        /// * `Err(Ok(contract_err))` = the contract returned our error enum
+        /// * `Ok(Err(_)) | Err(Err(_))` = unexpected (arg conversion /
+        ///   host invoke failure); not reachable in this test.
+        ///
+        /// We unwrap the outer layer and propagate the inner
+        /// `SovereigntyError` so the test can `assert_eq!` against a
+        /// flat `Result<bool, SovereigntyError>`.
+        pub fn relay_check(
+            env: Env,
+            sovereignty_contract: Address,
+            cid: String,
+            end_user: Address,
+        ) -> Result<bool, SovereigntyError> {
+            let client = DataSovereigntyContractClient::new(&env, &sovereignty_contract);
+            // Explicit type annotations on each constructor pin the result type to
+            // `Result<bool, SovereigntyError>`, sidestepping the soroban-sdk
+            // `try_check_access` double-Result shape (it returns
+            // `Result<Result<bool, ConversionError>, Result<SE, InvokeError>>`).
+            match client.try_check_access(&cid, &end_user) {
+                Ok(Ok(b)) => Ok::<bool, SovereigntyError>(b),
+                Err(Ok(e)) => Err::<bool, SovereigntyError>(e),
+                _ => panic!("unexpected check_access error variant from relay"),
+            }
+        }
+    }
 
     #[test]
     fn test_data_registration_and_access() {
@@ -176,38 +219,93 @@ mod test {
         client.register_data(&owner, &cid);
     }
 
-    /// Verifies that `check_access` is composable: a caller can query on
-    /// behalf of any other address without that address having to provide a
-    /// signature. This is the regression test for issue #294.
+    /// Verifies that `check_access` is composable: a relay contract
+    /// (or any other contract) can call `check_access` on behalf of an
+    /// arbitrary end user without that user having to provide a signature.
+    ///
+    /// Regression test for issue #294.
+    ///
+    /// The test uses MockAuth / MockAuthInvoke to authorize ONLY the two
+    /// setup transactions (register_data, grant_access), then drops the
+    /// auth state before making the cross-contract relay call. If
+    /// `check_access` ever re-introduces `caller.require_auth()`, the
+    /// relay call would panic with a host auth error because the relay
+    /// cannot supply a signature for an arbitrary end user — and that
+    /// panic would fail this test.
     #[test]
     fn test_check_access_is_composable_cross_contract() {
         let env = Env::default();
-        env.mock_all_auths();
 
-        let contract_id = env.register(DataSovereigntyContract, ());
-        let client = DataSovereigntyContractClient::new(&env, &contract_id);
+        let sovereignty_id = env.register(DataSovereigntyContract, ());
+        let sovereignty_client = DataSovereigntyContractClient::new(&env, &sovereignty_id);
 
         let owner = Address::generate(&env);
         let grantee = Address::generate(&env);
-        let actor = Address::generate(&env); // a separate contract / relayer
+        let stranger = Address::generate(&env);
         let cid = String::from_str(&env, "QmComposableHash");
         let expiration_ts = env.ledger().timestamp() + 10_000;
 
-        client.register_data(&owner, &cid);
-        client.grant_access(&owner, &cid, &grantee, &expiration_ts);
+        // ---- authorize ONLY the two setup transactions ---------------
+        let register_args: Vec<Val> = Vec::from_array(
+            &env,
+            [owner.clone().into_val(&env), cid.clone().into_val(&env)],
+        );
+        let grant_args: Vec<Val> = Vec::from_array(
+            &env,
+            [
+                owner.clone().into_val(&env),
+                cid.clone().into_val(&env),
+                grantee.clone().into_val(&env),
+                expiration_ts.into_val(&env),
+            ],
+        );
+        env.mock_auths(&[
+            MockAuth {
+                address: &owner,
+                invoke: &MockAuthInvoke {
+                    contract: &sovereignty_id,
+                    fn_name: "register_data",
+                    args: register_args,
+                    sub_invokes: &[],
+                },
+            },
+            MockAuth {
+                address: &owner,
+                invoke: &MockAuthInvoke {
+                    contract: &sovereignty_id,
+                    fn_name: "grant_access",
+                    args: grant_args,
+                    sub_invokes: &[],
+                },
+            },
+        ]);
+        sovereignty_client.register_data(&owner, &cid);
+        sovereignty_client.grant_access(&owner, &cid, &grantee, &expiration_ts);
 
-        // The owner can be queried through `check_access` by anyone,
-        // including a third party that did not authorize.
-        let owner_ok = client.try_check_access(&cid, &owner);
-        assert_eq!(owner_ok, Ok(Ok(true)));
+        // ---- drop ALL auths — cross-contract call must succeed without them
+        env.mock_auths(&[]);
 
-        // A granted grantee is reachable by an unrelated caller (composability).
-        let grantee_ok = client.try_check_access(&cid, &grantee);
-        assert_eq!(grantee_ok, Ok(Ok(true)));
+        // Deploy the relay and exercise every access-control arm.
+        let relay_id = env.register(RelayContract, ());
+        let relay_client = RelayContractClient::new(&env, &relay_id);
 
-        // An arbitrary caller that was never granted access is denied.
-        let actor_result = client.try_check_access(&cid, &actor);
-        assert_eq!(actor_result, Err(Ok(SovereigntyError::AccessDenied)));
+        // The relay lives in a separate contract, so we use the
+        // `try_relay_check` helper which preserves the inner
+        // `Result<bool, SovereigntyError>` envelope. (The plain
+        // `relay_check` wrapper would unwrap it to `bool` and panic on
+        // the contract-error path.)
+        // Owner always has access: `Ok(Ok(true))`.
+        let owner_outcome = relay_client.try_relay_check(&sovereignty_id, &cid, &owner);
+        assert_eq!(owner_outcome, Ok(Ok(true)));
+
+        // Granted grantee has access (composability).
+        let grantee_outcome = relay_client.try_relay_check(&sovereignty_id, &cid, &grantee);
+        assert_eq!(grantee_outcome, Ok(Ok(true)));
+
+        // Stranger is denied — check_access returns Err(AccessDenied),
+        // not Ok(false). The relay must forward this error verbatim.
+        let stranger_outcome = relay_client.try_relay_check(&sovereignty_id, &cid, &stranger);
+        assert_eq!(stranger_outcome, Err(Ok(SovereigntyError::AccessDenied)));
     }
 
     /// A non-existent CID must surface `DataNotFound`, not silently grant access.
