@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -160,16 +161,17 @@ impl TtlStorage {
         let chunks = Self::split_into_chunks(&env, &data, &entry_id)?;
 
         // Store chunks
-        for chunk in chunks {
+        for chunk in &chunks {
             env.storage().temporary().set(&chunk.chunk_id, &chunk);
         }
 
         // Create data entry
+        let chunk_count = chunks.len() as u32;
         let entry = DataEntry {
             entry_id: entry_id.clone(),
             owner: owner.clone(),
             data_hash: env.crypto().sha256(&data).into(),
-            chunk_count: chunks.len() as u32,
+            chunk_count,
             created_at: current_time,
             expires_at,
             ttl_extension_count: 0,
@@ -210,11 +212,11 @@ impl TtlStorage {
         }
 
         // Verify requester authorization (owner or admin)
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
-            .unwrap();
+            .ok_or(TtlStorageError::NotAuthorized)?;
         if requester != entry.owner && requester != admin {
             return Err(TtlStorageError::NotAuthorized);
         }
@@ -331,7 +333,7 @@ impl TtlStorage {
         amount: i128,
     ) -> Result<(), TtlStorageError> {
         // Verify admin authorization
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
@@ -393,7 +395,7 @@ impl TtlStorage {
                 break;
             }
 
-            let chunk_data = data.slice(start, end - start);
+            let chunk_data = data.slice(start..end);
             let chunk_id = Self::generate_chunk_id(env, entry_id, i);
             let checksum: BytesN<32> = env.crypto().sha256(&chunk_data).into();
 
@@ -488,5 +490,72 @@ impl TtlStorage {
         env.storage()
             .persistent()
             .set(&(Symbol::new(&env, "balance_"), user.clone()), &new_balance);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+
+    #[test]
+    fn test_retrieve_data_from_uninitialized_contract_returns_error() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(TtlStorage, ());
+        let client = TtlStorageClient::new(&env, &contract_id);
+
+        let requester = Address::generate(&env);
+        let entry_id = BytesN::<32>::from_array(&env, &[1u8; 32]);
+
+        // Attempting to retrieve data from an uninitialized contract
+        // should return Err (NotAuthorized) instead of panicking
+        let result = client.try_retrieve_data(&entry_id, &requester);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_retrieve_data_from_initialized_contract_succeeds() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(TtlStorage, ());
+        let client = TtlStorageClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let owner = Address::generate(&env);
+        let stranger = Address::generate(&env);
+
+        // Initialize the contract
+        client.initialize(&admin);
+
+        // Add storage credits to the owner so store_data won't fail with InsufficientFee
+        let credits: i128 = 1000000000; // 1000 XLM-equivalent credits
+        client.add_storage_credits(&owner, &credits);
+
+        // Store some data
+        let data = Bytes::from_slice(&env, &[42u8; 100]);
+        let mut metadata = Map::new(&env);
+        metadata.set(
+            String::from_str(&env, "key"),
+            String::from_str(&env, "value"),
+        );
+
+        let ttl_hours: u32 = 24;
+        let is_temp: bool = false;
+        let entry_id = client.store_data(&owner, &data, &is_temp, &ttl_hours, &metadata);
+
+        // Retrieve data as the owner — should succeed
+        let retrieved = client.retrieve_data(&entry_id, &owner);
+        assert!(!retrieved.is_empty());
+
+        // Retrieve data as admin — should succeed
+        let retrieved = client.retrieve_data(&entry_id, &admin);
+        assert!(!retrieved.is_empty());
+
+        // Retrieve data as a stranger (not owner, not admin) — should fail with NotAuthorized
+        let result = client.try_retrieve_data(&entry_id, &stranger);
+        assert!(result.is_err());
     }
 }

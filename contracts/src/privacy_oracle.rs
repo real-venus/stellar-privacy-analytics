@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -107,10 +108,10 @@ impl PrivacyOracle {
             .set(&Symbol::new(&env, "total_requests"), &0u64);
         env.storage()
             .instance()
-            .set(&Symbol::new(&env, "total_fees_collected"), 0i128);
+            .set(&Symbol::new(&env, "total_fees_collected"), &0i128);
         env.storage()
             .instance()
-            .set(&Symbol::new(&env, "initialized"), true);
+            .set(&Symbol::new(&env, "initialized"), &true);
     }
 
     /// Request data from external source with privacy protection
@@ -150,9 +151,9 @@ impl PrivacyOracle {
 
         // Generate request ID
         let mut hash_input = soroban_sdk::Bytes::new(&env);
-        hash_input.append(&requester.to_xdr(&env));
-        hash_input.append(&data_source.to_xdr(&env));
-        hash_input.append(&data_hash.to_xdr(&env));
+        hash_input.append(&requester.clone().to_xdr(&env));
+        hash_input.append(&data_source.clone().to_xdr(&env));
+        hash_input.append(&data_hash.clone().to_xdr(&env));
         hash_input.append(&Bytes::from_slice(&env, &privacy_level.to_be_bytes()));
         hash_input.append(&Bytes::from_slice(
             &env,
@@ -492,11 +493,11 @@ impl PrivacyOracle {
         }
 
         let current_deposit = Self::get_user_deposit(env.clone(), user.clone());
-        Self::set_user_deposit(env, user, current_deposit + amount);
+        Self::set_user_deposit(env.clone(), user.clone(), current_deposit + amount);
 
         // Emit event
         env.events()
-            .publish((Symbol::new(&env, "deposit_added"), user.clone()), ());
+            .publish((Symbol::new(&env, "deposit_added"), user), ());
 
         Ok(())
     }
@@ -514,11 +515,11 @@ impl PrivacyOracle {
             return Err(PrivacyOracleError::InsufficientDeposit);
         }
 
-        Self::set_user_deposit(env, user.clone(), current_deposit - amount);
+        Self::set_user_deposit(env.clone(), user.clone(), current_deposit - amount);
 
         // Emit event
         env.events()
-            .publish((Symbol::new(&env, "withdrawn"), user.clone()), ());
+            .publish((Symbol::new(&env, "withdrawn"), user), ());
 
         Ok(())
     }
@@ -636,7 +637,7 @@ impl PrivacyOracle {
             .get(&Symbol::new(&env, "oracle_nodes"))
             .unwrap_or_else(|| Map::new(&env));
 
-        if let Some(mut node) = nodes.get(oracle) {
+        if let Some(mut node) = nodes.get(oracle.clone()) {
             node.total_requests += 1;
             node.successful_requests += 1;
             node.last_response_time = env.ledger().timestamp();

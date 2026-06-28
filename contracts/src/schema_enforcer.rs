@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -261,7 +262,7 @@ impl SchemaEnforcer {
                 // Validate field type (basic check - encrypted data type validation)
                 if !Self::validate_encrypted_field_type(
                     expected_field.field_type.clone(),
-                    _encrypted_data,
+                    &_encrypted_data,
                 ) {
                     validation_log.validation_result = false;
                     validation_log
@@ -278,7 +279,7 @@ impl SchemaEnforcer {
 
         // Check for missing required fields
         for field in schema.fields.iter() {
-            if field.required && !payload.encrypted_fields.contains_key(&field.name) {
+            if field.required && !payload.encrypted_fields.contains_key(field.name.clone()) {
                 validation_log.validation_result = false;
                 validation_log
                     .error_messages
@@ -300,7 +301,7 @@ impl SchemaEnforcer {
                 rejection_reason: validation_log
                     .error_messages
                     .get(0)
-                    .unwrap_or(&String::from_str(&env, "Validation failed"))
+                    .unwrap_or(String::from_str(&env, "Validation failed"))
                     .clone(),
                 timestamp: env.ledger().timestamp(),
             };
@@ -395,6 +396,27 @@ impl SchemaEnforcer {
             .persistent()
             .set(&Symbol::new(&env, "active_schemas"), &active_schemas);
 
+        // Remove from the organization-specific index so get_org_schemas no
+        // longer returns the deactivated schema and the index does not grow
+        // unboundedly with every schema ever created.
+        let org_schemas_key = (Symbol::new(&env, "org_schemas_"), org_id.clone());
+        let org_schemas: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&org_schemas_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        let mut filtered_org_schemas = Vec::new(&env);
+        for id in org_schemas {
+            if id != schema_id {
+                filtered_org_schemas.push_back(id);
+            }
+        }
+
+        env.storage()
+            .persistent()
+            .set(&org_schemas_key, &filtered_org_schemas);
+
         Ok(())
     }
 
@@ -426,7 +448,7 @@ impl SchemaEnforcer {
             .get::<_, Vec<BytesN<32>>>(&logs_key)
         {
             for log_id in logs.iter() {
-                if let Some(log) = env.storage().persistent().get::<_, ValidationLog>(log_id) {
+                if let Some(log) = env.storage().persistent().get::<_, ValidationLog>(&log_id) {
                     if log.payload_id == payload_id {
                         return Some(log);
                     }
@@ -452,9 +474,9 @@ impl SchemaEnforcer {
         version: &String,
     ) -> BytesN<32> {
         let mut combined = soroban_sdk::Bytes::new(env);
-        combined.append(&org_id.to_xdr(env));
-        combined.append(&name.to_xdr(env));
-        combined.append(&version.to_xdr(env));
+        combined.append(&org_id.clone().to_xdr(env));
+        combined.append(&name.clone().to_xdr(env));
+        combined.append(&version.clone().to_xdr(env));
         combined.append(&Bytes::from_slice(
             env,
             &env.ledger().timestamp().to_be_bytes(),

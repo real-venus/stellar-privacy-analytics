@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -178,11 +179,14 @@ impl DataSovereigntyAccessControl {
 
     pub fn grant_access(
         env: Env,
+        caller: Address,
         resource_id: BytesN<32>,
         user: Address,
         permission_type: PermissionType,
         ttl_seconds: Option<u64>,
     ) -> Result<(), AccessControlError> {
+        caller.require_auth();
+
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
@@ -193,8 +197,7 @@ impl DataSovereigntyAccessControl {
             .get(resource_id.clone())
             .ok_or(AccessControlError::ResourceNotFound)?;
 
-        let caller = env.current_contract_address();
-        if caller != resource_owner.owner && !Self::is_authorized(&env, &resource_owner.owner) {
+        if caller != resource_owner.owner && !Self::is_authorized(&env, &caller) {
             return Err(AccessControlError::Unauthorized);
         }
 
@@ -244,9 +247,12 @@ impl DataSovereigntyAccessControl {
 
     pub fn revoke_access(
         env: Env,
+        caller: Address,
         resource_id: BytesN<32>,
         user: Address,
     ) -> Result<(), AccessControlError> {
+        caller.require_auth();
+
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
@@ -257,8 +263,7 @@ impl DataSovereigntyAccessControl {
             .get(resource_id.clone())
             .ok_or(AccessControlError::ResourceNotFound)?;
 
-        let caller = env.current_contract_address();
-        if caller != resource_owner.owner && !Self::is_authorized(&env, &resource_owner.owner) {
+        if caller != resource_owner.owner && !Self::is_authorized(&env, &caller) {
             return Err(AccessControlError::Unauthorized);
         }
 
@@ -311,11 +316,14 @@ impl DataSovereigntyAccessControl {
 
     pub fn create_access_key(
         env: Env,
+        caller: Address,
         resource_id: BytesN<32>,
         holder: Address,
         permissions: Vec<PermissionType>,
         ttl_seconds: Option<u64>,
     ) -> Result<BytesN<32>, AccessControlError> {
+        caller.require_auth();
+
         let resources: Map<BytesN<32>, ResourceOwner> = env
             .storage()
             .instance()
@@ -326,8 +334,7 @@ impl DataSovereigntyAccessControl {
             .get(resource_id.clone())
             .ok_or(AccessControlError::ResourceNotFound)?;
 
-        let caller = env.current_contract_address();
-        if caller != resource_owner.owner && !Self::is_authorized(&env, &resource_owner.owner) {
+        if caller != resource_owner.owner && !Self::is_authorized(&env, &caller) {
             return Err(AccessControlError::Unauthorized);
         }
 
@@ -342,8 +349,8 @@ impl DataSovereigntyAccessControl {
 
         // Generate unique key ID
         let mut key_data = soroban_sdk::Bytes::new(&env);
-        key_data.append(&resource_id.to_xdr(&env));
-        key_data.append(&holder.to_xdr(&env));
+        key_data.append(&resource_id.clone().to_xdr(&env));
+        key_data.append(&holder.clone().to_xdr(&env));
         key_data.append(&Bytes::from_slice(
             &env,
             &env.ledger().timestamp().to_be_bytes(),

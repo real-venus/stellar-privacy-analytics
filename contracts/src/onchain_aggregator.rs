@@ -2,6 +2,7 @@ use soroban_sdk::contract;
 use soroban_sdk::contracterror;
 use soroban_sdk::contractimpl;
 use soroban_sdk::contracttype;
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::Address;
 use soroban_sdk::Bytes;
 use soroban_sdk::BytesN;
@@ -171,7 +172,7 @@ impl OnChainAggregator {
 
         // Verify all data points exist and are valid
         for data_id in data_point_ids.iter() {
-            if !Self::data_point_exists(&env, data_id) {
+            if !Self::data_point_exists(&env, &data_id) {
                 return Err(AggregatorError::DataPointNotFound);
             }
         }
@@ -209,7 +210,7 @@ impl OnChainAggregator {
         processor: Address,
     ) -> Result<BytesN<32>, AggregatorError> {
         // Verify processor authorization (could be a designated oracle)
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
@@ -236,7 +237,7 @@ impl OnChainAggregator {
         let mut participants_count = 0u32;
 
         for data_id in request.data_points.iter() {
-            if let Some(data_point) = Self::get_data_point(&env, data_id) {
+            if let Some(data_point) = Self::get_data_point(&env, &data_id) {
                 encrypted_values.push_back(data_point.encrypted_value.clone());
                 total_epsilon_spent += data_point.epsilon_spent;
                 participants_count += 1;
@@ -274,7 +275,7 @@ impl OnChainAggregator {
             request_id: request_id.clone(),
             encrypted_result: encrypted_result.clone(),
             result_hash,
-            privacy_certificate_id: certificate_id,
+            privacy_certificate_id: certificate_id.clone(),
             timestamp: env.ledger().timestamp(),
             participants_count,
             total_epsilon_spent,
@@ -299,7 +300,7 @@ impl OnChainAggregator {
         processor: Address,
     ) -> Result<BytesN<32>, AggregatorError> {
         // Verify processor authorization
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
@@ -377,7 +378,7 @@ impl OnChainAggregator {
         amount: i128,
     ) -> Result<(), AggregatorError> {
         // Verify admin authorization
-        let admin = env
+        let admin: Address = env
             .storage()
             .instance()
             .get(&Symbol::new(&env, "admin"))
