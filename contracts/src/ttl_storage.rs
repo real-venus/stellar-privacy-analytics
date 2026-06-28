@@ -25,6 +25,7 @@ const DEFAULT_TTL: u64 = 86400; // 24 hours in seconds
 const EXTENSION_TTL: u64 = 3600; // 1 hour in seconds
 const MIN_STORAGE_FEE: i128 = 1000000; // 0.001 XLM
 const CLEANUP_INTERVAL: u64 = 3600; // 1 hour
+const LEDGERS_PER_HOUR: u32 = 720; // ~5s per ledger; converts hour TTLs to ledger TTLs
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[contracttype]
@@ -170,6 +171,13 @@ impl TtlStorage {
             env.storage().temporary().set(&chunk.chunk_id, &chunk);
         }
 
+        // Chunks live in temporary storage, which otherwise expires at the
+        // default (~24h) TTL regardless of how much storage was paid for. Extend
+        // each chunk's TTL to match the entry lifetime so the data survives
+        // until expires_at instead of being silently lost (reconstruct_data
+        // would otherwise fail with EntryNotFound).
+        Self::extend_chunk_ttls(&env, &entry_id, chunks.len(), ttl_hours);
+
         // Create data entry
         let chunk_count = chunks.len() as u32;
         let entry = DataEntry {
@@ -285,6 +293,12 @@ impl TtlStorage {
 
         // Update entry
         env.storage().persistent().set(&entry_id, &entry);
+
+        // Keep the chunk TTLs in step with the newly-extended entry lifetime,
+        // otherwise the chunks would still expire at their original TTL.
+        let now = env.ledger().timestamp();
+        let remaining_hours = entry.expires_at.saturating_sub(now).div_ceil(3600) as u32;
+        Self::extend_chunk_ttls(&env, &entry_id, entry.chunk_count, remaining_hours);
 
         // Update fee record
         let fee_key = (Symbol::new(&env, "fee_"), entry_id);
@@ -441,6 +455,21 @@ impl TtlStorage {
         env.crypto().sha256(&combined).into()
     }
 
+    /// Extend the temporary-storage TTL of every chunk so it survives `ttl_hours`
+    /// of the entry's lifetime. Temporary entries expire by ledger, so hours are
+    /// converted to ledgers and capped at the network maximum entry TTL.
+    fn extend_chunk_ttls(env: &Env, entry_id: &BytesN<32>, chunk_count: u32, ttl_hours: u32) {
+        let ttl_ledgers = ttl_hours
+            .saturating_mul(LEDGERS_PER_HOUR)
+            .min(env.storage().max_ttl());
+        for i in 0..chunk_count {
+            let chunk_id = Self::generate_chunk_id(env, entry_id, i);
+            env.storage()
+                .temporary()
+                .extend_ttl(&chunk_id, ttl_ledgers, ttl_ledgers);
+        }
+    }
+
     fn reconstruct_data(env: &Env, entry: &DataEntry) -> Result<Bytes, TtlStorageError> {
         let mut reconstructed = soroban_sdk::Bytes::new(env);
 
@@ -575,6 +604,79 @@ mod test {
         // Retrieve data as a stranger (not owner, not admin) — should fail with NotAuthorized
         let result = client.try_retrieve_data(&entry_id, &stranger);
         assert!(result.is_err());
+    }
+
+    fn setup_with_owner(env: &Env) -> (TtlStorageClient<'_>, Address) {
+        env.mock_all_auths();
+        let contract_id = env.register(TtlStorage, ());
+        let client = TtlStorageClient::new(env, &contract_id);
+        let admin = Address::generate(env);
+        let owner = Address::generate(env);
+        client.initialize(&admin);
+        // Generous credit so multi-hour TTLs (e.g. 168h permanent) are affordable.
+        client.add_storage_credits(&owner, &100_000_000_000i128);
+        (client, owner)
+    }
+
+    /// Acceptance (#285): after the chunk TTLs are extended, data stored with a
+    /// long entry TTL survives past the default temporary-storage TTL.
+    #[test]
+    fn test_chunks_survive_past_default_temp_ttl_within_entry_ttl() {
+        let env = Env::default();
+        let (client, owner) = setup_with_owner(&env);
+
+        let data = Bytes::from_slice(&env, &[42u8; 200]);
+        let metadata = Map::new(&env);
+        // 7-day TTL — far beyond the default temporary-storage TTL.
+        let entry_id = client.store_data(&owner, &data, &false, &168u32, &metadata);
+
+        // Advance the ledger sequence well past the default temporary TTL but
+        // within the entry's lifetime. Without the chunk extend_ttl the chunks
+        // would have expired and retrieval would fail with EntryNotFound.
+        let seq = env.ledger().sequence();
+        env.ledger().set_sequence_number(seq + 1000);
+
+        let retrieved = client.retrieve_data(&entry_id, &owner);
+        assert_eq!(retrieved, data);
+    }
+
+    /// Acceptance (#285): once the entry's own (timestamp-based) TTL passes,
+    /// retrieval fails with EntryExpired.
+    #[test]
+    fn test_retrieve_after_entry_ttl_fails_expired() {
+        let env = Env::default();
+        let (client, owner) = setup_with_owner(&env);
+
+        let data = Bytes::from_slice(&env, &[7u8; 64]);
+        let metadata = Map::new(&env);
+        let entry_id = client.store_data(&owner, &data, &false, &1u32, &metadata);
+
+        // Advance time past the entry's 1-hour TTL.
+        let ts = env.ledger().timestamp();
+        env.ledger().set_timestamp(ts + 2 * 3600);
+
+        let result = client.try_retrieve_data(&entry_id, &owner);
+        assert_eq!(result, Err(Ok(TtlStorageError::EntryExpired)));
+    }
+
+    /// bump_instance_ttl must keep chunks alive for the extended lifetime too.
+    #[test]
+    fn test_bump_ttl_keeps_chunks_alive() {
+        let env = Env::default();
+        let (client, owner) = setup_with_owner(&env);
+
+        let data = Bytes::from_slice(&env, &[9u8; 128]);
+        let metadata = Map::new(&env);
+        let entry_id = client.store_data(&owner, &data, &false, &1u32, &metadata);
+
+        // Extend the entry by a further 5 hours; chunk TTLs should follow.
+        client.bump_instance_ttl(&entry_id, &owner, &5u32);
+
+        let seq = env.ledger().sequence();
+        env.ledger().set_sequence_number(seq + 1000);
+
+        let retrieved = client.retrieve_data(&entry_id, &owner);
+        assert_eq!(retrieved, data);
     }
 
     /// Acceptance (#284): a temporary entry past its TTL is found via the
