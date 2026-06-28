@@ -17,6 +17,8 @@ mod invariant_testing_tests;
 #[cfg(test)]
 mod onchain_aggregator_tests;
 #[cfg(test)]
+mod privacy_oracle_tests;
+#[cfg(test)]
 mod upgradeable_proxy_tests;
 
 pub use access_control::DataSovereigntyAccessControl;
