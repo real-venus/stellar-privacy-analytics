@@ -45,7 +45,7 @@ fn raw_env() -> Env {
 /// Initial implementation address baked into every test fixture below.
 const TEST_IMPL: [u8; 32] = [7u8; 32];
 
-fn deploy(env: &Env) -> (UpgradeableProxyClient, Address, BytesN<32>) {
+fn deploy(env: &Env) -> (UpgradeableProxyClient<'_>, Address, BytesN<32>) {
     let contract_id = env.register(UpgradeableProxy, ());
     let client = UpgradeableProxyClient::new(env, &contract_id);
     let admin = Address::generate(env);
@@ -108,7 +108,9 @@ fn initiate_upgrade_admin_succeeds_and_records_pending() {
     let new_impl = BytesN::from_array(&env, &[1u8; 32]);
     client.initiate_upgrade(&new_impl, &admin);
 
-    let pending = client.pending_upgrade().expect("pending upgrade must exist");
+    let pending = client
+        .pending_upgrade()
+        .expect("pending upgrade must exist");
     assert_eq!(pending.new_implementation, new_impl);
     assert_eq!(pending.old_implementation, impl_addr);
     assert_eq!(pending.initiated_at, env.ledger().timestamp());
@@ -162,7 +164,8 @@ fn complete_upgrade_before_delay_rejected() {
 
     // Advance less than the current upgrade delay.
     let delay = client.upgrade_delay();
-    env.ledger().set_timestamp(env.ledger().timestamp() + delay.saturating_sub(1));
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + delay.saturating_sub(1));
 
     let res = client.try_complete_upgrade(&admin);
     assert_eq!(res, Err(Ok(ProxyError::UpgradeNotReady)));
@@ -177,7 +180,8 @@ fn complete_upgrade_after_delay_succeeds_and_clears_pending() {
     client.initiate_upgrade(&new_impl, &admin);
 
     let delay = client.upgrade_delay();
-    env.ledger().set_timestamp(env.ledger().timestamp() + delay + 1);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + delay + 1);
 
     client.complete_upgrade(&admin);
 
@@ -197,7 +201,8 @@ fn complete_upgrade_non_admin_rejected() {
     client.initiate_upgrade(&new_impl, &admin);
 
     let delay = client.upgrade_delay();
-    env.ledger().set_timestamp(env.ledger().timestamp() + delay + 1);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + delay + 1);
 
     let attacker = Address::generate(&env);
     let res = client.try_complete_upgrade(&attacker);
@@ -352,7 +357,10 @@ fn view_functions_reject_uninitialized_contract() {
     let contract_id = env.register(UpgradeableProxy, ());
     let client = UpgradeableProxyClient::new(&env, &contract_id);
 
-    assert_eq!(client.try_implementation(), Err(Ok(ProxyError::NotInitialized)));
+    assert_eq!(
+        client.try_implementation(),
+        Err(Ok(ProxyError::NotInitialized))
+    );
     assert_eq!(client.try_admin(), Err(Ok(ProxyError::NotInitialized)));
     // upgrade_delay has a default fallback so it must succeed even pre-init.
     assert!(client.upgrade_delay() >= MIN_UPGRADE_DELAY);
@@ -381,7 +389,10 @@ fn initiate_upgrade_panics_when_admin_provides_no_signature() {
     // Authorize ONLY the initialize call.
     let init_args: Vec<Val> = Vec::from_array(
         &env,
-        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            impl_addr.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     env.mock_auths(&[MockAuth {
         address: &admin,
@@ -415,12 +426,18 @@ fn complete_upgrade_panics_when_admin_provides_no_signature() {
     // Authorize initialize + initiate_upgrade.
     let init_args: Vec<Val> = Vec::from_array(
         &env,
-        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            impl_addr.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     let new_impl = BytesN::from_array(&env, &[1u8; 32]);
     let init_upg_args: Vec<Val> = Vec::from_array(
         &env,
-        [new_impl.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            new_impl.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     env.mock_auths(&[
         MockAuth {
@@ -447,7 +464,8 @@ fn complete_upgrade_panics_when_admin_provides_no_signature() {
 
     // Advance past the upgrade delay.
     let delay = client.upgrade_delay();
-    env.ledger().set_timestamp(env.ledger().timestamp() + delay + 1);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + delay + 1);
 
     // Drop all auths.
     env.mock_auths(&[]);
@@ -469,12 +487,18 @@ fn cancel_upgrade_panics_when_admin_provides_no_signature() {
     // Authorize initialize + initiate_upgrade.
     let init_args: Vec<Val> = Vec::from_array(
         &env,
-        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            impl_addr.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     let new_impl = BytesN::from_array(&env, &[1u8; 32]);
     let init_upg_args: Vec<Val> = Vec::from_array(
         &env,
-        [new_impl.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            new_impl.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     env.mock_auths(&[
         MockAuth {
@@ -519,7 +543,10 @@ fn set_upgrade_delay_panics_when_admin_provides_no_signature() {
     // Authorize ONLY the initialize call.
     let init_args: Vec<Val> = Vec::from_array(
         &env,
-        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            impl_addr.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     env.mock_auths(&[MockAuth {
         address: &admin,
@@ -553,7 +580,10 @@ fn transfer_admin_panics_when_admin_provides_no_signature() {
     // Authorize ONLY the initialize call.
     let init_args: Vec<Val> = Vec::from_array(
         &env,
-        [impl_addr.clone().into_val(&env), admin.clone().into_val(&env)],
+        [
+            impl_addr.clone().into_val(&env),
+            admin.clone().into_val(&env),
+        ],
     );
     env.mock_auths(&[MockAuth {
         address: &admin,
