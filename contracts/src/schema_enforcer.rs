@@ -396,6 +396,27 @@ impl SchemaEnforcer {
             .persistent()
             .set(&Symbol::new(&env, "active_schemas"), &active_schemas);
 
+        // Remove from the organization-specific index so get_org_schemas no
+        // longer returns the deactivated schema and the index does not grow
+        // unboundedly with every schema ever created.
+        let org_schemas_key = (Symbol::new(&env, "org_schemas_"), org_id.clone());
+        let org_schemas: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&org_schemas_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        let mut filtered_org_schemas = Vec::new(&env);
+        for id in org_schemas {
+            if id != schema_id {
+                filtered_org_schemas.push_back(id);
+            }
+        }
+
+        env.storage()
+            .persistent()
+            .set(&org_schemas_key, &filtered_org_schemas);
+
         Ok(())
     }
 

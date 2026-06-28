@@ -80,11 +80,24 @@ export interface LoadBalancingConfig {
   healthyThreshold: number;
 }
 
+export interface MetricsPersistenceConfig {
+  /** When false, metrics live only in memory (legacy behaviour). */
+  enabled: boolean;
+  /** JSONL store location. Defaults to data/gateway/privacy-metrics.jsonl. */
+  filePath?: string;
+  /** How often the in-memory buffer is flushed to disk, in ms. Default 30s. */
+  flushInterval?: number;
+  /** Hard cap on in-memory records; oldest (already-persisted) are evicted. Default 10000. */
+  maxBufferSize?: number;
+}
+
 export interface MetricsConfig {
   enabled: boolean;
   collectionInterval: number;
   retentionPeriod: number;
   exportFormat: "prometheus" | "json" | "csv";
+  /** Optional durable persistence so metrics survive a process restart. */
+  persistence?: MetricsPersistenceConfig;
 }
 
 export class PrivacyApiGateway {
