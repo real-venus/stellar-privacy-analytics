@@ -128,6 +128,11 @@ impl OnChainAggregator {
             return; // Already initialized
         }
 
+        // Require the admin to authorize initialization. Without this an
+        // attacker could front-run the deployer's setup transaction and
+        // claim admin by passing their own address.
+        admin.require_auth();
+
         // Set admin
         env.storage()
             .instance()
