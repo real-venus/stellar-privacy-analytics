@@ -11,6 +11,10 @@ mod tests {
 
     /// Helper: register the contract and return the contract ID + an admin address.
     fn setup(env: &Env) -> (Address, Address) {
+        // initialize now requires the admin to authorize the call; authorize
+        // all host auth in tests so setup succeeds. Business-logic authorization
+        // (e.g. batch_process caller == admin) is unaffected and still enforced.
+        env.mock_all_auths();
         let contract_id = env.register(OnChainAggregator, ());
         let admin = Address::generate(env);
         env.as_contract(&contract_id, || {
