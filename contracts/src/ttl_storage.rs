@@ -183,6 +183,18 @@ impl TtlStorage {
         // Store entry
         env.storage().persistent().set(&entry_id, &entry);
 
+        // Append the entry id to the data_entries index that
+        // cleanup_expired_data scans. Without this the index stays empty, so
+        // cleanup can never find expired entries and always returns Ok(0).
+        let entries_key = Symbol::new(&env, "data_entries");
+        let mut data_entries: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&entries_key)
+            .unwrap_or_else(|| Vec::new(&env));
+        data_entries.push_back(entry_id.clone());
+        env.storage().persistent().set(&entries_key, &data_entries);
+
         // Create storage fee record
         let fee_record = StorageFee {
             entry_id: entry_id.clone(),
@@ -497,6 +509,7 @@ impl TtlStorage {
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::Ledger;
 
     #[test]
     fn test_retrieve_data_from_uninitialized_contract_returns_error() {
@@ -557,5 +570,71 @@ mod test {
         // Retrieve data as a stranger (not owner, not admin) — should fail with NotAuthorized
         let result = client.try_retrieve_data(&entry_id, &stranger);
         assert!(result.is_err());
+    }
+
+    /// Acceptance (#284): a temporary entry past its TTL is found via the
+    /// data_entries index and removed by cleanup_expired_data.
+    #[test]
+    fn test_cleanup_removes_expired_temporary_entry() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(TtlStorage, ());
+        let client = TtlStorageClient::new(&env, &contract_id);
+
+        // initialize sets the cleanup worker to the admin.
+        let admin = Address::generate(&env);
+        let owner = Address::generate(&env);
+        client.initialize(&admin);
+        client.add_storage_credits(&owner, &1_000_000_000i128);
+
+        // Store a temporary entry with a 1-hour TTL.
+        let data = Bytes::from_slice(&env, &[42u8; 64]);
+        let metadata = Map::new(&env);
+        let entry_id = client.store_data(&owner, &data, &true, &1u32, &metadata);
+
+        // The entry exists before expiry.
+        assert!(client.try_get_data_entry_info(&entry_id).is_ok());
+
+        // Advance time past the TTL (2 hours).
+        env.ledger()
+            .set_timestamp(env.ledger().timestamp() + 2 * 3600);
+
+        // Cleanup must find the entry via the index and remove it.
+        let cleaned = client.cleanup_expired_data(&admin);
+        assert_eq!(cleaned, 1);
+
+        // The expired entry is gone.
+        assert!(client.try_get_data_entry_info(&entry_id).is_err());
+    }
+
+    /// A non-expired (permanent) entry must survive cleanup, and only the
+    /// worker recorded at initialization may run cleanup.
+    #[test]
+    fn test_cleanup_preserves_live_entry_and_rejects_non_worker() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(TtlStorage, ());
+        let client = TtlStorageClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let owner = Address::generate(&env);
+        client.initialize(&admin);
+        client.add_storage_credits(&owner, &1_000_000_000i128);
+
+        // Permanent (non-temporary) entry with a 24-hour TTL.
+        let data = Bytes::from_slice(&env, &[7u8; 32]);
+        let metadata = Map::new(&env);
+        let entry_id = client.store_data(&owner, &data, &false, &24u32, &metadata);
+
+        // A non-worker cannot run cleanup.
+        let stranger = Address::generate(&env);
+        assert!(client.try_cleanup_expired_data(&stranger).is_err());
+
+        // Worker cleanup runs but removes nothing (entry is live).
+        let cleaned = client.cleanup_expired_data(&admin);
+        assert_eq!(cleaned, 0);
+        assert!(client.try_get_data_entry_info(&entry_id).is_ok());
     }
 }
