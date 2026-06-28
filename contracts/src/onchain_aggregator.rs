@@ -12,13 +12,6 @@ use soroban_sdk::String;
 use soroban_sdk::Symbol;
 use soroban_sdk::Vec;
 
-// Contract state storage keys
-const AGGREGATION_REQUESTS_KEY: &str = "AGGREGATION_REQUESTS";
-const AGGREGATION_RESULTS_KEY: &str = "AGGREGATION_RESULTS";
-const USER_CREDITS_KEY: &str = "USER_CREDITS";
-const ACTIVE_BATCHES_KEY: &str = "ACTIVE_BATCHES";
-const PRIVACY_CERTIFICATES_KEY: &str = "PRIVACY_CERTIFICATES";
-
 // Constants
 const MAX_BATCH_SIZE: u32 = 100;
 const MIN_CREDITS_FOR_SUM: i128 = 1000000; // 0.001 XLM

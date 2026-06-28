@@ -12,19 +12,9 @@ use soroban_sdk::String;
 use soroban_sdk::Symbol;
 use soroban_sdk::Vec;
 
-// Contract state storage keys
-const DATA_ENTRIES_KEY: &str = "DATA_ENTRIES";
-const TEMP_DATA_KEY: &str = "TEMP_DATA";
-const STORAGE_FEES_KEY: &str = "STORAGE_FEES";
-const CLEANUP_WORKER_KEY: &str = "CLEANUP_WORKER";
-const USER_BALANCES_KEY: &str = "USER_BALANCES";
-
 // Constants
 const MAX_ENTRY_SIZE: u32 = 65536; // 64KB in bytes
-const DEFAULT_TTL: u64 = 86400; // 24 hours in seconds
-const EXTENSION_TTL: u64 = 3600; // 1 hour in seconds
 const MIN_STORAGE_FEE: i128 = 1000000; // 0.001 XLM
-const CLEANUP_INTERVAL: u64 = 3600; // 1 hour
 const LEDGERS_PER_HOUR: u32 = 720; // ~5s per ledger; converts hour TTLs to ledger TTLs
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -12,16 +12,9 @@ use soroban_sdk::String;
 use soroban_sdk::Symbol;
 use soroban_sdk::Vec;
 
-// Contract state storage keys
-const ACTIVE_SCHEMAS_KEY: &str = "ACTIVE_SCHEMAS";
-const ORG_SCHEMAS_KEY: &str = "ORG_SCHEMAS";
-const VALIDATION_LOGS_KEY: &str = "VALIDATION_LOGS";
-const REJECTION_EVENTS_KEY: &str = "REJECTION_EVENTS";
-
 // Constants
 const MAX_SCHEMA_FIELDS: u32 = 50;
 const MAX_FIELD_NAME_LENGTH: u32 = 256;
-const MAX_SCHEMA_SIZE: u32 = 65536; // 64KB
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[contracttype]
