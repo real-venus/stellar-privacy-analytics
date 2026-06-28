@@ -15,8 +15,6 @@ use soroban_sdk::Vec;
 // Constants
 const MIN_FEE: i128 = 10000000; // 0.01 XLM (10^7 stroops)
 const MAX_FEE: i128 = 1000000000; // 1 XLM (10^9 stroops)
-const MIN_REPUTATION: u32 = 50;
-const RESPONSE_TIMEOUT: u64 = 3600; // 1 hour in seconds
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[contracttype]

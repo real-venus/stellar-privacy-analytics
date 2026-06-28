@@ -17,7 +17,6 @@ const RESOURCE_OWNERS_KEY: &str = "RESOURCE_OWNERS";
 const ACCESS_KEYS_KEY: &str = "ACCESS_KEYS";
 const ACCESS_LOG_KEY: &str = "ACCESS_LOG";
 
-const DEFAULT_TTL: u64 = 86400;
 const MAX_TTL: u64 = 2592000;
 const MIN_MULTI_SIG: u32 = 2;
 const MAX_MULTI_SIG: u32 = 10;
