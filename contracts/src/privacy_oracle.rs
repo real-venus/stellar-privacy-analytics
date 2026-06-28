@@ -372,6 +372,22 @@ impl PrivacyOracle {
         let current_deposit = Self::get_user_deposit(env.clone(), cancel_requester.clone());
         Self::set_user_deposit(env.clone(), cancel_requester, current_deposit + refund);
 
+        // The full fee was added to total_fees_collected at request time, but
+        // only the non-refunded portion (fee - refund) is actually retained.
+        // Decrement by the refunded amount so the global counter reflects the
+        // net fee collected instead of diverging with every cancellation.
+        if refund > 0 {
+            let total_fees_collected: i128 = env
+                .storage()
+                .instance()
+                .get(&Symbol::new(&env, "total_fees_collected"))
+                .unwrap_or(0);
+            env.storage().instance().set(
+                &Symbol::new(&env, "total_fees_collected"),
+                &(total_fees_collected - refund),
+            );
+        }
+
         // Remove from pending requests
         Self::remove_from_pending(env.clone(), request_id.clone());
 
