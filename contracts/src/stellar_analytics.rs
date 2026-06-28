@@ -594,6 +594,51 @@ impl StellarAnalytics {
         Ok(())
     }
 
+    /// Remove an authorized oracle (admin only), revoking its ability to submit
+    /// analysis results. Without this a compromised oracle key could never be
+    /// rotated out.
+    pub fn remove_oracle(
+        env: Env,
+        oracle: Address,
+        caller: Address,
+    ) -> Result<(), StellarAnalyticsError> {
+        // Authenticate the caller. Because `caller` is supplied by the invoker
+        // (unlike add_oracle's non-spoofable current_contract_address), the
+        // host-level auth check is what actually restricts this to the admin.
+        caller.require_auth();
+
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "admin"))
+            .ok_or(StellarAnalyticsError::NotAuthorizedOracle)?;
+        if caller != admin {
+            return Err(StellarAnalyticsError::NotAuthorizedOracle);
+        }
+
+        let oracles: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, "authorized_oracles"))
+            .unwrap_or_else(|| Vec::new(&env));
+
+        // Rebuild the list without the target oracle.
+        let mut remaining = Vec::new(&env);
+        for existing in oracles.iter() {
+            if existing != oracle {
+                remaining.push_back(existing);
+            }
+        }
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "authorized_oracles"), &remaining);
+
+        env.events()
+            .publish((Symbol::new(&env, "oracle_removed"), oracle), ());
+
+        Ok(())
+    }
+
     /// Get analysis request details
     pub fn get_analysis_request(
         env: Env,
@@ -1118,5 +1163,66 @@ mod test {
 
         let (_total, budget_used_after, _active) = client.get_stats();
         assert_eq!(budget_used_after, 0);
+    }
+
+    /// Acceptance (#288): an oracle can be added and then revoked, after which
+    /// is_authorized_oracle reports it as unauthorized.
+    #[test]
+    fn test_remove_oracle_revokes_authorization() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(StellarAnalytics, ());
+        let client = StellarAnalyticsClient::new(&env, &contract_id);
+
+        // The contract's own address is admin so add_oracle's
+        // current_contract_address == admin check passes.
+        let contract_addr: Address =
+            env.as_contract(&contract_id, || env.current_contract_address());
+        client.initialize(&contract_addr);
+
+        let oracle = Address::generate(&env);
+        client.add_oracle(&oracle);
+
+        let authorized_before = env.as_contract(&contract_id, || {
+            StellarAnalytics::is_authorized_oracle(env.clone(), oracle.clone())
+        });
+        assert!(authorized_before);
+
+        // Admin revokes the oracle.
+        client.remove_oracle(&oracle, &contract_addr);
+
+        let authorized_after = env.as_contract(&contract_id, || {
+            StellarAnalytics::is_authorized_oracle(env.clone(), oracle.clone())
+        });
+        assert!(!authorized_after);
+    }
+
+    /// A non-admin caller cannot remove an oracle.
+    #[test]
+    fn test_remove_oracle_rejects_non_admin() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register(StellarAnalytics, ());
+        let client = StellarAnalyticsClient::new(&env, &contract_id);
+
+        let contract_addr: Address =
+            env.as_contract(&contract_id, || env.current_contract_address());
+        client.initialize(&contract_addr);
+
+        let oracle = Address::generate(&env);
+        client.add_oracle(&oracle);
+
+        // A different address (not the admin) is rejected.
+        let stranger = Address::generate(&env);
+        let res = client.try_remove_oracle(&oracle, &stranger);
+        assert_eq!(res, Err(Ok(StellarAnalyticsError::NotAuthorizedOracle)));
+
+        // The oracle remains authorized.
+        let still_authorized = env.as_contract(&contract_id, || {
+            StellarAnalytics::is_authorized_oracle(env.clone(), oracle.clone())
+        });
+        assert!(still_authorized);
     }
 }
