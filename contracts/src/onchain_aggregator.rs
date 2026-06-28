@@ -92,6 +92,8 @@ pub struct BatchProcessing {
     pub status: String,
     pub created_at: u64,
     pub completed_at: Option<u64>,
+    pub succeeded_requests: Vec<BytesN<32>>,
+    pub failed_requests: Vec<BytesN<32>>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -321,25 +323,49 @@ impl OnChainAggregator {
             status: String::from_str(&env, "processing"),
             created_at: env.ledger().timestamp(),
             completed_at: None,
+            succeeded_requests: Vec::new(&env),
+            failed_requests: Vec::new(&env),
         };
 
         // Store batch
         env.storage().persistent().set(&batch_id, &batch);
 
         // Process each request
-        let mut certificate_ids = Vec::new(&env);
+        let mut succeeded_requests = Vec::new(&env);
+        let mut failed_requests = Vec::new(&env);
         for request_id in request_ids.iter() {
-            if let Ok(certificate_id) =
-                Self::process_aggregation(env.clone(), request_id.clone(), processor.clone())
-            {
-                certificate_ids.push_back(certificate_id);
+            match Self::process_aggregation(
+                env.clone(),
+                request_id.clone(),
+                processor.clone(),
+            ) {
+                Ok(_certificate_id) => {
+                    succeeded_requests.push_back(request_id.clone());
+                }
+                Err(_) => {
+                    // Mark the individual request as failed
+                    if let Some(mut req) =
+                        Self::get_aggregation_request(&env, &request_id)
+                    {
+                        req.status = String::from_str(&env, "failed");
+                        env.storage().persistent().set(&request_id, &req);
+                    }
+                    failed_requests.push_back(request_id.clone());
+                }
             }
         }
 
-        // Update batch status
+        // Update batch status based on results
         let mut updated_batch = batch;
-        updated_batch.status = String::from_str(&env, "completed");
+        let all_succeeded = failed_requests.is_empty();
+        updated_batch.status = if all_succeeded {
+            String::from_str(&env, "completed")
+        } else {
+            String::from_str(&env, "partial")
+        };
         updated_batch.completed_at = Some(env.ledger().timestamp());
+        updated_batch.succeeded_requests = succeeded_requests;
+        updated_batch.failed_requests = failed_requests;
         env.storage().persistent().set(&batch_id, &updated_batch);
 
         Ok(batch_id)
